@@ -43,7 +43,14 @@
 **Goal:** Deliver powerful feedback and diagnostic tools for developers.
 **Requirements:** DBG-01, DBG-02, DBG-03
 - Add visual highlighting and video recording capabilities.
-- Implement the interactive `show --annotate` UI flow for design feedback.
+- Add interactive `show` command.
+
+### Phase 6: Exhaustive Integration Testing
+**Status:** Planned
+**Goal:** Guarantee 100% reliability with 5 test cases per command.
+**Requirements:** TST-01
+- Spin up an embedded local Go webserver to serve dynamic DOMs (forms, canvases, storage scripts).
+- Implement 5 edge-case integration tests for all 35+ CLI commands using `os/exec` against the daemon.
 
 ---
 *Roadmap generated: 2026-06-18*
