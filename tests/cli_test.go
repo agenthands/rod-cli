@@ -3,17 +3,24 @@ package tests
 import (
 	"bytes"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // runCli is a helper to run the compiled binary
 func runCli(args ...string) (string, error) {
-	cmd := exec.Command("../rod-cli", args...)
+	absPath, _ := filepath.Abs("../rod-cli")
+	cmd := exec.Command(absPath, args...)
+	cmd.Dir = ".."
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	err := cmd.Run()
+	if len(args) > 0 && args[0] == "close" || (len(args) > 1 && args[1] == "close") {
+		time.Sleep(500 * time.Millisecond) // Wait for daemon to fully exit
+	}
 	return out.String(), err
 }
 

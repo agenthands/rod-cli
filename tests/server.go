@@ -18,7 +18,24 @@ func SetupTestServer() *httptest.Server {
 			<a id="link-forms" href="/forms">Forms</a>
 			<a id="link-dialogs" href="/dialogs">Dialogs</a>
 			<a id="link-storage" href="/storage">Storage</a>
+			<a id="link-page1" href="/page1">Page 1</a>
 		</body></html>`))
+	})
+
+	mux.HandleFunc("/page1", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><h1 id="p1">Page 1</h1><a href="/page2">Page 2</a></body></html>`))
+	})
+
+	mux.HandleFunc("/page2", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><h1 id="p2">Page 2</h1></body></html>`))
+	})
+
+	mux.HandleFunc("/slow", func(w http.ResponseWriter, r *http.Request) {
+		// No sleep for test stability, but simulate a large DOM or delayed rendering
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<html><body><div id="slow-div">Slow</div></body></html>`))
 	})
 
 	// 2. Forms & Inputs
