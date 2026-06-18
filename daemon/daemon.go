@@ -234,6 +234,17 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		return actions.EvalStorage(ctx, "sessionStorage", "set", req.Args["key"], req.Args["value"])
 	case "sessionstorage-clear":
 		return actions.EvalStorage(ctx, "sessionStorage", "clear", "", "")
+	case "highlight":
+		return actions.Highlight(ctx, req.Args["ref"])
+	case "highlight-clear":
+		return actions.ClearHighlights(ctx)
+	case "video-start":
+		return actions.VideoStart(ctx, req.Args["name"])
+	case "video-stop":
+		return actions.VideoStop(ctx)
+	case "show":
+		annotate := req.Args["annotate"] == "true"
+		return actions.Show(ctx, annotate)
 	default:
 		return "", fmt.Errorf("unknown command: %s", req.Command)
 	}

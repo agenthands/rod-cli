@@ -383,6 +383,52 @@ func getApp() *cli.App {
 					return runClientCommand(c, daemon.Request{Command: "sessionstorage-clear"})
 				},
 			},
+			{
+				Name:  "highlight",
+				Usage: "Highlight an element by its ref",
+				Action: func(c *cli.Context) error {
+					ref := c.Args().First()
+					if ref == "" {
+						return fmt.Errorf("element ref is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "highlight", Args: map[string]string{"ref": ref}})
+				},
+			},
+			{
+				Name:  "highlight-clear",
+				Usage: "Clear all highlights",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "highlight-clear"})
+				},
+			},
+			{
+				Name:  "video-start",
+				Usage: "Start recording video",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "name", Usage: "Name of the video file"},
+				},
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "video-start", Args: map[string]string{"name": c.String("name")}})
+				},
+			},
+			{
+				Name:  "video-stop",
+				Usage: "Stop recording video",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "video-stop"})
+				},
+			},
+			{
+				Name:  "show",
+				Usage: "Show the browser or launch interactive annotation",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "annotate", Usage: "Launch interactive annotation UI"},
+				},
+				Action: func(c *cli.Context) error {
+					annotate := fmt.Sprint(c.Bool("annotate"))
+					return runClientCommand(c, daemon.Request{Command: "show", Args: map[string]string{"annotate": annotate}})
+				},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			return runMCPServer(c)

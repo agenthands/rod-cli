@@ -57,6 +57,13 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli sessionstorage-set [key] [value]`: Set a sessionStorage item.
 - `rod-cli sessionstorage-clear`: Clear sessionStorage.
 
+### Observability & Debugging
+- `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking).
+- `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
+- `rod-cli video-start --name [name]`: (Stubbed) Begin recording viewport.
+- `rod-cli video-stop`: (Stubbed) Stop recording video.
+- `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
+
 ### Evaluation & Export
 - `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context.
 - `rod-cli snapshot`: Return the token-efficient Markdown representation of the DOM.

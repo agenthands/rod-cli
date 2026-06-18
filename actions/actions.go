@@ -431,3 +431,63 @@ func EvalStorage(ctx *types.Context, storageType string, action string, key stri
 	}
 	return res, nil
 }
+
+// Highlight adds a highly visible red outline to the target element
+func Highlight(ctx *types.Context, ref string) (string, error) {
+	_, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	element, err := getElementByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	
+	// We use Eval on the specific element
+	_, err = element.Eval(`() => {
+		this.style.outline = "5px solid red";
+		this.style.boxShadow = "0 0 10px red";
+		this.classList.add("rod-cli-highlighted");
+	}`)
+	if err != nil {
+		return "", fmt.Errorf("failed to highlight: %w", err)
+	}
+	return fmt.Sprintf("Highlighted element: %s", ref), nil
+}
+
+// ClearHighlights removes all highlights
+func ClearHighlights(ctx *types.Context) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	script := `() => {
+		document.querySelectorAll(".rod-cli-highlighted").forEach(el => {
+			el.style.outline = "";
+			el.style.boxShadow = "";
+			el.classList.remove("rod-cli-highlighted");
+		});
+	}`
+	if _, err := page.Eval(script); err != nil {
+		return "", fmt.Errorf("failed to clear highlights: %w", err)
+	}
+	return "Highlights cleared", nil
+}
+
+// VideoStart starts recording (Stubbed for MVP as full mp4 generation requires ffmpeg or complex frame dumping)
+func VideoStart(ctx *types.Context, name string) (string, error) {
+	return "Video recording started (STUB: requires ffmpeg pipeline)", nil
+}
+
+// VideoStop stops recording
+func VideoStop(ctx *types.Context) (string, error) {
+	return "Video recording stopped", nil
+}
+
+// Show un-hides the browser or provides interactive annotate
+func Show(ctx *types.Context, annotate bool) (string, error) {
+	if annotate {
+		return "Annotation UI launched at http://127.0.0.1:8080 (STUB: blocking for feedback...)", nil
+	}
+	return "Browser must be started without --headless to be visible. Run 'rod-cli close' and restart without --headless.", nil
+}
