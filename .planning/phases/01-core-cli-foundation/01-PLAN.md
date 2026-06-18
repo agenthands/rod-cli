@@ -21,7 +21,7 @@ The existing `rod-mcp` project currently acts solely as an MCP server. This phas
 
 ### 1. Rename Project Module (CLI-01)
 - Edit `go.mod` to change `module` to `github.com/agenthands/rod-cli` (or current git path).
-- Search and replace all internal imports of `github.com/go-rod/rod-mcp` with the new module path.
+- Search and replace all internal imports of `github.com/agenthands/rod-cli` with the new module path.
 - Update `package.json` names/descriptions if necessary.
 
 ### 2. Implement Root CLI Structure (CLI-02)
