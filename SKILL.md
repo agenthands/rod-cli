@@ -39,6 +39,24 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli select [selector] [values...]`: Select dropdown values.
 - `rod-cli hover [selector]`: Hover over an element.
 
+### Advanced Input & Dialogs
+- `rod-cli press [key]`: Simulate a raw keyboard key press (e.g., `Enter`, `Tab`, `Escape`).
+- `rod-cli mousemove [x] [y]`: Move the mouse to absolute coordinates.
+- `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
+- `rod-cli mouseup [left|right|middle]`: Trigger mouse up.
+- `rod-cli dialog-accept`: Automatically accept the next javascript alert/confirm.
+- `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
+
+### Storage Controls
+- `rod-cli cookie-get`: Read all browser cookies.
+- `rod-cli cookie-clear`: Clear all browser cookies.
+- `rod-cli localstorage-get [key]`: Retrieve a localStorage item (or omit key for all).
+- `rod-cli localstorage-set [key] [value]`: Set a localStorage item.
+- `rod-cli localstorage-clear`: Clear localStorage.
+- `rod-cli sessionstorage-get [key]`: Retrieve a sessionStorage item.
+- `rod-cli sessionstorage-set [key] [value]`: Set a sessionStorage item.
+- `rod-cli sessionstorage-clear`: Clear sessionStorage.
+
 ### Evaluation & Export
 - `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context.
 - `rod-cli snapshot`: Return the token-efficient Markdown representation of the DOM.
