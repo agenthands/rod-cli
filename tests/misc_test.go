@@ -115,3 +115,24 @@ func TestHighlightCommands(t *testing.T) {
 
 	runCli("close")
 }
+
+func TestScreenshotCommand(t *testing.T) {
+	ts := SetupTestServer()
+	defer ts.Close()
+	runCli("close")
+
+	// Case 1: Screenshot without navigation
+	out, err := runCli("--raw", "screenshot", "--name", "test_missing_nav")
+	if err == nil {
+		t.Errorf("Screenshot without goto should fail: %s", out)
+	}
+
+	// Case 2: Valid Screenshot
+	runCli("--raw", "goto", ts.URL)
+	out, err = runCli("--raw", "screenshot", "--name", "test_screenshot")
+	if err != nil || !strings.Contains(out, "Save to") || !strings.Contains(out, "test_screenshot.png") {
+		t.Errorf("Valid screenshot failed: err=%v out=%s", err, out)
+	}
+
+	runCli("close")
+}
