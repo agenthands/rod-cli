@@ -274,3 +274,160 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	}
 	return fmt.Sprintf("Save to %s", filePath), nil
 }
+
+// parseKey parses a string to input.Key
+func parseKey(keyStr string) input.Key {
+	switch keyStr {
+	case "Enter": return input.Enter
+	case "Tab": return input.Tab
+	case "Backspace": return input.Backspace
+	case "Escape": return input.Escape
+	case "ArrowUp": return input.ArrowUp
+	case "ArrowDown": return input.ArrowDown
+	case "ArrowLeft": return input.ArrowLeft
+	case "ArrowRight": return input.ArrowRight
+	}
+	if len(keyStr) > 0 {
+		return input.Key(rune(keyStr[0]))
+	}
+	return input.Key(0)
+}
+
+// Press triggers a raw keyboard key press
+func Press(ctx *types.Context, key string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	if err := page.Keyboard.Press(parseKey(key)); err != nil {
+		return "", fmt.Errorf("failed to press key %s: %w", key, err)
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return fmt.Sprintf("Pressed key: %s", key), nil
+}
+
+// MouseMove triggers a raw mouse move
+func MouseMove(ctx *types.Context, x, y float64) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	if err := page.Mouse.MoveTo(proto.Point{X: x, Y: y}); err != nil {
+		return "", fmt.Errorf("failed to move mouse: %w", err)
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return fmt.Sprintf("Moved mouse to %f, %f", x, y), nil
+}
+
+// MouseDown triggers a raw mouse down
+func MouseDown(ctx *types.Context, button string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	btn := proto.InputMouseButtonLeft
+	if button == "right" {
+		btn = proto.InputMouseButtonRight
+	} else if button == "middle" {
+		btn = proto.InputMouseButtonMiddle
+	}
+	if err := page.Mouse.Down(btn, 1); err != nil {
+		return "", fmt.Errorf("failed to mousedown: %w", err)
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return "Mouse down", nil
+}
+
+// MouseUp triggers a raw mouse up
+func MouseUp(ctx *types.Context, button string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	btn := proto.InputMouseButtonLeft
+	if button == "right" {
+		btn = proto.InputMouseButtonRight
+	} else if button == "middle" {
+		btn = proto.InputMouseButtonMiddle
+	}
+	if err := page.Mouse.Up(btn, 1); err != nil {
+		return "", fmt.Errorf("failed to mouseup: %w", err)
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return "Mouse up", nil
+}
+
+// HandleDialog handles javascript alerts/confirms
+func HandleDialog(ctx *types.Context, accept bool, promptText string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	wait, handle := page.MustHandleDialog()
+	go func() {
+		wait()
+		handle(accept, promptText)
+	}()
+	return "Set up dialog handler for next dialog", nil
+}
+
+// GetCookies returns the current cookies
+func GetCookies(ctx *types.Context) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	cookies, err := page.Browser().GetCookies()
+	if err != nil {
+		return "", fmt.Errorf("failed to get cookies: %w", err)
+	}
+	
+	// Format cookies into a string representation instead of JSON marshaling the Rod types directly, 
+	// or we can marshal if json import is present. json is not imported, let's just format it simple.
+	// Wait, we can just use Evaluate for localStorage, but cookies are browser level.
+	// Let's just return length or basic info, or we can use standard json import.
+	// We'll return a simple summary since JSON is not imported yet, or we'll add json import later.
+	// Rod's cookies are []*proto.NetworkCookie.
+	res := "Cookies:\n"
+	for _, c := range cookies {
+		res += fmt.Sprintf("- %s: %s (domain: %s)\n", c.Name, c.Value, c.Domain)
+	}
+	return res, nil
+}
+
+// ClearCookies clears all cookies
+func ClearCookies(ctx *types.Context) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	if err := page.Browser().SetCookies(nil); err != nil {
+		return "", fmt.Errorf("failed to clear cookies: %w", err)
+	}
+	return "Cookies cleared", nil
+}
+
+// EvalStorage evaluates localStorage or sessionStorage commands
+func EvalStorage(ctx *types.Context, storageType string, action string, key string, value string) (string, error) {
+	var script string
+	switch action {
+	case "get":
+		if key == "" {
+			script = fmt.Sprintf("() => JSON.stringify(Object.fromEntries(Object.entries(window.%s)))", storageType)
+		} else {
+			script = fmt.Sprintf("() => window.%s.getItem('%s')", storageType, key)
+		}
+	case "set":
+		script = fmt.Sprintf("() => window.%s.setItem('%s', '%s')", storageType, key, value)
+	case "clear":
+		script = fmt.Sprintf("() => window.%s.clear()", storageType)
+	default:
+		return "", fmt.Errorf("unknown storage action: %s", action)
+	}
+
+	res, err := Evaluate(ctx, script)
+	if err != nil {
+		return "", fmt.Errorf("failed to eval storage: %w", err)
+	}
+	return res, nil
+}

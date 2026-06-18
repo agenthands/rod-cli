@@ -273,6 +273,116 @@ func getApp() *cli.App {
 					return runClientCommand(c, daemon.Request{Command: "pdf", Args: map[string]string{"name": name}})
 				},
 			},
+			{
+				Name:  "press",
+				Usage: "Press a keyboard key",
+				Action: func(c *cli.Context) error {
+					key := c.Args().First()
+					if key == "" {
+						return fmt.Errorf("key is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "press", Args: map[string]string{"key": key}})
+				},
+			},
+			{
+				Name:  "mousemove",
+				Usage: "Move mouse to x y coordinates",
+				Action: func(c *cli.Context) error {
+					x := c.Args().Get(0)
+					y := c.Args().Get(1)
+					if x == "" || y == "" {
+						return fmt.Errorf("x and y are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "mousemove", Args: map[string]string{"x": x, "y": y}})
+				},
+			},
+			{
+				Name:  "mousedown",
+				Usage: "Trigger mouse down",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "mousedown", Args: map[string]string{"button": c.Args().First()}})
+				},
+			},
+			{
+				Name:  "mouseup",
+				Usage: "Trigger mouse up",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "mouseup", Args: map[string]string{"button": c.Args().First()}})
+				},
+			},
+			{
+				Name:  "dialog-accept",
+				Usage: "Accept next dialog",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "prompt", Usage: "Text to enter into prompt"},
+				},
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "dialog-accept", Args: map[string]string{"promptText": c.String("prompt")}})
+				},
+			},
+			{
+				Name:  "dialog-dismiss",
+				Usage: "Dismiss next dialog",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "dialog-dismiss"})
+				},
+			},
+			{
+				Name:  "cookie-get",
+				Usage: "Get cookies",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "cookie-get"})
+				},
+			},
+			{
+				Name:  "cookie-clear",
+				Usage: "Clear cookies",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "cookie-clear"})
+				},
+			},
+			{
+				Name:  "localstorage-get",
+				Usage: "Get localStorage item or all",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "localstorage-get", Args: map[string]string{"key": c.Args().First()}})
+				},
+			},
+			{
+				Name:  "localstorage-set",
+				Usage: "Set localStorage item",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "localstorage-set", Args: map[string]string{"key": c.Args().Get(0), "value": c.Args().Get(1)}})
+				},
+			},
+			{
+				Name:  "localstorage-clear",
+				Usage: "Clear localStorage",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "localstorage-clear"})
+				},
+			},
+			{
+				Name:  "sessionstorage-get",
+				Usage: "Get sessionStorage item or all",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "sessionstorage-get", Args: map[string]string{"key": c.Args().First()}})
+				},
+			},
+			{
+				Name:  "sessionstorage-set",
+				Usage: "Set sessionStorage item",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "sessionstorage-set", Args: map[string]string{"key": c.Args().Get(0), "value": c.Args().Get(1)}})
+				},
+			},
+			{
+				Name:  "sessionstorage-clear",
+				Usage: "Clear sessionStorage",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "sessionstorage-clear"})
+				},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			return runMCPServer(c)

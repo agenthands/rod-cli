@@ -31,7 +31,7 @@
 - Support attaching to external browsers using `rod-cli attach --cdp`.
 
 ### Phase 4: Advanced Web Interactions
-**Status:** Pending
+**Status:** Complete
 **Goal:** Support complex inputs, storage, and networking.
 **Requirements:** ADV-01, ADV-02, ADV-03, ADV-04
 - Add DevTools networking interceptions (`route`, `unroute`, `requests`).

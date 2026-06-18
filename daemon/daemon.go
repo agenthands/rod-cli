@@ -200,10 +200,40 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "snapshot":
 		return actions.Snapshot(ctx)
 	case "screenshot":
-		// we'll skip parsing width/height for now in the daemon to keep it simple, or we can parse them.
 		return actions.Screenshot(ctx, req.Args["name"], req.Args["selector"], 0, 0)
 	case "pdf":
 		return actions.Pdf(ctx, req.Args["name"])
+	case "press":
+		return actions.Press(ctx, req.Args["key"])
+	case "mousemove":
+		var x, y float64
+		fmt.Sscanf(req.Args["x"], "%f", &x)
+		fmt.Sscanf(req.Args["y"], "%f", &y)
+		return actions.MouseMove(ctx, x, y)
+	case "mousedown":
+		return actions.MouseDown(ctx, req.Args["button"])
+	case "mouseup":
+		return actions.MouseUp(ctx, req.Args["button"])
+	case "dialog-accept":
+		return actions.HandleDialog(ctx, true, req.Args["promptText"])
+	case "dialog-dismiss":
+		return actions.HandleDialog(ctx, false, "")
+	case "cookie-get":
+		return actions.GetCookies(ctx)
+	case "cookie-clear":
+		return actions.ClearCookies(ctx)
+	case "localstorage-get":
+		return actions.EvalStorage(ctx, "localStorage", "get", req.Args["key"], "")
+	case "localstorage-set":
+		return actions.EvalStorage(ctx, "localStorage", "set", req.Args["key"], req.Args["value"])
+	case "localstorage-clear":
+		return actions.EvalStorage(ctx, "localStorage", "clear", "", "")
+	case "sessionstorage-get":
+		return actions.EvalStorage(ctx, "sessionStorage", "get", req.Args["key"], "")
+	case "sessionstorage-set":
+		return actions.EvalStorage(ctx, "sessionStorage", "set", req.Args["key"], req.Args["value"])
+	case "sessionstorage-clear":
+		return actions.EvalStorage(ctx, "sessionStorage", "clear", "", "")
 	default:
 		return "", fmt.Errorf("unknown command: %s", req.Command)
 	}
