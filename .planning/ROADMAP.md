@@ -6,7 +6,7 @@
 ## Phases
 
 ### Phase 1: Core CLI Foundation
-**Status:** Pending
+**Status:** Complete
 **Goal:** Establish the root CLI structure and rename the project.
 **Requirements:** CLI-01, CLI-02, CLI-03
 - Restructure project to replace purely MCP-driven startup with `urfave/cli/v2` subcommands.
