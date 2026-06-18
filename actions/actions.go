@@ -102,6 +102,9 @@ func Evaluate(ctx *types.Context, script string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to evaluate code")
 	}
+	if r.ExceptionDetails != nil {
+		return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+	}
 	return fmt.Sprintf("Evaluate code successfully with result: %s", r.Result.Value.String()), nil
 }
 
