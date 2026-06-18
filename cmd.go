@@ -1,39 +1,35 @@
 package main
 
 import (
-	"context"
+
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
-	"github.com/agenthands/rod-cli/actions"
 	"github.com/agenthands/rod-cli/banner"
-	"github.com/agenthands/rod-cli/types"
+	"github.com/agenthands/rod-cli/daemon"
 	"github.com/urfave/cli/v2"
 )
 
-func runWithContext(c *cli.Context, actionFunc func(rodCtx *types.Context) (string, error)) error {
-	cfg, err := types.LoadConfig(c.String("config"))
+func runClientCommand(c *cli.Context, req daemon.Request) error {
+	session := c.String("session")
+	
+	// Format generic daemon-spawn flags from global cli args
+	flags := []string{}
+	if c.String("config") != "" { flags = append(flags, "--config", c.String("config")) }
+	if c.String("cdp-endpoint") != "" { flags = append(flags, "--cdp-endpoint", c.String("cdp-endpoint")) }
+	if c.Bool("headless") { flags = append(flags, "--headless") }
+	if c.Bool("vision") { flags = append(flags, "--vision") }
+	
+	err := daemon.EnsureDaemon(session, os.Args[0], flags)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to ensure daemon: %v", err)
 	}
-	if c.Bool("headless") {
-		cfg.Headless = true
-	}
-	if c.Bool("vision") {
-		cfg.Mode = types.Vision
-	}
-	if cdp := c.String("cdp-endpoint"); cdp != "" {
-		cfg.CDPEndpoint = cdp
-	}
-	cfg.Raw = c.Bool("raw")
-	cfg.Json = c.Bool("json")
 
-	rodCtx := types.NewContext(context.Background(), *cfg)
-	defer rodCtx.Close()
-
-	msg, err := actionFunc(rodCtx)
+	msg, err := daemon.ClientExecute(session, req)
 	if err != nil {
-		if cfg.Json {
+		if c.Bool("json") {
 			out, _ := json.Marshal(map[string]string{"error": err.Error()})
 			fmt.Println(string(out))
 		} else {
@@ -42,10 +38,10 @@ func runWithContext(c *cli.Context, actionFunc func(rodCtx *types.Context) (stri
 		return err
 	}
 
-	if cfg.Json {
+	if c.Bool("json") {
 		out, _ := json.Marshal(map[string]string{"result": msg})
 		fmt.Println(string(out))
-	} else if cfg.Raw {
+	} else if c.Bool("raw") {
 		fmt.Println(msg)
 	} else {
 		fmt.Println(msg)
@@ -68,6 +64,7 @@ func getApp() *cli.App {
 			&cli.BoolFlag{Name: "vision", Aliases: []string{"vs"}, Usage: "support vision LLM"},
 			&cli.BoolFlag{Name: "raw", Usage: "output raw results"},
 			&cli.BoolFlag{Name: "json", Usage: "output structured json"},
+			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
 		},
 		Before: func(c *cli.Context) error {
 			if !c.Bool("no-banner") {
@@ -84,6 +81,23 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:   "daemon",
+				Hidden: true,
+				Flags: []cli.Flag{
+					&cli.IntFlag{Name: "ppid"},
+				},
+				Action: func(c *cli.Context) error {
+					return runDaemonServer(c)
+				},
+			},
+			{
+				Name:  "close",
+				Usage: "Close the daemon session and the browser",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "close"})
+				},
+			},
+			{
 				Name:    "open",
 				Aliases: []string{"goto"},
 				Usage:   "Navigate to a URL",
@@ -92,36 +106,28 @@ func getApp() *cli.App {
 					if url == "" {
 						return fmt.Errorf("URL is required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Navigate(rodCtx, url)
-					})
+					return runClientCommand(c, daemon.Request{Command: "open", Args: map[string]string{"url": url}})
 				},
 			},
 			{
 				Name:  "go-back",
 				Usage: "Go back in the browser history",
 				Action: func(c *cli.Context) error {
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.GoBack(rodCtx)
-					})
+					return runClientCommand(c, daemon.Request{Command: "go-back"})
 				},
 			},
 			{
 				Name:  "go-forward",
 				Usage: "Go forward in the browser history",
 				Action: func(c *cli.Context) error {
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.GoForward(rodCtx)
-					})
+					return runClientCommand(c, daemon.Request{Command: "go-forward"})
 				},
 			},
 			{
 				Name:  "reload",
 				Usage: "Reload the current page",
 				Action: func(c *cli.Context) error {
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Reload(rodCtx)
-					})
+					return runClientCommand(c, daemon.Request{Command: "reload"})
 				},
 			},
 			{
@@ -132,9 +138,7 @@ func getApp() *cli.App {
 					if ref == "" {
 						return fmt.Errorf("element ref is required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Click(rodCtx, ref)
-					})
+					return runClientCommand(c, daemon.Request{Command: "click", Args: map[string]string{"ref": ref}})
 				},
 			},
 			{
@@ -145,9 +149,7 @@ func getApp() *cli.App {
 					if ref == "" {
 						return fmt.Errorf("element ref is required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.DblClick(rodCtx, ref)
-					})
+					return runClientCommand(c, daemon.Request{Command: "dblclick", Args: map[string]string{"ref": ref}})
 				},
 			},
 			{
@@ -159,9 +161,7 @@ func getApp() *cli.App {
 					if ref == "" || text == "" {
 						return fmt.Errorf("element ref and text are required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Type(rodCtx, ref, text)
-					})
+					return runClientCommand(c, daemon.Request{Command: "type", Args: map[string]string{"ref": ref, "text": text}})
 				},
 			},
 			{
@@ -176,9 +176,7 @@ func getApp() *cli.App {
 					if ref == "" || text == "" {
 						return fmt.Errorf("element ref and text are required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Fill(rodCtx, ref, text, c.Bool("submit"))
-					})
+					return runClientCommand(c, daemon.Request{Command: "fill", Args: map[string]string{"ref": ref, "text": text, "submit": fmt.Sprint(c.Bool("submit"))}})
 				},
 			},
 			{
@@ -189,9 +187,7 @@ func getApp() *cli.App {
 					if ref == "" {
 						return fmt.Errorf("element ref is required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Hover(rodCtx, ref)
-					})
+					return runClientCommand(c, daemon.Request{Command: "hover", Args: map[string]string{"ref": ref}})
 				},
 			},
 			{
@@ -199,13 +195,11 @@ func getApp() *cli.App {
 				Usage: "Select options in an element",
 				Action: func(c *cli.Context) error {
 					ref := c.Args().First()
-					values := c.Args().Slice()[1:]
-					if ref == "" || len(values) == 0 {
+					values := strings.Join(c.Args().Slice()[1:], ",")
+					if ref == "" || values == "" {
 						return fmt.Errorf("element ref and values are required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Select(rodCtx, ref, values)
-					})
+					return runClientCommand(c, daemon.Request{Command: "select", Args: map[string]string{"ref": ref, "values": values}})
 				},
 			},
 			{
@@ -216,18 +210,14 @@ func getApp() *cli.App {
 					if script == "" {
 						return fmt.Errorf("script is required")
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Evaluate(rodCtx, script)
-					})
+					return runClientCommand(c, daemon.Request{Command: "eval", Args: map[string]string{"script": script}})
 				},
 			},
 			{
 				Name:  "snapshot",
 				Usage: "Take a snapshot of the current page",
 				Action: func(c *cli.Context) error {
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Snapshot(rodCtx)
-					})
+					return runClientCommand(c, daemon.Request{Command: "snapshot"})
 				},
 			},
 			{
@@ -236,17 +226,13 @@ func getApp() *cli.App {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "name", Usage: "Name of the screenshot"},
 					&cli.StringFlag{Name: "selector", Usage: "CSS selector"},
-					&cli.Float64Flag{Name: "width", Usage: "Width"},
-					&cli.Float64Flag{Name: "height", Usage: "Height"},
 				},
 				Action: func(c *cli.Context) error {
 					name := c.String("name")
 					if name == "" {
 						name = "screenshot"
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Screenshot(rodCtx, name, c.String("selector"), c.Float64("width"), c.Float64("height"))
-					})
+					return runClientCommand(c, daemon.Request{Command: "screenshot", Args: map[string]string{"name": name, "selector": c.String("selector")}})
 				},
 			},
 			{
@@ -260,9 +246,7 @@ func getApp() *cli.App {
 					if name == "" {
 						name = "page"
 					}
-					return runWithContext(c, func(rodCtx *types.Context) (string, error) {
-						return actions.Pdf(rodCtx, name)
-					})
+					return runClientCommand(c, daemon.Request{Command: "pdf", Args: map[string]string{"name": name}})
 				},
 			},
 		},
