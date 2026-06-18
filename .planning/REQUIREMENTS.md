@@ -18,10 +18,14 @@
 - [ ] **AUTO-03**: Implement DOM evaluation commands: `eval`, `generate-locator`.
 - [ ] **AUTO-04**: Implement save/export commands: `snapshot`, `screenshot`, `pdf`.
 
-### Browser & Session Management
+### Background Daemon & Session Management
 
-- [ ] **SESS-01**: Support named sessions via global `-s` flag.
-- [ ] **SESS-02**: Implement browser attachment via `--cdp` and `--extension`.
+- [ ] **DAEM-01**: Implement Background Session (Default). The first command boots up a browser instance in the background and keeps it running. Subsequent commands communicate with it.
+- [ ] **DAEM-02**: Implement Zombie Safeguard: Parent Process ID (PPID) Polling. The daemon captures the caller's PID and periodically polls it. If the parent dies, the daemon gracefully kills the browser and exits.
+- [ ] **DAEM-03**: Implement Zombie Safeguard: Explicit Teardown hooks. Create `rod-cli close` and `rod-cli kill-all` commands.
+- [ ] **DAEM-04**: Implement Zombie Safeguard: Idle Timeout. Enforce a 15-minute inactivity timer that kills the daemon if no commands are received.
+- [ ] **SESS-01**: Support named sessions via global `-s` flag to spawn separate isolated browser sessions.
+- [ ] **SESS-02**: Implement `attach` command to connect to an external browser via `--cdp`.
 - [ ] **SESS-03**: Support persistent profiles (`--persistent`, `--profile`).
 - [ ] **SESS-04**: Implement tab management: `tab-list`, `tab-new`, `tab-close`, `tab-select`.
 
@@ -63,6 +67,10 @@
 | AUTO-02 | Phase 2 | Pending |
 | AUTO-03 | Phase 2 | Pending |
 | AUTO-04 | Phase 2 | Pending |
+| DAEM-01 | Phase 3 | Pending |
+| DAEM-02 | Phase 3 | Pending |
+| DAEM-03 | Phase 3 | Pending |
+| DAEM-04 | Phase 3 | Pending |
 | SESS-01 | Phase 3 | Pending |
 | SESS-02 | Phase 3 | Pending |
 | SESS-03 | Phase 3 | Pending |
@@ -76,8 +84,8 @@
 | DBG-03 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 18 total
-- Mapped to phases: 18
+- v1 requirements: 22 total
+- Mapped to phases: 22
 - Unmapped: 0 ✓
 
 ---

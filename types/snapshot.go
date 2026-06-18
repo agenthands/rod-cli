@@ -3,8 +3,8 @@ package types
 import (
 	"fmt"
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod-mcp/types/js"
-	"github.com/go-rod/rod-mcp/utils"
+	"github.com/agenthands/rod-cli/types/js"
+	"github.com/agenthands/rod-cli/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"regexp"

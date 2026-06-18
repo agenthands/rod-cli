@@ -21,13 +21,14 @@
 - Ensure that the commands gracefully wrap around the existing MCP tool handlers or extract their logic for reuse.
 - Implement snapshot and screenshot generation commands.
 
-### Phase 3: Browser & Session Management
+### Phase 3: Background Daemon & Session Management
 **Status:** Pending
-**Goal:** Enable persistent profiles and multi-target support.
-**Requirements:** SESS-01, SESS-02, SESS-03, SESS-04
-- Support attaching to existing browsers (`--cdp`, `--extension`).
+**Goal:** Transform rod-cli into a persistent background daemon, enabling shared state and robust zombie browser prevention.
+**Requirements:** DAEM-01, DAEM-02, DAEM-03, DAEM-04, SESS-01, SESS-02, SESS-03, SESS-04
+- Implement the Background Session Daemon architecture so `rod-cli` processes commands against a single shared, running instance.
+- Implement Zombie Safeguards: PPID polling, explicit `rod-cli close` teardown hooks, and a 15-minute idle timeout.
 - Enable named sessions (`-s`) and user data dir persistence (`--persistent`).
-- Implement basic tab management.
+- Support attaching to external browsers using `rod-cli attach --cdp`.
 
 ### Phase 4: Advanced Web Interactions
 **Status:** Pending

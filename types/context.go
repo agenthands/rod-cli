@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod-mcp/types/js"
-	"github.com/go-rod/rod-mcp/utils"
+	"github.com/agenthands/rod-cli/types/js"
+	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"

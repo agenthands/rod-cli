@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/charmbracelet/log"
-	"github.com/go-rod/rod-mcp/types"
+	"github.com/agenthands/rod-cli/types"
 )
 
 type Runner struct {

@@ -1,4 +1,4 @@
-module github.com/go-rod/rod-mcp
+module github.com/agenthands/rod-cli
 
 go 1.23.7
 

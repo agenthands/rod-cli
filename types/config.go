@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/go-rod/rod-mcp/utils"
+	"github.com/agenthands/rod-cli/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -22,6 +22,8 @@ type Config struct {
 	NoSandbox      bool         `yaml:"noSandbox" json:"noSandbox"`
 	Proxy          string       `yaml:"proxy" json:"proxy"`
 	LoggerConfig   LoggerConfig `yaml:"loggerConfig" json:"loggerConfig"`
+	Raw            bool         `yaml:"raw" json:"raw"`
+	Json           bool         `yaml:"json" json:"json"`
 }
 
 var (
@@ -37,6 +39,8 @@ var (
 		ServerName:     DefaultServerName,
 		LoggerConfig:   DefaultLoggerConfig,
 		Mode:           Text,
+		Raw:            false,
+		Json:           false,
 	}
 )
 

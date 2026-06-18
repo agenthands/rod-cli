@@ -8,6 +8,14 @@ rod-cli is a lightweight, zero-dependency command-line interface (CLI) that prov
 
 Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration, avoiding the overhead of heavy Node.js runtimes and massive DOM accessibility trees.
 
+## Architecture: Persistent Background Daemon
+
+`rod-cli` does not start the browser every time. That would be incredibly slow and resource-heavy. Instead, it relies on persistent background sessions:
+1. **The Background Session (Default)**: The first command boots up a browser instance in the background and keeps it running in memory. Subsequent commands communicate with that exact same running instance.
+2. **Named Sessions**: Multi-target workflows can spawn separate isolated sessions using the `-s` flag.
+3. **The `attach` Command**: Connect the CLI to an external browser already started outside of the CLI using `--cdp`.
+4. **Zombie Safeguards**: To prevent leaving zombie browsers, `rod-cli` uses Parent Process ID (PPID) polling, explicit teardown hooks (`kill-all`), and strict idle timeouts (15 minutes).
+
 ## Requirements
 
 ### Validated
