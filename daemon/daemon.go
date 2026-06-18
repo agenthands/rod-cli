@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -56,13 +57,35 @@ func ClientExecute(session string, req Request) (string, error) {
 	return res.Result, nil
 }
 
+func ListSessions() ([]string, error) {
+	files, err := filepath.Glob(filepath.Join(os.TempDir(), "rod-cli-*.port"))
+	if err != nil {
+		return nil, err
+	}
+	var active []string
+	for _, f := range files {
+		base := filepath.Base(f)
+		session := strings.TrimSuffix(strings.TrimPrefix(base, "rod-cli-"), ".port")
+		_, err := ClientExecute(session, Request{Command: "ping"})
+		if err == nil {
+			active = append(active, session)
+		} else {
+			os.Remove(f)
+		}
+	}
+	return active, nil
+}
+
 func EnsureDaemon(session string, exePath string, flags []string) error {
 	_, err := ClientExecute(session, Request{Command: "ping"})
 	if err == nil {
 		return nil
 	}
 	
-	args := append([]string{"daemon", "--session", session, "--ppid", fmt.Sprint(os.Getppid())}, flags...)
+	args := []string{"--session", session}
+	args = append(args, flags...)
+	args = append(args, "daemon", "--ppid", fmt.Sprint(os.Getppid()))
+	
 	cmd := exec.Command(exePath, args...)
 	if err := cmd.Start(); err != nil {
 		return err

@@ -91,6 +91,30 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "sessions",
+				Usage: "List all active background sessions",
+				Action: func(c *cli.Context) error {
+					sessions, err := daemon.ListSessions()
+					if err != nil {
+						return err
+					}
+					if c.Bool("json") {
+						out, _ := json.Marshal(map[string]interface{}{"sessions": sessions})
+						fmt.Println(string(out))
+					} else {
+						if len(sessions) == 0 {
+							fmt.Println("No active sessions")
+						} else {
+							fmt.Println("Active sessions:")
+							for _, s := range sessions {
+								fmt.Println("- " + s)
+							}
+						}
+					}
+					return nil
+				},
+			},
+			{
 				Name:  "close",
 				Usage: "Close the daemon session and the browser",
 				Action: func(c *cli.Context) error {
