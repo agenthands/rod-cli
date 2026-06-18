@@ -1,8 +1,8 @@
 package tools
 
 import (
-	"github.com/go-rod/rod-mcp/types"
-	"github.com/go-rod/rod-mcp/utils"
+	"github.com/agenthands/rod-cli/types"
+	"github.com/agenthands/rod-cli/utils"
 	"github.com/mark3labs/mcp-go/server"
 )
 
