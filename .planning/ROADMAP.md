@@ -14,7 +14,7 @@
 - Implement `--raw` and `--json` foundational output formatting flags.
 
 ### Phase 2: Core Automation Commands
-**Status:** Pending
+**Status:** Complete
 **Goal:** Port basic browser controls into the CLI framework.
 **Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04
 - Connect rod actions (navigation, clicking, typing, evaluation) to CLI commands (`goto`, `click`, `eval`, etc.).
