@@ -76,9 +76,9 @@ func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error
 	browser := rod.New().Context(ctx)
 	err := browser.ControlURL(controlURL).Connect()
 	if err != nil {
-		err := browser.Close()
-		if err != nil {
-			return nil, errors.Wrap(err, "in connect browser stage to close browser happened err")
+		closeErr := browser.Close()
+		if closeErr != nil {
+			return nil, errors.Wrapf(err, "connect error: %v, close error: %v", err, closeErr)
 		}
 		return nil, errors.Wrap(err, "Error connecting to browser")
 	}
@@ -247,7 +247,9 @@ func (ctx *Context) closeBrowser() error {
 
 func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	page, err := ctx.browser.Page(proto.TargetCreateTarget{URL: strings.Join(urls, "/")})
-	page.EvalOnNewDocument(js.InjectedSnapShot)
+	if page != nil {
+		page.EvalOnNewDocument(js.InjectedSnapShot)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "create page failed")
 	}

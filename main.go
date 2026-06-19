@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -87,6 +89,21 @@ func runDaemonServer(c *cli.Context) error {
 func main() {
 	app := getApp()
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		isJson := false
+		for _, arg := range os.Args {
+			if arg == "--json" {
+				isJson = true
+				break
+			}
+		}
+		if isJson {
+			// Extract just the underlying error message if it's wrapped by cli.Exit
+			msg := err.Error()
+			out, _ := json.Marshal(map[string]string{"error": msg})
+			fmt.Println(string(out))
+			os.Exit(1)
+		} else {
+			log.Fatal(err)
+		}
 	}
 }

@@ -416,14 +416,14 @@ func EvalStorage(ctx *types.Context, storageType string, action string, key stri
 	switch action {
 	case "get":
 		if key == "" {
-			script = fmt.Sprintf("() => JSON.stringify(Object.fromEntries(Object.entries(window.%s)))", storageType)
+			script = fmt.Sprintf("JSON.stringify(Object.fromEntries(Object.entries(window.%s)))", storageType)
 		} else {
-			script = fmt.Sprintf("() => window.%s.getItem('%s')", storageType, key)
+			script = fmt.Sprintf("window.%s.getItem('%s')", storageType, key)
 		}
 	case "set":
-		script = fmt.Sprintf("() => window.%s.setItem('%s', '%s')", storageType, key, value)
+		script = fmt.Sprintf("window.%s.setItem('%s', '%s')", storageType, key, value)
 	case "clear":
-		script = fmt.Sprintf("() => window.%s.clear()", storageType)
+		script = fmt.Sprintf("window.%s.clear()", storageType)
 	default:
 		return "", fmt.Errorf("unknown storage action: %s", action)
 	}

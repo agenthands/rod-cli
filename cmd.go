@@ -29,12 +29,6 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 
 	msg, err := daemon.ClientExecute(session, req)
 	if err != nil {
-		if c.Bool("json") {
-			out, _ := json.Marshal(map[string]string{"error": err.Error()})
-			fmt.Println(string(out))
-		} else {
-			fmt.Println("Error:", err)
-		}
 		return err
 	}
 

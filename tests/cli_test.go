@@ -12,6 +12,8 @@ import (
 // runCli is a helper to run the compiled binary
 func runCli(args ...string) (string, error) {
 	absPath, _ := filepath.Abs("../rod-cli")
+	// Prepend global flags
+	args = append([]string{"--no-banner"}, args...)
 	cmd := exec.Command(absPath, args...)
 	cmd.Dir = ".."
 	var out bytes.Buffer

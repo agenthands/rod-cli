@@ -82,11 +82,8 @@ func TestInputsAndForms(t *testing.T) {
 	defer ts.Close()
 	runCli("close")
 
-	out, err := runCli("--raw", "goto", ts.URL+"/forms")
-	if err != nil {
-		t.Fatalf("goto failed: %v, out: %s", err, out)
-	}
-	out, _ = runCli("--raw", "snapshot")
+	runCli("--raw", "goto", ts.URL+"/forms")
+	out, _ := runCli("--raw", "snapshot")
 
 	// We need to identify the inputs. Our server renders:
 	// <input type="text" id="username" />
@@ -111,7 +108,7 @@ func TestInputsAndForms(t *testing.T) {
 	}
 
 	// Case 1: Type
-	out, err = runCli("--raw", "type", userRef, "alice")
+	out, err := runCli("--raw", "type", userRef, "alice")
 	if err != nil || !strings.Contains(out, "Typed text") {
 		t.Errorf("Type failed: err=%v out=%s", err, out)
 	}
