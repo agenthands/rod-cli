@@ -76,10 +76,6 @@ func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error
 	browser := rod.New().Context(ctx)
 	err := browser.ControlURL(controlURL).Connect()
 	if err != nil {
-		closeErr := browser.Close()
-		if closeErr != nil {
-			return nil, errors.Wrapf(err, "connect error: %v, close error: %v", err, closeErr)
-		}
 		return nil, errors.Wrap(err, "Error connecting to browser")
 	}
 	return browser, nil
