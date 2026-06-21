@@ -64,7 +64,7 @@ func TestBrowserConnectionFailures(t *testing.T) {
 	}
 
 	errMsg, ok := jsonRes["error"].(string)
-	if !ok || !strings.Contains(errMsg, "Error connecting to browser") && !strings.Contains(errMsg, "connect error") {
+	if !ok || !strings.Contains(errMsg, "Error connecting to remote browser via godoll") && !strings.Contains(errMsg, "connect error") {
 		t.Errorf("Expected connection error in JSON, got: %s", out)
 	}
 
