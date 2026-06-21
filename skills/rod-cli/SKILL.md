@@ -126,3 +126,5 @@ For more detailed guides on advanced features, refer to the following documents:
 * **Running code**: [references/running-code.md](references/running-code.md)
 * **Browser session management**: [references/session-management.md](references/session-management.md)
 * **Storage state**: [references/storage-state.md](references/storage-state.md)
+* **File uploads and drag-and-drop**: [references/file-uploads.md](references/file-uploads.md)
+* **Tabs and windows management**: [references/tabs-and-windows.md](references/tabs-and-windows.md)
