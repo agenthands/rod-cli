@@ -1,38 +1,28 @@
-# Roadmap: v1.3 Godoll Migration
+# Roadmap: rod-cli
 
-**4 phases** | **6 requirements mapped** | All covered ✓
+## Milestones
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 12 | Zero-Dependency Browser Installation | Add `install` command to auto-download Chromium. | BROWSER-01 | 1 |
-| 13 | Stealth and Remote Browser Integration | Replace inline launcher with `godoll` wrapped launcher. | BROWSER-02, BROWSER-03 | 2 |
-| 14 | Network and Humanized Interactions | Implement `godoll/network` interceptor and bezier scrolling. | NETWORK-01, HUMAN-01 | 2 |
-| 15 | Robust Execution Retries | Wrap critical DOM actions with exponential backoff. | RETRY-01 | 1 |
+- ✅ **v1.3 Godoll Migration** — Phases 12-16 (shipped 2026-06-21)
 
-### Phase Details
+## Phases
 
-**Phase 12: Zero-Dependency Browser Installation**
-Goal: Add `install` command to auto-download Chromium.
-Requirements: BROWSER-01
-Success criteria:
-1. Running `rod-cli install` successfully fetches and caches Chromium locally without requiring global Chrome installation.
+<details>
+<summary>✅ v1.3 Godoll Migration (Phases 12-16) — SHIPPED 2026-06-21</summary>
 
-**Phase 13: Stealth and Remote Browser Integration**
-Goal: Replace inline launcher with `godoll` wrapped launcher.
-Requirements: BROWSER-02, BROWSER-03
-Success criteria:
-1. `rod-cli` uses `godoll.NewBrowser(opts)` and `opts.StealthPreset()` instead of manual `launcher.New()` configuration.
-2. `rod-cli` connects to remote CDP sessions via `godoll/browser.ConnectToRemoteBrowser()`.
+- [x] Phase 12: Zero-Dependency Browser Installation
+- [x] Phase 13: Stealth and Remote Browser Integration
+- [x] Phase 14: Network and Humanized Interactions
+- [x] Phase 15: Robust Execution Retries
+- [x] Phase 16: Add comprehensive test cases for godoll migration features
 
-**Phase 14: Network and Humanized Interactions**
-Goal: Implement `godoll/network` interceptor and bezier scrolling.
-Requirements: NETWORK-01, HUMAN-01
-Success criteria:
-1. `rod-cli route` commands correctly use `godoll/network.NewInterceptor()` to block or mock requests.
-2. `rod-cli` uses `humanize.Scroll()` when processing mouse scroll events instead of native go-rod scrolling.
+</details>
 
-**Phase 15: Robust Execution Retries**
-Goal: Wrap critical DOM actions with exponential backoff.
-Requirements: RETRY-01
-Success criteria:
-1. Navigation and element-finding commands are wrapped in `retry.Fetch()` to prevent transient network failures from crashing the CLI session.
+## Progress
+
+| Phase             | Milestone | Plans Complete | Status      | Completed  |
+| ----------------- | --------- | -------------- | ----------- | ---------- |
+| 12. Browser Install| v1.3      | -              | Complete    | 2026-06-21 |
+| 13. Stealth Integr | v1.3      | -              | Complete    | 2026-06-21 |
+| 14. Network/Human | v1.3      | -              | Complete    | 2026-06-21 |
+| 15. Execution Retry| v1.3      | -              | Complete    | 2026-06-21 |
+| 16. Test Cases    | v1.3      | 1/1            | Complete    | 2026-06-21 |
