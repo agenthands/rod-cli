@@ -1,8 +1,11 @@
 package actions
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/agenthands/godoll/humanize"
 	"github.com/agenthands/rod-cli/types"
+	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
@@ -11,6 +14,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -89,23 +93,80 @@ func CloseBrowser(ctx *types.Context) (string, error) {
 	return "Close browser successfully", nil
 }
 
-func Evaluate(ctx *types.Context, script string) (string, error) {
+func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
 	}
-	r, err := proto.RuntimeEvaluate{
-		Expression:            script,
-		ObjectGroup:           "console",
-		IncludeCommandLineAPI: true,
-	}.Call(page)
-	if err != nil {
-		return "", errors.Wrap(err, "Failed to evaluate code")
+
+	var valStr string
+	scriptTrimmed := strings.TrimSpace(script)
+
+	// If a ref is provided, evaluate on that specific element
+	if ref != "" {
+		element, err := getElementByRef(ctx, ref)
+		if err != nil {
+			return "", err
+		}
+		res, err := element.Eval(scriptTrimmed)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to evaluate code on element")
+		}
+		if res != nil && !res.Value.Nil() {
+			valStr = res.Value.String()
+		} else {
+			valStr = "null"
+		}
+		return fmt.Sprintf("Evaluate code successfully with result: %s", valStr), nil
 	}
-	if r.ExceptionDetails != nil {
-		return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+
+	// Global page evaluation
+	isFunc := strings.HasPrefix(scriptTrimmed, "function") ||
+		strings.HasPrefix(scriptTrimmed, "()") ||
+		strings.HasPrefix(scriptTrimmed, "async ()") ||
+		strings.HasPrefix(scriptTrimmed, "el =>") ||
+		strings.HasPrefix(scriptTrimmed, "(el) =>") ||
+		strings.HasPrefix(scriptTrimmed, "e =>") ||
+		strings.HasPrefix(scriptTrimmed, "() =>") ||
+		strings.HasPrefix(scriptTrimmed, "async () =>")
+		
+	if isFunc {
+		res, err := page.Eval(scriptTrimmed)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to evaluate code")
+		}
+		if res != nil {
+			if !res.Value.Nil() {
+				valStr = res.Value.String()
+			} else {
+				valStr = "null"
+			}
+		}
+	} else {
+		r, err := proto.RuntimeEvaluate{
+			Expression:            scriptTrimmed,
+			ObjectGroup:           "console",
+			IncludeCommandLineAPI: true,
+			AwaitPromise:          true,
+		}.Call(page)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to evaluate code")
+		}
+		if r.ExceptionDetails != nil {
+			return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+		}
+		if r.Result != nil && !r.Result.Value.Nil() {
+			valStr = r.Result.Value.String()
+		} else if r.Result != nil && r.Result.Type == "string" {
+			valStr = fmt.Sprintf("%v", r.Result.Value)
+		} else if r.Result != nil {
+			valStr = fmt.Sprintf("%v", r.Result.Value)
+		} else {
+			valStr = "null"
+		}
 	}
-	return fmt.Sprintf("Evaluate code successfully with result: %s", r.Result.Value.String()), nil
+
+	return fmt.Sprintf("Evaluate code successfully with result: %s", valStr), nil
 }
 
 func Screenshot(ctx *types.Context, name string, selector string, width, height float64) (string, error) {
@@ -160,7 +221,7 @@ func Click(ctx *types.Context, ref string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := element.Click(proto.InputMouseButtonLeft, 1); err != nil {
+	if err := humanize.ClickWithMouse(page, element); err != nil {
 		return "", errors.Wrap(err, "Failed to click element")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -176,7 +237,10 @@ func Fill(ctx *types.Context, ref string, value string, submit bool) (string, er
 	if err != nil {
 		return "", err
 	}
-	if err := element.Input(value); err != nil {
+	// Clear input first
+	_ = element.SelectAllText()
+	_ = page.Keyboard.Press(input.Backspace)
+	if err := humanize.TypeWithHumanize(element, value); err != nil {
 		return "", errors.Wrap(err, "Failed to fill element")
 	}
 	if submit {
@@ -204,6 +268,79 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 	return fmt.Sprintf("Select option(s) in element %s successfully", ref), nil
 }
 
+func Check(ctx *types.Context, ref string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	element, err := getElementByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	_, err = element.Eval(`() => {
+		if (!this.checked) {
+			this.checked = true;
+			this.dispatchEvent(new Event('change', { bubbles: true }));
+			this.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+	}`)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to check element")
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return fmt.Sprintf("Checked element %s successfully", ref), nil
+}
+
+func Uncheck(ctx *types.Context, ref string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	element, err := getElementByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	_, err = element.Eval(`() => {
+		if (this.checked) {
+			this.checked = false;
+			this.dispatchEvent(new Event('change', { bubbles: true }));
+			this.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+	}`)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to uncheck element")
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return fmt.Sprintf("Unchecked element %s successfully", ref), nil
+}
+
+func Upload(ctx *types.Context, ref string, filePaths []string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	element, err := getElementByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	
+	// Convert relative to absolute paths as needed by the browser
+	absPaths := make([]string, len(filePaths))
+	for i, p := range filePaths {
+		absPath, err := filepath.Abs(p)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to resolve absolute path for upload")
+		}
+		absPaths[i] = absPath
+	}
+	
+	if err := element.SetFiles(absPaths); err != nil {
+		return "", errors.Wrap(err, "Failed to upload files")
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	return fmt.Sprintf("Uploaded files to element %s successfully", ref), nil
+}
+
 func Hover(ctx *types.Context, ref string) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
@@ -213,7 +350,7 @@ func Hover(ctx *types.Context, ref string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := element.Hover(); err != nil {
+	if err := humanize.Hover(element); err != nil {
 		return "", errors.Wrap(err, "Failed to hover element")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -245,10 +382,8 @@ func Type(ctx *types.Context, ref string, text string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, char := range text {
-		if err := element.Type(input.Key(char)); err != nil {
-			return "", errors.Wrap(err, "Failed to type text")
-		}
+	if err := humanize.TypeWithHumanize(element, text); err != nil {
+		return "", errors.Wrap(err, "Failed to type text")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
 	return fmt.Sprintf("Typed text into element %s successfully", ref), nil
@@ -277,6 +412,103 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	}
 	return fmt.Sprintf("Save to %s", filePath), nil
 }
+
+func MouseWheel(ctx *types.Context, dx, dy float64) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	if err := page.Mouse.Scroll(0, 0, int(dy)); err != nil {
+		return "", errors.Wrap(err, "Failed to scroll mouse wheel")
+	}
+	return "Mouse wheel scrolled", nil
+}
+
+func Resize(ctx *types.Context, width, height int) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	if err := page.SetViewport(&proto.EmulationSetDeviceMetricsOverride{Width: width, Height: height, DeviceScaleFactor: 1, Mobile: false}); err != nil {
+		return "", errors.Wrap(err, "Failed to resize viewport")
+	}
+	return fmt.Sprintf("Viewport resized to %dx%d", width, height), nil
+}
+
+func TabList(ctx *types.Context) (string, error) {
+	browser := ctx.GetBrowser()
+	if browser == nil {
+		return "", errors.New("No active browser")
+	}
+	pages, err := browser.Pages()
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to list tabs")
+	}
+	var res strings.Builder
+	for i, p := range pages {
+		info, _ := p.Info()
+		res.WriteString(fmt.Sprintf("[%d] %s (%s)\n", i, info.Title, info.URL))
+	}
+	return res.String(), nil
+}
+
+func TabNew(ctx *types.Context, url string) (string, error) {
+	browser := ctx.GetBrowser()
+	if browser == nil {
+		return "", errors.New("No active browser")
+	}
+	var targetURL string
+	if url != "" {
+		targetURL = url
+	} else {
+		targetURL = "about:blank"
+	}
+	page, err := browser.Page(proto.TargetCreateTarget{URL: targetURL})
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to create new tab")
+	}
+	ctx.SetPage(page)
+	return fmt.Sprintf("New tab created: %s", targetURL), nil
+}
+
+func TabClose(ctx *types.Context, index int) (string, error) {
+	browser := ctx.GetBrowser()
+	if browser == nil {
+		return "", errors.New("No active browser")
+	}
+	pages, err := browser.Pages()
+	if err != nil {
+		return "", err
+	}
+	if index < 0 || index >= len(pages) {
+		return "", errors.Errorf("Tab index out of range: %d", index)
+	}
+	if err := pages[index].Close(); err != nil {
+		return "", errors.Wrap(err, "Failed to close tab")
+	}
+	return fmt.Sprintf("Closed tab %d", index), nil
+}
+
+func TabSelect(ctx *types.Context, index int) (string, error) {
+	browser := ctx.GetBrowser()
+	if browser == nil {
+		return "", errors.New("No active browser")
+	}
+	pages, err := browser.Pages()
+	if err != nil {
+		return "", err
+	}
+	if index < 0 || index >= len(pages) {
+		return "", errors.Errorf("Tab index out of range: %d", index)
+	}
+	page := pages[index]
+	if _, err := page.Activate(); err != nil {
+		return "", errors.Wrap(err, "Failed to activate tab")
+	}
+	ctx.SetPage(page)
+	return fmt.Sprintf("Selected tab %d", index), nil
+}
+
 
 // parseKey parses a string to input.Key
 func parseKey(keyStr string) input.Key {
@@ -410,6 +642,36 @@ func ClearCookies(ctx *types.Context) (string, error) {
 	return "Cookies cleared", nil
 }
 
+func SetCookie(ctx *types.Context, name, value string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	info, _ := page.Info()
+	err = page.SetCookies([]*proto.NetworkCookieParam{{
+		Name:  name,
+		Value: value,
+		URL:   info.URL,
+	}})
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to set cookie")
+	}
+	return fmt.Sprintf("Set cookie %s", name), nil
+}
+
+func DeleteCookie(ctx *types.Context, name string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	info, _ := page.Info()
+	err = proto.NetworkDeleteCookies{Name: name, URL: info.URL}.Call(page)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to delete cookie")
+	}
+	return fmt.Sprintf("Deleted cookie %s", name), nil
+}
+
 // EvalStorage evaluates localStorage or sessionStorage commands
 func EvalStorage(ctx *types.Context, storageType string, action string, key string, value string) (string, error) {
 	var script string
@@ -418,21 +680,77 @@ func EvalStorage(ctx *types.Context, storageType string, action string, key stri
 		if key == "" {
 			script = fmt.Sprintf("JSON.stringify(Object.fromEntries(Object.entries(window.%s)))", storageType)
 		} else {
-			script = fmt.Sprintf("window.%s.getItem('%s')", storageType, key)
+			keyBytes, _ := json.Marshal(key)
+			script = fmt.Sprintf("window.%s.getItem(%s)", storageType, string(keyBytes))
 		}
 	case "set":
-		script = fmt.Sprintf("window.%s.setItem('%s', '%s')", storageType, key, value)
+		keyBytes, _ := json.Marshal(key)
+		valBytes, _ := json.Marshal(value)
+		script = fmt.Sprintf("window.%s.setItem(%s, %s)", storageType, string(keyBytes), string(valBytes))
+	case "delete":
+		keyBytes, _ := json.Marshal(key)
+		script = fmt.Sprintf("window.%s.removeItem(%s)", storageType, string(keyBytes))
 	case "clear":
 		script = fmt.Sprintf("window.%s.clear()", storageType)
 	default:
 		return "", fmt.Errorf("unknown storage action: %s", action)
 	}
 
-	res, err := Evaluate(ctx, script)
+	res, err := Evaluate(ctx, script, "")
 	if err != nil {
 		return "", fmt.Errorf("failed to eval storage: %w", err)
 	}
 	return res, nil
+}
+
+func ConsoleLogs(ctx *types.Context) (string, error) {
+	logs := ctx.GetConsoleLogs()
+	if len(logs) == 0 {
+		return "No console logs", nil
+	}
+	return strings.Join(logs, "\n"), nil
+}
+
+func NetworkRequests(ctx *types.Context) (string, error) {
+	reqs := ctx.GetRequests()
+	if len(reqs) == 0 {
+		return "No network requests", nil
+	}
+	var res strings.Builder
+	for i, req := range reqs {
+		res.WriteString(fmt.Sprintf("[%d] %s\n", i, req))
+	}
+	return res.String(), nil
+}
+
+func NetworkRequest(ctx *types.Context, index int) (string, error) {
+	reqs := ctx.GetRequests()
+	if index < 0 || index >= len(reqs) {
+		return "", fmt.Errorf("Request index out of bounds")
+	}
+	return reqs[index], nil
+}
+
+func Route(ctx *types.Context, pattern string, body string) (string, error) {
+	ctx.AddRoute(pattern, body)
+	return fmt.Sprintf("Added route for %s", pattern), nil
+}
+
+func Unroute(ctx *types.Context, pattern string) (string, error) {
+	ctx.RemoveRoute(pattern)
+	return fmt.Sprintf("Removed route for %s", pattern), nil
+}
+
+func RouteList(ctx *types.Context) (string, error) {
+	routes := ctx.GetRoutes()
+	if len(routes) == 0 {
+		return "No active routes", nil
+	}
+	var res strings.Builder
+	for pattern := range routes {
+		res.WriteString(fmt.Sprintf("- %s\n", pattern))
+	}
+	return res.String(), nil
 }
 
 // Highlight adds a highly visible red outline to the target element
@@ -477,6 +795,79 @@ func ClearHighlights(ctx *types.Context) (string, error) {
 	return "Highlights cleared", nil
 }
 
+func Drag(ctx *types.Context, startRef, endRef string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	el1, err := getElementByRef(ctx, startRef)
+	if err != nil {
+		return "", err
+	}
+	el2, err := getElementByRef(ctx, endRef)
+	if err != nil {
+		return "", err
+	}
+
+	if err := humanize.DragAndDrop(page, el1, el2); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Dragged from %s to %s", startRef, endRef), nil
+}
+
+func Drop(ctx *types.Context, ref string, path string) (string, error) {
+	el, err := getElementByRef(ctx, ref)
+	if err != nil {
+		return "", err
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	if err := el.SetFiles([]string{absPath}); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Dropped file(s) onto %s", ref), nil
+}
+
+func StateSave(ctx *types.Context, path string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	cookies, err := page.Browser().GetCookies()
+	if err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(cookies)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, b, 0644); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Saved state to %s", path), nil
+}
+
+func StateLoad(ctx *types.Context, path string) (string, error) {
+	page, err := ctx.ControlledPage()
+	if err != nil {
+		return "", err
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	var cookies []*proto.NetworkCookieParam
+	if err := json.Unmarshal(b, &cookies); err != nil {
+		return "", err
+	}
+	if err := page.SetCookies(cookies); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Loaded state from %s", path), nil
+}
+
 // VideoStart starts recording (Stubbed for MVP as full mp4 generation requires ffmpeg or complex frame dumping)
 func VideoStart(ctx *types.Context, name string) (string, error) {
 	return "Video recording started (STUB: requires ffmpeg pipeline)", nil
@@ -490,7 +881,22 @@ func VideoStop(ctx *types.Context) (string, error) {
 // Show un-hides the browser or provides interactive annotate
 func Show(ctx *types.Context, annotate bool) (string, error) {
 	if annotate {
-		return "Annotation UI launched at http://127.0.0.1:8080 (STUB: blocking for feedback...)", nil
+		page, err := ctx.ControlledPage()
+		if err != nil {
+			return "", err
+		}
+		
+		res, err := page.Eval(js.AnnotatorUI)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to launch annotation UI")
+		}
+		
+		if res.Value.Get("cancelled").Bool() {
+			return "Annotation cancelled by user.", nil
+		}
+		
+		annotations := res.Value.Get("annotations")
+		return fmt.Sprintf("Annotations saved:\n%s", annotations.JSON("", "  ")), nil
 	}
 	return "Browser must be started without --headless to be visible. Run 'rod-cli close' and restart without --headless.", nil
 }

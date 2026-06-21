@@ -84,9 +84,12 @@ func EnsureDaemon(session string, exePath string, flags []string) error {
 	
 	args := []string{"--session", session}
 	args = append(args, flags...)
-	args = append(args, "daemon", "--ppid", fmt.Sprint(os.Getppid()))
+	args = append(args, "daemon")
 	
 	cmd := exec.Command(exePath, args...)
+	logFile, _ := os.OpenFile(filepath.Join(os.TempDir(), "rod-cli-daemon.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -129,9 +132,10 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			return
 		}
 		if req.Command == "close" {
+			os.Remove(portFile)
 			json.NewEncoder(w).Encode(Response{Result: "closing"})
 			go func() {
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
 				os.Exit(0)
 			}()
 			return
@@ -190,13 +194,20 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		return actions.Fill(ctx, req.Args["ref"], req.Args["text"], submit)
 	case "hover":
 		return actions.Hover(ctx, req.Args["ref"])
+	case "check":
+		return actions.Check(ctx, req.Args["ref"])
+	case "uncheck":
+		return actions.Uncheck(ctx, req.Args["ref"])
+	case "upload":
+		files := strings.Split(req.Args["files"], ",")
+		return actions.Upload(ctx, req.Args["ref"], files)
 	case "select":
 		// select values are separated by comma in our generic arg format for simplicity
 		// wait, actually we can pass JSON array in the args map? No, map[string]string.
 		// Let's assume values are passed directly or not supported multiple right now.
 		return actions.Select(ctx, req.Args["ref"], []string{req.Args["values"]})
 	case "eval":
-		return actions.Evaluate(ctx, req.Args["script"])
+		return actions.Evaluate(ctx, req.Args["script"], req.Args["ref"])
 	case "snapshot":
 		return actions.Snapshot(ctx)
 	case "screenshot":
@@ -214,26 +225,78 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		return actions.MouseDown(ctx, req.Args["button"])
 	case "mouseup":
 		return actions.MouseUp(ctx, req.Args["button"])
+	case "mousewheel":
+		var dx, dy float64
+		fmt.Sscanf(req.Args["dx"], "%f", &dx)
+		fmt.Sscanf(req.Args["dy"], "%f", &dy)
+		return actions.MouseWheel(ctx, dx, dy)
+	case "resize":
+		var w, h int
+		fmt.Sscanf(req.Args["width"], "%d", &w)
+		fmt.Sscanf(req.Args["height"], "%d", &h)
+		return actions.Resize(ctx, w, h)
+	case "tab-list":
+		return actions.TabList(ctx)
+	case "tab-new":
+		return actions.TabNew(ctx, req.Args["url"])
+	case "tab-close":
+		var index int
+		fmt.Sscanf(req.Args["index"], "%d", &index)
+		return actions.TabClose(ctx, index)
+	case "tab-select":
+		var index int
+		fmt.Sscanf(req.Args["index"], "%d", &index)
+		return actions.TabSelect(ctx, index)
 	case "dialog-accept":
 		return actions.HandleDialog(ctx, true, req.Args["promptText"])
 	case "dialog-dismiss":
 		return actions.HandleDialog(ctx, false, "")
 	case "cookie-get":
 		return actions.GetCookies(ctx)
+	case "cookie-set":
+		return actions.SetCookie(ctx, req.Args["name"], req.Args["value"])
+	case "cookie-delete":
+		return actions.DeleteCookie(ctx, req.Args["name"])
 	case "cookie-clear":
 		return actions.ClearCookies(ctx)
 	case "localstorage-get":
 		return actions.EvalStorage(ctx, "localStorage", "get", req.Args["key"], "")
 	case "localstorage-set":
 		return actions.EvalStorage(ctx, "localStorage", "set", req.Args["key"], req.Args["value"])
+	case "localstorage-delete":
+		return actions.EvalStorage(ctx, "localStorage", "delete", req.Args["key"], "")
 	case "localstorage-clear":
 		return actions.EvalStorage(ctx, "localStorage", "clear", "", "")
 	case "sessionstorage-get":
 		return actions.EvalStorage(ctx, "sessionStorage", "get", req.Args["key"], "")
 	case "sessionstorage-set":
 		return actions.EvalStorage(ctx, "sessionStorage", "set", req.Args["key"], req.Args["value"])
+	case "sessionstorage-delete":
+		return actions.EvalStorage(ctx, "sessionStorage", "delete", req.Args["key"], "")
 	case "sessionstorage-clear":
 		return actions.EvalStorage(ctx, "sessionStorage", "clear", "", "")
+	case "route":
+		return actions.Route(ctx, req.Args["pattern"], req.Args["body"])
+	case "unroute":
+		return actions.Unroute(ctx, req.Args["pattern"])
+	case "route-list":
+		return actions.RouteList(ctx)
+	case "console":
+		return actions.ConsoleLogs(ctx)
+	case "requests":
+		return actions.NetworkRequests(ctx)
+	case "request":
+		var index int
+		fmt.Sscanf(req.Args["index"], "%d", &index)
+		return actions.NetworkRequest(ctx, index)
+	case "drag":
+		return actions.Drag(ctx, req.Args["start"], req.Args["end"])
+	case "drop":
+		return actions.Drop(ctx, req.Args["ref"], req.Args["path"])
+	case "state-save":
+		return actions.StateSave(ctx, req.Args["path"])
+	case "state-load":
+		return actions.StateLoad(ctx, req.Args["path"])
 	case "highlight":
 		return actions.Highlight(ctx, req.Args["ref"])
 	case "highlight-clear":

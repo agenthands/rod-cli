@@ -139,7 +139,7 @@ var (
 	EvaluateHandler = func(rodCtx *types.Context) server.ToolHandlerFunc {
 		handler := func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			script := request.Params.Arguments["script"].(string)
-			msg, err := actions.Evaluate(rodCtx, script)
+			msg, err := actions.Evaluate(rodCtx, script, "")
 			if err != nil {
 				log.Errorf("Evaluate error: %v", err)
 				return nil, err

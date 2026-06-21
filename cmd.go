@@ -61,7 +61,7 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
 		},
 		Before: func(c *cli.Context) error {
-			if !c.Bool("no-banner") {
+			if !c.Bool("no-banner") && !c.Bool("raw") && !c.Bool("json") {
 				fmt.Println(banner.ShowBanner())
 			}
 			return nil
@@ -209,6 +209,40 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "check",
+				Usage: "Check a checkbox or radio button by its ref",
+				Action: func(c *cli.Context) error {
+					ref := c.Args().First()
+					if ref == "" {
+						return fmt.Errorf("element ref is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "check", Args: map[string]string{"ref": ref}})
+				},
+			},
+			{
+				Name:  "uncheck",
+				Usage: "Uncheck a checkbox or radio button by its ref",
+				Action: func(c *cli.Context) error {
+					ref := c.Args().First()
+					if ref == "" {
+						return fmt.Errorf("element ref is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "uncheck", Args: map[string]string{"ref": ref}})
+				},
+			},
+			{
+				Name:  "upload",
+				Usage: "Upload files to an element",
+				Action: func(c *cli.Context) error {
+					ref := c.Args().First()
+					files := strings.Join(c.Args().Slice()[1:], ",")
+					if ref == "" || files == "" {
+						return fmt.Errorf("element ref and at least one file are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "upload", Args: map[string]string{"ref": ref, "files": files}})
+				},
+			},
+			{
 				Name:  "select",
 				Usage: "Select options in an element",
 				Action: func(c *cli.Context) error {
@@ -225,10 +259,11 @@ func getApp() *cli.App {
 				Usage: "Evaluate a JS script",
 				Action: func(c *cli.Context) error {
 					script := c.Args().First()
+					ref := c.Args().Get(1)
 					if script == "" {
 						return fmt.Errorf("script is required")
 					}
-					return runClientCommand(c, daemon.Request{Command: "eval", Args: map[string]string{"script": script}})
+					return runClientCommand(c, daemon.Request{Command: "eval", Args: map[string]string{"script": script, "ref": ref}})
 				},
 			},
 			{
@@ -305,6 +340,66 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "mousewheel",
+				Usage: "Scroll mouse wheel",
+				Action: func(c *cli.Context) error {
+					dx := c.Args().Get(0)
+					dy := c.Args().Get(1)
+					if dx == "" || dy == "" {
+						return fmt.Errorf("dx and dy are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "mousewheel", Args: map[string]string{"dx": dx, "dy": dy}})
+				},
+			},
+			{
+				Name:  "resize",
+				Usage: "Resize the browser window",
+				Action: func(c *cli.Context) error {
+					width := c.Args().Get(0)
+					height := c.Args().Get(1)
+					if width == "" || height == "" {
+						return fmt.Errorf("width and height are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "resize", Args: map[string]string{"width": width, "height": height}})
+				},
+			},
+			{
+				Name:  "tab-list",
+				Usage: "List all tabs",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "tab-list"})
+				},
+			},
+			{
+				Name:  "tab-new",
+				Usage: "Create a new tab",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "tab-new", Args: map[string]string{"url": c.Args().First()}})
+				},
+			},
+			{
+				Name:  "tab-close",
+				Usage: "Close a browser tab",
+				Action: func(c *cli.Context) error {
+					index := c.Args().First()
+					if index == "" {
+						return fmt.Errorf("tab index is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "tab-close", Args: map[string]string{"index": index}})
+				},
+			},
+			{
+				Name:  "tab-select",
+				Usage: "Select a browser tab",
+				Action: func(c *cli.Context) error {
+					index := c.Args().First()
+					if index == "" {
+						return fmt.Errorf("tab index is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "tab-select", Args: map[string]string{"index": index}})
+				},
+			},
+			{
 				Name:  "dialog-accept",
 				Usage: "Accept next dialog",
 				Flags: []cli.Flag{
@@ -329,6 +424,29 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "cookie-set",
+				Usage: "Set a cookie",
+				Action: func(c *cli.Context) error {
+					name := c.Args().Get(0)
+					value := c.Args().Get(1)
+					if name == "" || value == "" {
+						return fmt.Errorf("cookie name and value are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "cookie-set", Args: map[string]string{"name": name, "value": value}})
+				},
+			},
+			{
+				Name:  "cookie-delete",
+				Usage: "Delete a cookie",
+				Action: func(c *cli.Context) error {
+					name := c.Args().First()
+					if name == "" {
+						return fmt.Errorf("cookie name is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "cookie-delete", Args: map[string]string{"name": name}})
+				},
+			},
+			{
 				Name:  "cookie-clear",
 				Usage: "Clear cookies",
 				Action: func(c *cli.Context) error {
@@ -347,6 +465,13 @@ func getApp() *cli.App {
 				Usage: "Set localStorage item",
 				Action: func(c *cli.Context) error {
 					return runClientCommand(c, daemon.Request{Command: "localstorage-set", Args: map[string]string{"key": c.Args().Get(0), "value": c.Args().Get(1)}})
+				},
+			},
+			{
+				Name:  "localstorage-delete",
+				Usage: "Delete localStorage entry",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "localstorage-delete", Args: map[string]string{"key": c.Args().First()}})
 				},
 			},
 			{
@@ -371,10 +496,123 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "sessionstorage-delete",
+				Usage: "Delete sessionStorage entry",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "sessionstorage-delete", Args: map[string]string{"key": c.Args().First()}})
+				},
+			},
+			{
 				Name:  "sessionstorage-clear",
 				Usage: "Clear sessionStorage",
 				Action: func(c *cli.Context) error {
 					return runClientCommand(c, daemon.Request{Command: "sessionstorage-clear"})
+				},
+			},
+			{
+				Name:  "route",
+				Usage: "Mock network requests",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "body", Usage: "Mock response body"},
+				},
+				Action: func(c *cli.Context) error {
+					pattern := c.Args().First()
+					if pattern == "" {
+						return fmt.Errorf("route pattern is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "route", Args: map[string]string{"pattern": pattern, "body": c.String("body")}})
+				},
+			},
+			{
+				Name:  "route-list",
+				Usage: "List active routes",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "route-list"})
+				},
+			},
+			{
+				Name:  "unroute",
+				Usage: "Remove a route",
+				Action: func(c *cli.Context) error {
+					pattern := c.Args().First()
+					return runClientCommand(c, daemon.Request{Command: "unroute", Args: map[string]string{"pattern": pattern}})
+				},
+			},
+			{
+				Name:  "console",
+				Usage: "List console messages",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "console"})
+				},
+			},
+			{
+				Name:  "requests",
+				Usage: "List network requests",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "requests"})
+				},
+			},
+			{
+				Name:  "request",
+				Usage: "Show details for a specific request",
+				Action: func(c *cli.Context) error {
+					index := c.Args().First()
+					if index == "" {
+						return fmt.Errorf("request index is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "request", Args: map[string]string{"index": index}})
+				},
+			},
+			{
+				Name:  "drag",
+				Usage: "Drag an element to another element",
+				Action: func(c *cli.Context) error {
+					start := c.Args().Get(0)
+					end := c.Args().Get(1)
+					if start == "" || end == "" {
+						return fmt.Errorf("start and end refs are required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "drag", Args: map[string]string{"start": start, "end": end}})
+				},
+			},
+			{
+				Name:  "drop",
+				Usage: "Drop a file onto an element",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "path", Usage: "File path to drop"},
+				},
+				Action: func(c *cli.Context) error {
+					ref := c.Args().First()
+					if ref == "" {
+						return fmt.Errorf("element ref is required")
+					}
+					path := c.String("path")
+					if path == "" {
+						return fmt.Errorf("--path is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "drop", Args: map[string]string{"ref": ref, "path": path}})
+				},
+			},
+			{
+				Name:  "state-save",
+				Usage: "Save browser state to a file",
+				Action: func(c *cli.Context) error {
+					path := c.Args().First()
+					if path == "" {
+						return fmt.Errorf("file path is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "state-save", Args: map[string]string{"path": path}})
+				},
+			},
+			{
+				Name:  "state-load",
+				Usage: "Load browser state from a file",
+				Action: func(c *cli.Context) error {
+					path := c.Args().First()
+					if path == "" {
+						return fmt.Errorf("file path is required")
+					}
+					return runClientCommand(c, daemon.Request{Command: "state-load", Args: map[string]string{"path": path}})
 				},
 			},
 			{
