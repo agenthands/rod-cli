@@ -53,4 +53,12 @@
 - Implement 5 edge-case integration tests for all 35+ CLI commands using `os/exec` against the daemon.
 
 ---
-*Roadmap generated: 2026-06-18*
+## Completed Milestones
+
+<details>
+<summary><b>v1.1: Stealth & Humanization</b> (Shipped 2026-06-21)</summary>
+See archive: [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
+</details>
+
+---
+*Roadmap generated: 2026-06-21*

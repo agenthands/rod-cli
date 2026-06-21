@@ -16,6 +16,25 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 3. **The `attach` Command**: Connect the CLI to an external browser already started outside of the CLI using `--cdp`.
 4. **Zombie Safeguards**: To prevent leaving zombie browsers, `rod-cli` uses Parent Process ID (PPID) polling, explicit teardown hooks (`kill-all`), and strict idle timeouts (15 minutes).
 
+## Current State
+
+rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully bypasses bot detection mechanisms natively using Bayesian fingerprint matching and Bezier-curve realistic human interactions.
+
+## Next Milestone Goals
+
+To be defined via `/gsd-new-milestone`.
+
+<details>
+<summary>Archived: v1.1 Stealth & Humanization</summary>
+
+**Goal:** Adapt the `godoll` engine into `rod-cli` to provide robust bot detection evasion, realistic browser fingerprinting, and human-like interaction.
+
+**Target features:**
+- Replace standard `go-rod` browser initialization with `godoll` stealth launcher (spoofing navigator, WebGL, Canvas, plugins, etc.).
+- Implement humanized input commands (realistic mouse movement trajectories, typing delays) replacing raw `go-rod` interactions.
+- Introduce dynamic header and fingerprint injection based on `godoll`'s Bayesian network model.
+</details>
+
 ## Requirements
 
 ### Validated
@@ -23,15 +42,18 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 - ✓ Basic architecture as a standalone Go binary using `go-rod`.
 - ✓ Communication via stdio for LLMs (currently via MCP).
 - ✓ Initial snapshotting and JavaScript injection logic.
+- ✓ Rename module, imports, and executable references from `rod-mcp` to `rod-cli`.
+- ✓ Implement standalone CLI command parsing matching the README specs (e.g., `open`, `goto`, `click`, `type`, `snapshot`).
+- ✓ Implement `--raw` flag to strip verbose output and yield direct results for piping.
+- ✓ Support multi-session management (`-s=mysession`) and remote browser attachment (`--cdp`, `--extension`).
+- ✓ Expand tool coverage to support the full categorized suite: Core, Navigation, Keyboard, Mouse, Storage, Network, and DevTools.
+- ✓ Enable `rod-cli show --annotate` for interactive design feedback flows.
 
 ### Active
 
-- [ ] Rename module, imports, and executable references from `rod-mcp` to `rod-cli`.
-- [ ] Implement standalone CLI command parsing matching the README specs (e.g., `open`, `goto`, `click`, `type`, `snapshot`).
-- [ ] Implement `--raw` flag to strip verbose output and yield direct results for piping.
-- [ ] Support multi-session management (`-s=mysession`) and remote browser attachment (`--cdp`, `--extension`).
-- [ ] Expand tool coverage to support the full categorized suite: Core, Navigation, Keyboard, Mouse, Storage, Network, and DevTools.
-- [ ] Enable `rod-cli show --annotate` for interactive design feedback flows.
+- [ ] Import `godoll` network, stealth, and browser launcher modules.
+- [ ] Replace `go-rod` browser initialization with `godoll.NewBrowser()`.
+- [ ] Implement `humanize` mouse and typing handlers over `rod-cli` actions.
 
 ### Out of Scope
 
@@ -52,7 +74,25 @@ The project currently exists as an MCP server (`rod-mcp`). The goal is to transf
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Transform from MCP Server to CLI | Allows usage both as an interactive CLI and an automated LLM skill, providing a more versatile developer experience. | — Pending |
+| Transform from MCP Server to CLI | Allows usage both as an interactive CLI and an automated LLM skill, providing a more versatile developer experience. | ✅ Complete |
+| Integrate godoll stealth | Prevent modern bot detection systems from blocking rod-cli sessions. | — Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-06-18 after initialization*
+*Last updated: 2026-06-21 after initialization*
