@@ -1,64 +1,38 @@
-# Roadmap: rod-cli
+# Roadmap: v1.3 Godoll Migration
 
-**Created:** 2026-06-18
-**Goal:** Transform rod-mcp into a full-featured CLI capable of serving both interactive human use cases and background LLM interactions seamlessly via stdio.
+**4 phases** | **6 requirements mapped** | All covered ✓
 
-## Phases
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 12 | Zero-Dependency Browser Installation | Add `install` command to auto-download Chromium. | BROWSER-01 | 1 |
+| 13 | Stealth and Remote Browser Integration | Replace inline launcher with `godoll` wrapped launcher. | BROWSER-02, BROWSER-03 | 2 |
+| 14 | Network and Humanized Interactions | Implement `godoll/network` interceptor and bezier scrolling. | NETWORK-01, HUMAN-01 | 2 |
+| 15 | Robust Execution Retries | Wrap critical DOM actions with exponential backoff. | RETRY-01 | 1 |
 
-### Phase 1: Core CLI Foundation
-**Status:** Complete
-**Goal:** Establish the root CLI structure and rename the project.
-**Requirements:** CLI-01, CLI-02, CLI-03
-- Restructure project to replace purely MCP-driven startup with `urfave/cli/v2` subcommands.
-- Rename module and build outputs from `rod-mcp` to `rod-cli`.
-- Implement `--raw` and `--json` foundational output formatting flags.
+### Phase Details
 
-### Phase 2: Core Automation Commands
-**Status:** Complete
-**Goal:** Port basic browser controls into the CLI framework.
-**Requirements:** AUTO-01, AUTO-02, AUTO-03, AUTO-04
-- Connect rod actions (navigation, clicking, typing, evaluation) to CLI commands (`goto`, `click`, `eval`, etc.).
-- Ensure that the commands gracefully wrap around the existing MCP tool handlers or extract their logic for reuse.
-- Implement snapshot and screenshot generation commands.
+**Phase 12: Zero-Dependency Browser Installation**
+Goal: Add `install` command to auto-download Chromium.
+Requirements: BROWSER-01
+Success criteria:
+1. Running `rod-cli install` successfully fetches and caches Chromium locally without requiring global Chrome installation.
 
-### Phase 3: Background Daemon & Session Management
-**Status:** Complete
-**Goal:** Transform rod-cli into a persistent background daemon, enabling shared state and robust zombie browser prevention.
-**Requirements:** DAEM-01, DAEM-02, DAEM-03, DAEM-04, SESS-01, SESS-02, SESS-03, SESS-04
-- Implement the Background Session Daemon architecture so `rod-cli` processes commands against a single shared, running instance.
-- Implement Zombie Safeguards: PPID polling, explicit `rod-cli close` teardown hooks, and a 15-minute idle timeout.
-- Enable named sessions (`-s`) and user data dir persistence (`--persistent`).
-- Support attaching to external browsers using `rod-cli attach --cdp`.
+**Phase 13: Stealth and Remote Browser Integration**
+Goal: Replace inline launcher with `godoll` wrapped launcher.
+Requirements: BROWSER-02, BROWSER-03
+Success criteria:
+1. `rod-cli` uses `godoll.NewBrowser(opts)` and `opts.StealthPreset()` instead of manual `launcher.New()` configuration.
+2. `rod-cli` connects to remote CDP sessions via `godoll/browser.ConnectToRemoteBrowser()`.
 
-### Phase 4: Advanced Web Interactions
-**Status:** Complete
-**Goal:** Support complex inputs, storage, and networking.
-**Requirements:** ADV-01, ADV-02, ADV-03, ADV-04
-- Add DevTools networking interceptions (`route`, `unroute`, `requests`).
-- Add storage manipulation commands (Cookies, LocalStorage, SessionStorage).
-- Add raw mouse and keyboard simulators.
+**Phase 14: Network and Humanized Interactions**
+Goal: Implement `godoll/network` interceptor and bezier scrolling.
+Requirements: NETWORK-01, HUMAN-01
+Success criteria:
+1. `rod-cli route` commands correctly use `godoll/network.NewInterceptor()` to block or mock requests.
+2. `rod-cli` uses `humanize.Scroll()` when processing mouse scroll events instead of native go-rod scrolling.
 
-### Phase 5: Annotation & Debugging
-**Status:** Complete
-**Goal:** Deliver powerful feedback and diagnostic tools for developers.
-**Requirements:** DBG-01, DBG-02, DBG-03
-- Add visual highlighting and video recording capabilities.
-- Add interactive `show` command.
-
-### Phase 6: Exhaustive Integration Testing
-**Status:** Complete
-**Goal:** Guarantee 100% reliability with 5 test cases per command.
-**Requirements:** TST-01
-- Spin up an embedded local Go webserver to serve dynamic DOMs (forms, canvases, storage scripts).
-- Implement 5 edge-case integration tests for all 35+ CLI commands using `os/exec` against the daemon.
-
----
-## Completed Milestones
-
-<details>
-<summary><b>v1.1: Stealth & Humanization</b> (Shipped 2026-06-21)</summary>
-See archive: [v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
-</details>
-
----
-*Roadmap generated: 2026-06-21*
+**Phase 15: Robust Execution Retries**
+Goal: Wrap critical DOM actions with exponential backoff.
+Requirements: RETRY-01
+Success criteria:
+1. Navigation and element-finding commands are wrapped in `retry.Fetch()` to prevent transient network failures from crashing the CLI session.

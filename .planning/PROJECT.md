@@ -20,9 +20,28 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully bypasses bot detection mechanisms natively using Bayesian fingerprint matching and Bezier-curve realistic human interactions.
 
-## Next Milestone Goals
+## Current Milestone: v1.3 Godoll Migration
 
-To be defined via `/gsd-new-milestone`.
+**Goal:** Complete the migration to `godoll` to leverage its full suite of evasion, network interception, and robust interaction features, while achieving parity with Playwright via an automatic browser installer.
+
+**Target features:**
+- Implement `rod-cli install` command to auto-download Chromium.
+- Replace inline launcher with `godoll.NewBrowser(opts)` and stealth presets.
+- Replace raw `HijackRequests` with `godoll/network.NewInterceptor()`.
+- Replace `page.Mouse.Scroll` with `humanize.Scroll()`.
+- Wrap critical DOM actions with `godoll/retry` exponential backoff.
+- Standardize remote connectivity using `godoll/browser.ConnectToRemoteBrowser()`.
+
+<details>
+<summary>Archived: v1.2 First-Class Agent Skills & Documentation</summary>
+
+**Goal:** Elevate the `rod-cli` LLM skill integrations to first-class citizens and overhaul the project documentation to present it as a polished, agent-ready tool.
+
+**Target features:**
+- Promote the skill configuration from `example/skills/` to an official `skills/rod-cli/` directory.
+- Update the documentation (README, USAGE, INSTALL) to reflect its primary use case: native web automation for agents like Gemini and Codex.
+- Strip Node.js/NPM installation references and replace them with `go install`.
+</details>
 
 <details>
 <summary>Archived: v1.1 Stealth & Humanization</summary>
@@ -48,12 +67,11 @@ To be defined via `/gsd-new-milestone`.
 - ✓ Support multi-session management (`-s=mysession`) and remote browser attachment (`--cdp`, `--extension`).
 - ✓ Expand tool coverage to support the full categorized suite: Core, Navigation, Keyboard, Mouse, Storage, Network, and DevTools.
 - ✓ Enable `rod-cli show --annotate` for interactive design feedback flows.
+- ✓ [STEALTH-03] Implement `humanize` mouse and typing handlers over `rod-cli` actions. - v1.1
 
 ### Active
-
-- [ ] Import `godoll` network, stealth, and browser launcher modules.
-- [ ] Replace `go-rod` browser initialization with `godoll.NewBrowser()`.
-- [ ] Implement `humanize` mouse and typing handlers over `rod-cli` actions.
+- [ ] [STEALTH-01] Import `godoll` network module for advanced request mocking.
+- [ ] [STEALTH-02] Replace inline `go-rod` browser initialization with `godoll.NewBrowser()`.
 
 ### Out of Scope
 
