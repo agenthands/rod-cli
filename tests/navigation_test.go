@@ -18,7 +18,7 @@ func TestGotoCommand(t *testing.T) {
 
 	// Case 2: Missing URL
 	out, err = runCli("--raw", "goto")
-	if err == nil || !strings.Contains(out, "url is required") {
+	if err == nil || !strings.Contains(strings.ToLower(out), "url is required") {
 		t.Errorf("Goto missing URL should fail: err=%v out=%s", err, out)
 	}
 
@@ -93,7 +93,7 @@ func TestReloadCommand(t *testing.T) {
 
 	// Case 1: Reload without navigation
 	out, err := runCli("--raw", "reload")
-	if err == nil || !strings.Contains(out, "Failed to reload") {
+	if err == nil || (!strings.Contains(strings.ToLower(out), "failed to reload") && !strings.Contains(strings.ToLower(out), "no tab to used")) {
 		t.Errorf("Reload without goto should fail: err=%v out=%s", err, out)
 	}
 

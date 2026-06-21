@@ -52,7 +52,7 @@ func ClientExecute(session string, req Request) (string, error) {
 		return "", err
 	}
 	if res.Error != "" {
-		return "", fmt.Errorf(res.Error)
+		return "", fmt.Errorf("%s", res.Error)
 	}
 	return res.Result, nil
 }

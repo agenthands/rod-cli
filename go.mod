@@ -1,8 +1,9 @@
 module github.com/agenthands/rod-cli
 
-go 1.23.7
+go 1.25.1
 
 require (
+	github.com/agenthands/godoll v0.0.0-20260314193512-b7f2b1da0553
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.1
 	github.com/go-rod/rod v0.116.2
@@ -39,3 +40,5 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.30.0 // indirect
 )
+
+replace github.com/agenthands/godoll => ../godoll

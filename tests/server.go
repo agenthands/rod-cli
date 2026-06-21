@@ -45,6 +45,9 @@ func SetupTestServer() *httptest.Server {
 			<input type="text" id="username" />
 			<input type="password" id="password" />
 			<select id="dropdown"><option value="1">One</option><option value="2">Two</option></select>
+			<input type="checkbox" id="terms" />
+			<input type="radio" id="gender" name="gender" value="male" />
+			<input type="file" id="fileup" />
 			<button id="submit">Submit</button>
 			<div id="output"></div>
 			<script>

@@ -11,6 +11,10 @@ import (
 	"sync/atomic"
 
 	"github.com/go-rod/rod"
+	"github.com/agenthands/godoll/browser"
+	"github.com/agenthands/godoll/network"
+	"github.com/agenthands/godoll/stealth"
+	rodfingerprint "github.com/agenthands/godoll/fingerprint"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
@@ -30,6 +34,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 
 	// browser must own a unique temp dir
 	cfg.BrowserTempDir = fmt.Sprintf("%s/%s", cfg.BrowserTempDir, utils.RandomString(10))
+	// Create basic launcher manually so we can set Headless, Proxy, UserDataDir
 	browserLauncher := launcher.New().
 		Context(ctx).
 		Headless(cfg.Headless).
@@ -41,7 +46,6 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 		Set("disable-popup-blocking").
 		Set("mute-audio", "true").
 		Set("use-mock-keychain").
-		//Set("--disable-permissions-api").
 		Set("--remote-allow-origins", "*").
 		Set("--disable-dev-shm-usage").
 		Set("--disable-features", "HttpsUpgrades").
@@ -53,7 +57,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 		if browserPath, has := launcher.LookPath(); has {
 			browserLauncher.Bin(browserPath)
 		} else {
-			return nil, errors.New("the machine does not have Chrome installed,please set the executable_path or installed a chrome")
+			return nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
 		}
 	}
 
@@ -61,24 +65,25 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 		browserLauncher.Proxy(cfg.Proxy)
 	}
 
-	controlUrl, err := browserLauncher.Launch()
+	// Create godoll options and apply stealth preset
+	opts := browser.NewBrowserOptions().
+		WithLauncher(browserLauncher).
+		SetBrowserPreferences(browser.NewBrowserOptions().StealthPreset())
+
+	browserInstance, err := browser.NewBrowserE(ctx, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "launch local browser failed")
+		return nil, errors.Wrap(err, "launch local browser failed via godoll")
 	}
-	browser, err := controlBrowser(ctx, controlUrl)
-	if err != nil {
-		return nil, err
-	}
-	return browser, nil
+
+	return browserInstance, nil
 }
 
 func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error) {
-	browser := rod.New().Context(ctx)
-	err := browser.ControlURL(controlURL).Connect()
+	browserInstance, err := browser.ConnectToRemoteBrowserWithContext(ctx, controlURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error connecting to browser")
+		return nil, errors.Wrap(err, "Error connecting to remote browser via godoll")
 	}
-	return browser, nil
+	return browserInstance, nil
 }
 
 // Mode is the model type, indicates the model type of the tool
@@ -99,8 +104,13 @@ type Context struct {
 	page       *rod.Page
 	stateLock  sync.Mutex
 	isInitial  atomic.Bool
-	snapshot   *Snapshot
-	mode       Mode
+	snapshot    *Snapshot
+	mode        Mode
+	consoleLogs []string
+	requests    []string
+	interceptor *network.Interceptor
+	routes      map[string]string
+	fingerprint *rodfingerprint.Fingerprint
 }
 
 func NewContext(ctx context.Context, cfg Config) *Context {
@@ -108,6 +118,7 @@ func NewContext(ctx context.Context, cfg Config) *Context {
 		stdContext: ctx,
 		config:     cfg,
 		mode:       cfg.Mode,
+		routes:     make(map[string]string),
 	}
 }
 
@@ -162,6 +173,18 @@ func (ctx *Context) ClosePage() error {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	return ctx.closePage()
+}
+
+func (ctx *Context) GetBrowser() *rod.Browser {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	return ctx.browser
+}
+
+func (ctx *Context) SetPage(p *rod.Page) {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	ctx.page = p
 }
 
 func (ctx *Context) Execute(handlerFunc server.ToolHandlerFunc, handlerCallOpts ToolHandlerCallOpts) server.ToolHandlerFunc {
@@ -244,12 +267,147 @@ func (ctx *Context) closeBrowser() error {
 func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	page, err := ctx.browser.Page(proto.TargetCreateTarget{URL: strings.Join(urls, "/")})
 	if page != nil {
+		// Apply stealth evasion
+		em := stealth.NewEvasionManager(page)
+		fg := rodfingerprint.NewFingerprintGenerator(rodfingerprint.FPWithBrowserNames("chrome"))
+		fp, err := fg.Generate()
+		if err == nil && fp != nil {
+			ctx.fingerprint = fp
+			em.SetFingerprint(fp)
+		}
+		_ = em.Apply()
+
 		page.EvalOnNewDocument(js.InjectedSnapShot)
+		
+		// Setup logging
+		go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
+			ctx.stateLock.Lock()
+			defer ctx.stateLock.Unlock()
+			var args []string
+			for _, arg := range e.Args {
+				if !arg.Value.Nil() {
+					args = append(args, arg.Value.String())
+				}
+			}
+			ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+		})()
+
+		go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
+			ctx.stateLock.Lock()
+			defer ctx.stateLock.Unlock()
+			ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+		})()
+		
+		// Setup godoll/network interceptor
+		ctx.interceptor = network.NewInterceptor(page)
+		ctx.updateInterceptorRules()
+		
+		if err := ctx.interceptor.Enable(); err != nil {
+			return nil, errors.Wrap(err, "failed to enable network interceptor")
+		}
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "create page failed")
 	}
 	return page, nil
+}
+
+// Accessors
+func (ctx *Context) GetConsoleLogs() []string {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	return ctx.consoleLogs
+}
+
+func (ctx *Context) GetRequests() []string {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	return ctx.requests
+}
+
+func (ctx *Context) updateInterceptorRules() {
+	if ctx.interceptor == nil {
+		return
+	}
+	
+	ctx.interceptor.ClearRules()
+	
+	// Add mock routes first
+	for pattern, body := range ctx.routes {
+		ctx.interceptor.AddRule(network.InterceptRule{
+			URLPattern: pattern,
+			Action:     network.Mock,
+			MockResponse: &network.MockResponse{
+				StatusCode: 200,
+				Body:       body,
+				Headers: map[string]string{
+					"Content-Type": "text/plain",
+				},
+			},
+		})
+	}
+	
+	// Add evasion headers catch-all rule
+	var prof *stealth.Profile
+	fp := ctx.fingerprint
+	if fp != nil {
+		p := stealth.FromFingerprint(fp)
+		prof = &p
+	} else {
+		def := stealth.DefaultProfile()
+		prof = &def
+	}
+	
+	headers := map[string]string{
+		"User-Agent": prof.UserAgent,
+		"Accept-Language": prof.AcceptLanguage,
+		"X-Requested-With": "", // This acts as a deletion since it overrides with empty
+	}
+	
+	if prof.SpoofClientHints {
+		var chPlatform string
+		switch prof.Platform {
+		case "Win32":
+			chPlatform = "\"Windows\""
+		case "MacIntel":
+			chPlatform = "\"macOS\""
+		default:
+			chPlatform = fmt.Sprintf("\"%s\"", prof.Platform)
+		}
+		headers["Sec-Ch-Ua"] = "\"Not A(Brand\";v=\"99\", \"Google Chrome\";v=\"121\", \"Chromium\";v=\"121\""
+		headers["Sec-Ch-Ua-Mobile"] = "?0"
+		headers["Sec-Ch-Ua-Platform"] = chPlatform
+	}
+	
+	ctx.interceptor.AddRule(network.InterceptRule{
+		URLPattern: "*",
+		Action:     network.Continue,
+		ModifiedHeaders: headers,
+	})
+}
+
+func (ctx *Context) AddRoute(pattern, body string) {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	ctx.routes[pattern] = body
+	ctx.updateInterceptorRules()
+}
+
+func (ctx *Context) RemoveRoute(pattern string) {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	delete(ctx.routes, pattern)
+	ctx.updateInterceptorRules()
+}
+
+func (ctx *Context) GetRoutes() map[string]string {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	res := make(map[string]string)
+	for k, v := range ctx.routes {
+		res[k] = v
+	}
+	return res
 }
 
 // Close the browser
