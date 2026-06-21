@@ -9,6 +9,7 @@ import (
 
 	"github.com/agenthands/rod-cli/banner"
 	"github.com/agenthands/rod-cli/daemon"
+	"github.com/go-rod/rod/lib/launcher"
 	"github.com/urfave/cli/v2"
 )
 
@@ -67,6 +68,23 @@ func getApp() *cli.App {
 			return nil
 		},
 		Commands: []*cli.Command{
+			{
+				Name:  "install",
+				Usage: "Install the Chromium browser required by rod-cli",
+				Action: func(c *cli.Context) error {
+					if !c.Bool("raw") && !c.Bool("json") {
+						fmt.Println("Downloading Chromium (this may take a minute)...")
+					}
+					browserPath := launcher.NewBrowser().MustGet()
+					if c.Bool("json") {
+						out, _ := json.Marshal(map[string]string{"path": browserPath, "status": "installed"})
+						fmt.Println(string(out))
+					} else {
+						fmt.Printf("Chromium installed successfully at: %s\n", browserPath)
+					}
+					return nil
+				},
+			},
 			{
 				Name:  "serve",
 				Usage: "Run the MCP server (default behavior when no command is provided)",
@@ -633,23 +651,7 @@ func getApp() *cli.App {
 					return runClientCommand(c, daemon.Request{Command: "highlight-clear"})
 				},
 			},
-			{
-				Name:  "video-start",
-				Usage: "Start recording video",
-				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "name", Usage: "Name of the video file"},
-				},
-				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "video-start", Args: map[string]string{"name": c.String("name")}})
-				},
-			},
-			{
-				Name:  "video-stop",
-				Usage: "Stop recording video",
-				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "video-stop"})
-				},
-			},
+
 			{
 				Name:  "show",
 				Usage: "Show the browser or launch interactive annotation",

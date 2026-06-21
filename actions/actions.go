@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/agenthands/godoll/humanize"
+	"github.com/agenthands/godoll/retry"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
@@ -31,7 +32,10 @@ func Navigate(ctx *types.Context, url string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "Failed to navigate to %s", url)
 	}
-	if err := page.Navigate(url); err != nil {
+	err = retry.Retry(func() error {
+		return page.Navigate(url)
+	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(time.Second))
+	if err != nil {
 		return "", errors.Wrapf(err, "Failed to navigate to %s", url)
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -43,7 +47,10 @@ func GoBack(ctx *types.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := page.NavigateBack(); err != nil {
+	err = retry.Retry(func() error {
+		return page.NavigateBack()
+	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(time.Second))
+	if err != nil {
 		return "", errors.Wrap(err, "Failed to go back")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -55,7 +62,10 @@ func GoForward(ctx *types.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := page.NavigateForward(); err != nil {
+	err = retry.Retry(func() error {
+		return page.NavigateForward()
+	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(time.Second))
+	if err != nil {
 		return "", errors.Wrap(err, "Failed to go forward")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -67,7 +77,10 @@ func Reload(ctx *types.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := page.Reload(); err != nil {
+	err = retry.Retry(func() error {
+		return page.Reload()
+	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(time.Second))
+	if err != nil {
 		return "", errors.Wrap(err, "Failed to reload")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -205,7 +218,13 @@ func getElementByRef(ctx *types.Context, ref string) (*rod.Element, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to get latest snapshot (try running snapshot first)")
 	}
-	element, err := snapshot.LocatorInFrame(ref)
+	var element *rod.Element
+	err = retry.Retry(func() error {
+		var inErr error
+		element, inErr = snapshot.LocatorInFrame(ref)
+		return inErr
+	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(500*time.Millisecond))
+	
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to find element by ref %s", ref)
 	}
@@ -418,9 +437,29 @@ func MouseWheel(ctx *types.Context, dx, dy float64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := page.Mouse.Scroll(0, 0, int(dy)); err != nil {
-		return "", errors.Wrap(err, "Failed to scroll mouse wheel")
+	
+	// Handle Y axis scrolling with godoll physics
+	if dy > 0 {
+		if err := humanize.ScrollBy(page, humanize.ScrollDown, int(dy)); err != nil {
+			return "", errors.Wrap(err, "Failed to scroll mouse wheel down")
+		}
+	} else if dy < 0 {
+		if err := humanize.ScrollBy(page, humanize.ScrollUp, int(-dy)); err != nil {
+			return "", errors.Wrap(err, "Failed to scroll mouse wheel up")
+		}
 	}
+	
+	// Handle X axis scrolling with godoll physics
+	if dx > 0 {
+		if err := humanize.ScrollBy(page, humanize.ScrollRight, int(dx)); err != nil {
+			return "", errors.Wrap(err, "Failed to scroll mouse wheel right")
+		}
+	} else if dx < 0 {
+		if err := humanize.ScrollBy(page, humanize.ScrollLeft, int(-dx)); err != nil {
+			return "", errors.Wrap(err, "Failed to scroll mouse wheel left")
+		}
+	}
+	
 	return "Mouse wheel scrolled", nil
 }
 
@@ -868,15 +907,7 @@ func StateLoad(ctx *types.Context, path string) (string, error) {
 	return fmt.Sprintf("Loaded state from %s", path), nil
 }
 
-// VideoStart starts recording (Stubbed for MVP as full mp4 generation requires ffmpeg or complex frame dumping)
-func VideoStart(ctx *types.Context, name string) (string, error) {
-	return "Video recording started (STUB: requires ffmpeg pipeline)", nil
-}
 
-// VideoStop stops recording
-func VideoStop(ctx *types.Context) (string, error) {
-	return "Video recording stopped", nil
-}
 
 // Show un-hides the browser or provides interactive annotate
 func Show(ctx *types.Context, annotate bool) (string, error) {
