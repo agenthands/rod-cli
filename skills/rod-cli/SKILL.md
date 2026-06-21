@@ -25,11 +25,20 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `--json` / `--raw`: Suppress banners and output clean JSON or raw text.
 - `-s, --session`: Specify a named session string.
 
-### Browser Lifecycle
+### Setup & MCP
+- `rod-cli install`: Install the Chromium browser required by rod-cli.
+- `rod-cli serve`: Run the MCP server for agentic integrations.
+
+### Browser Lifecycle & Tabs
 - `rod-cli sessions`: List all currently active background daemon sessions.
 - `rod-cli close`: Terminate the background daemon and clean up the browser.
 - `rod-cli open [url]` (or `goto`): Navigate to a URL.
 - `rod-cli reload`, `go-back`, `go-forward`: Standard navigation.
+- `rod-cli resize [width] [height]`: Resize the browser window.
+- `rod-cli tab-list`: List all open tabs.
+- `rod-cli tab-new [url]`: Create a new tab.
+- `rod-cli tab-select [index]`: Select a browser tab.
+- `rod-cli tab-close [index]`: Close a browser tab.
 
 ### Interaction
 - `rod-cli click [selector]`: Click an element.
@@ -37,30 +46,43 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli type [selector] [text]`: Type sequentially into an element.
 - `rod-cli fill [selector] [text]`: Fill an entire input at once. Use `--submit` to press enter afterwards.
 - `rod-cli select [selector] [values...]`: Select dropdown values.
+- `rod-cli check [selector]`: Check a checkbox or radio button.
+- `rod-cli uncheck [selector]`: Uncheck a checkbox or radio button.
 - `rod-cli hover [selector]`: Hover over an element.
+- `rod-cli upload [selector] [file]`: Upload a file to an element.
+- `rod-cli drag [start-selector] [end-selector]`: Drag one element to another.
+- `rod-cli drop [selector] --path [file-path]`: Drop a file onto an element.
 
 ### Advanced Input & Dialogs
 - `rod-cli press [key]`: Simulate a raw keyboard key press (e.g., `Enter`, `Tab`, `Escape`).
 - `rod-cli mousemove [x] [y]`: Move the mouse to absolute coordinates.
 - `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
 - `rod-cli mouseup [left|right|middle]`: Trigger mouse up.
+- `rod-cli mousewheel [dx] [dy]`: Scroll the mouse wheel.
 - `rod-cli dialog-accept`: Automatically accept the next javascript alert/confirm.
 - `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
 
-### Storage Controls
+### Storage & State Controls
+- `rod-cli state-save [path]`: Save the browser state to a file.
+- `rod-cli state-load [path]`: Load the browser state from a file.
 - `rod-cli cookie-get`: Read all browser cookies.
+- `rod-cli cookie-set [name] [value]`: Set a cookie.
+- `rod-cli cookie-delete [name]`: Delete a specific cookie.
 - `rod-cli cookie-clear`: Clear all browser cookies.
 - `rod-cli localstorage-get [key]`: Retrieve a localStorage item (or omit key for all).
 - `rod-cli localstorage-set [key] [value]`: Set a localStorage item.
+- `rod-cli localstorage-delete [key]`: Delete a localStorage entry.
 - `rod-cli localstorage-clear`: Clear localStorage.
 - `rod-cli sessionstorage-get [key]`: Retrieve a sessionStorage item.
 - `rod-cli sessionstorage-set [key] [value]`: Set a sessionStorage item.
+- `rod-cli sessionstorage-delete [key]`: Delete a sessionStorage entry.
 - `rod-cli sessionstorage-clear`: Clear sessionStorage.
 
 ### Observability & Debugging
 - `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking).
 - `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
 - `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
+- `rod-cli console`: List browser console messages.
 
 ### Network Interception
 - `rod-cli route [pattern] --body [body]`: Mock network requests via godoll/network interceptor.
