@@ -1,28 +1,41 @@
-# Roadmap: rod-cli
+# Roadmap: v1.4 Plugin Architecture
 
-## Milestones
+**4 phases** | **11 requirements mapped** | All covered ✓
 
-- ✅ **v1.3 Godoll Migration** — Phases 12-16 (shipped 2026-06-21)
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 17 | Engine Sandbox | Implement the plugin engine sandbox and script loader. | PLUG-01, PLUG-02 | 2 |
+| 18 | Lifecycle Emitters | Expose godoll browser events to the plugin engine. | PLUG-03, PLUG-04, PLUG-05, PLUG-06 | 3 |
+| 19 | State Context Sharing | Allow scripts to securely read the DOM snapshot and network state. | PLUG-10, PLUG-11 | 2 |
+| 20 | Plugin CLI Interface | Expose commands to load, list, and run plugins manually. | PLUG-07, PLUG-08, PLUG-09 | 2 |
 
-## Phases
+### Phase Details
 
-<details>
-<summary>✅ v1.3 Godoll Migration (Phases 12-16) — SHIPPED 2026-06-21</summary>
+**Phase 17: Engine Sandbox**
+Goal: Implement the plugin engine sandbox and script loader.
+Requirements: PLUG-01, PLUG-02
+Success criteria:
+1. Engine initializes properly inside the daemon process.
+2. A generic script can be parsed and executed via file path.
 
-- [x] Phase 12: Zero-Dependency Browser Installation
-- [x] Phase 13: Stealth and Remote Browser Integration
-- [x] Phase 14: Network and Humanized Interactions
-- [x] Phase 15: Robust Execution Retries
-- [x] Phase 16: Add comprehensive test cases for godoll migration features
+**Phase 18: Lifecycle Emitters**
+Goal: Expose godoll browser events to the plugin engine.
+Requirements: PLUG-03, PLUG-04, PLUG-05, PLUG-06
+Success criteria:
+1. Engine can define an `OnRequest` handler that fires before network dispatch.
+2. Engine can define `OnLoad` and `OnResponse` handlers that receive state.
+3. Engine can intercept dynamic DOM mutations (`OnDOMNodeInserted`).
 
-</details>
+**Phase 19: State Context Sharing**
+Goal: Allow scripts to securely read the DOM snapshot and network state.
+Requirements: PLUG-10, PLUG-11
+Success criteria:
+1. Plugin scripts can query the token-optimized snapshot tree.
+2. Plugin scripts can read active cookies and local storage via standard API mappings.
 
-## Progress
-
-| Phase             | Milestone | Plans Complete | Status      | Completed  |
-| ----------------- | --------- | -------------- | ----------- | ---------- |
-| 12. Browser Install| v1.3      | -              | Complete    | 2026-06-21 |
-| 13. Stealth Integr | v1.3      | -              | Complete    | 2026-06-21 |
-| 14. Network/Human | v1.3      | -              | Complete    | 2026-06-21 |
-| 15. Execution Retry| v1.3      | -              | Complete    | 2026-06-21 |
-| 16. Test Cases    | v1.3      | 1/1            | Complete    | 2026-06-21 |
+**Phase 20: Plugin CLI Interface**
+Goal: Expose commands to load, list, and run plugins manually.
+Requirements: PLUG-07, PLUG-08, PLUG-09
+Success criteria:
+1. `rod-cli plugin load` injects a script into the daemon memory.
+2. `rod-cli plugin list` outputs active loaded plugins.
