@@ -1,9 +1,5 @@
-
 gomod:
   proxy: true
-  env:
-    - GOPROXY=https://goproxy.cn,direct
-    - GO111MODULE=on
 
 before:
   hooks:
@@ -12,8 +8,8 @@ before:
 builds:
 -
   ldflags:
-    - -s -w -X github.com/go-rod/rod-mcp/banner.Version={{ .Version }}
-    - -X github.com/go-rod/rod-mcp/banner.BuildTime={{ .Date }}
+    - -s -w -X github.com/agenthands/rod-cli/banner.Version={{ .Version }}
+    - -X github.com/agenthands/rod-cli/banner.BuildTime={{ .Date }}
   env:
     - CGO_ENABLED=0
   goos:
@@ -36,9 +32,6 @@ builds:
 
   binary: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
   main: "."
-
-dockers:
--
 
 archives:
 - id: Rod MCP
