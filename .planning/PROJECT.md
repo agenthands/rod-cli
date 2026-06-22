@@ -18,9 +18,24 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 ## Current State
 
-rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully bypasses bot detection mechanisms natively using Bayesian fingerprint matching and Bezier-curve realistic human interactions.
+rod-cli has completed its v1.4 Plugin Architecture milestone. It now ships a generic plugin engine with a script sandbox, browser lifecycle hooks (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`), state/context sharing, and `plugin load/list/run` CLI commands — demonstrated by a working XSS scanner plugin.
 
-## Current Milestone: v1.4 Plugin Architecture
+## Current Milestone: v1.5 Plugin Ecosystem Documentation
+
+**Goal:** Ship complete, authoritative documentation for the plugin ecosystem in a `docs/plugins/` tree, backed by runnable example plugins that exercise every hook and API.
+
+**Target features:**
+- Authoring Guide: A first-plugin tutorial covering project structure, loading, and running a plugin.
+- API / Lifecycle Reference: Reference docs for `OnRequest`, `OnResponse`, `OnLoad`, and `OnDOMNodeInserted` — signatures and payloads.
+- State / Context API Reference: Document reading token-optimized snapshots, cookies, localStorage, and network context from a plugin.
+- CLI Command Reference: Document `plugin load` / `list` / `run`, their flags, and exit codes.
+- Example Plugins: Polish and document the existing XSS scanner as the flagship example, ship a few small per-hook recipe plugins, and provide a copyable starter/template plugin.
+- All docs live under `docs/plugins/`, linked from the README.
+
+**Scope note:** Brownfield documentation milestone — the v1.4 engine, hooks, state API, and CLI commands already exist (phases 17–20). This milestone documents and exemplifies them rather than adding new engine capabilities; any gaps surfaced are treated as small fixes, not new features.
+
+<details>
+<summary>Archived: v1.4 Plugin Architecture</summary>
 
 **Goal:** Design and implement a generic plugin system for `rod-cli` allowing dynamic execution of external scripts or modules to hook into browser lifecycle events.
 
@@ -29,6 +44,7 @@ rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully
 - Lifecycle Hooks: Add event emitters to the daemon for `OnRequest`, `OnResponse`, `OnLoad`, and `OnDOMNodeInserted`.
 - Plugin CLI Commands: Add `rod-cli plugin load <path>`, `rod-cli plugin list`, and `rod-cli plugin run`.
 - State Sharing: Allow plugins to safely read token-optimized snapshots and network context from the `godoll` daemon.
+</details>
 
 <details>
 <summary>Archived: v1.3 Godoll Migration</summary>
@@ -125,4 +141,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 after initialization*
+*Last updated: 2026-06-22 — started milestone v1.5 Plugin Ecosystem Documentation*
