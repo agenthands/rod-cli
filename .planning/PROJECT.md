@@ -20,7 +20,18 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully bypasses bot detection mechanisms natively using Bayesian fingerprint matching and Bezier-curve realistic human interactions.
 
-## Current Milestone: v1.3 Godoll Migration
+## Current Milestone: v1.4 Plugin Architecture
+
+**Goal:** Design and implement a generic plugin system for `rod-cli` allowing dynamic execution of external scripts or modules to hook into browser lifecycle events.
+
+**Target features:**
+- Engine Selection: Implement embedded script engine (e.g. `goja` or Lua) or Wasm for plugin execution.
+- Lifecycle Hooks: Add event emitters to the daemon for `OnRequest`, `OnResponse`, `OnLoad`, and `OnDOMNodeInserted`.
+- Plugin CLI Commands: Add `rod-cli plugin load <path>`, `rod-cli plugin list`, and `rod-cli plugin run`.
+- State Sharing: Allow plugins to safely read token-optimized snapshots and network context from the `godoll` daemon.
+
+<details>
+<summary>Archived: v1.3 Godoll Migration</summary>
 
 **Goal:** Complete the migration to `godoll` to leverage its full suite of evasion, network interception, and robust interaction features, while achieving parity with Playwright via an automatic browser installer.
 
@@ -31,6 +42,7 @@ rod-cli has completed its v1.1 Stealth & Humanization milestone. It successfully
 - Replace `page.Mouse.Scroll` with `humanize.Scroll()`.
 - Wrap critical DOM actions with `godoll/retry` exponential backoff.
 - Standardize remote connectivity using `godoll/browser.ConnectToRemoteBrowser()`.
+</details>
 
 <details>
 <summary>Archived: v1.2 First-Class Agent Skills & Documentation</summary>
