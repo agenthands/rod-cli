@@ -6,6 +6,7 @@ require (
 	github.com/agenthands/godoll v0.0.0-20260314193512-b7f2b1da0553
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.1
+	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
 	github.com/go-rod/rod v0.116.2
 	github.com/mark3labs/mcp-go v0.20.1
 	github.com/pkg/errors v0.9.1
@@ -21,7 +22,10 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
+	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -39,6 +43,7 @@ require (
 	github.com/ysmood/leakless v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.3.8 // indirect
 )
 
 replace github.com/agenthands/godoll => ../godoll
