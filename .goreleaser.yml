@@ -34,10 +34,12 @@ builds:
   main: "."
 
 archives:
-- id: Rod MCP
-  format: zip
-  name_template: '{{ .ProjectName }}_{{ .Version }}_{{- if eq .Os "darwin" }}macOS_{{ .Arch }} {{- else }}{{ .Os }}_{{ .Arch }}{{ end }}'
+- format: tar.gz
+  name_template: '{{ .ProjectName }}_{{ .Version }}_{{ if eq .Os "darwin" }}macOS{{ else }}{{ title .Os }}{{ end }}_{{ if eq .Arch "amd64" }}x86_64{{ else if eq .Arch "386" }}i386{{ else }}{{ .Arch }}{{ end }}'
+  format_overrides:
+    - goos: windows
+      format: zip
 
 checksum:
   algorithm: sha256
-  name_template: "{{ .ProjectName }}-linux-checksums.txt"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
