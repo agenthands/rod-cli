@@ -22,4 +22,16 @@
 - Vulnerability scanning logic or exploit payloads baked into the binary — consistent with v1.4, specific functional/exploit logic stays in user-written example scripts, not the core tool.
 
 ## Traceability
-*(To be populated by the roadmapper)*
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PDOC-02 | Phase 21 — Reference Documentation | Pending |
+| PDOC-03 | Phase 21 — Reference Documentation | Pending |
+| PDOC-04 | Phase 21 — Reference Documentation | Pending |
+| PEX-01 | Phase 22 — Example Plugins | Pending |
+| PEX-02 | Phase 22 — Example Plugins | Pending |
+| PEX-03 | Phase 22 — Example Plugins | Pending |
+| PDOC-01 | Phase 23 — Authoring Guide & Docs Index | Pending |
+| PDOC-05 | Phase 23 — Authoring Guide & Docs Index | Pending |
+
+**Coverage:** 8/8 requirements mapped to exactly one phase. No orphans, no duplicates.
