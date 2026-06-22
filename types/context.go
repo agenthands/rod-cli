@@ -15,6 +15,7 @@ import (
 	"github.com/agenthands/godoll/network"
 	"github.com/agenthands/godoll/stealth"
 	rodfingerprint "github.com/agenthands/godoll/fingerprint"
+	"github.com/agenthands/rod-cli/internal/plugin"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
@@ -111,6 +112,8 @@ type Context struct {
 	interceptor *network.Interceptor
 	routes      map[string]string
 	fingerprint *rodfingerprint.Fingerprint
+	pluginEngine *plugin.PluginEngine
+	loadedPlugins []string
 }
 
 func NewContext(ctx context.Context, cfg Config) *Context {
@@ -185,6 +188,28 @@ func (ctx *Context) SetPage(p *rod.Page) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	ctx.page = p
+}
+
+func (ctx *Context) GetPluginEngine() *plugin.PluginEngine {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	if ctx.pluginEngine == nil {
+		ctx.pluginEngine = plugin.NewPluginEngine()
+		ctx.pluginEngine.Init()
+	}
+	return ctx.pluginEngine
+}
+
+func (ctx *Context) GetLoadedPlugins() []string {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	return ctx.loadedPlugins
+}
+
+func (ctx *Context) AddLoadedPlugin(path string) {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	ctx.loadedPlugins = append(ctx.loadedPlugins, path)
 }
 
 func (ctx *Context) Execute(handlerFunc server.ToolHandlerFunc, handlerCallOpts ToolHandlerCallOpts) server.ToolHandlerFunc {

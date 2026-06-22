@@ -396,6 +396,38 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "plugin",
+				Usage: "Manage external plugins",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "load",
+						Usage: "Load a plugin script",
+						Action: func(c *cli.Context) error {
+							path := c.Args().First()
+							if path == "" {
+								return fmt.Errorf("plugin path is required")
+							}
+							return runClientCommand(c, daemon.Request{Command: "plugin-load", Args: map[string]string{"path": path}})
+						},
+					},
+					{
+						Name:  "list",
+						Usage: "List loaded plugins",
+						Action: func(c *cli.Context) error {
+							return runClientCommand(c, daemon.Request{Command: "plugin-list"})
+						},
+					},
+					{
+						Name:  "run",
+						Usage: "Trigger a loaded plugin",
+						Action: func(c *cli.Context) error {
+							name := c.Args().First()
+							return runClientCommand(c, daemon.Request{Command: "plugin-run", Args: map[string]string{"name": name}})
+						},
+					},
+				},
+			},
+			{
 				Name:  "tab-close",
 				Usage: "Close a browser tab",
 				Action: func(c *cli.Context) error {

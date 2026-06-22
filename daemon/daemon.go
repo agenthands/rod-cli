@@ -198,6 +198,12 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		return actions.Check(ctx, req.Args["ref"])
 	case "uncheck":
 		return actions.Uncheck(ctx, req.Args["ref"])
+	case "plugin-load":
+		return actions.PluginLoad(ctx, req.Args["path"])
+	case "plugin-list":
+		return actions.PluginList(ctx)
+	case "plugin-run":
+		return actions.PluginRun(ctx, req.Args["name"])
 	case "upload":
 		files := strings.Split(req.Args["files"], ",")
 		return actions.Upload(ctx, req.Args["ref"], files)
