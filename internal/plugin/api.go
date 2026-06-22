@@ -33,3 +33,26 @@ func (a *PluginAPI) GetSnapshot() (string, error) {
 	}
 	return a.page.HTML()
 }
+
+// GetLocalStorage returns the current page's window.localStorage as a
+// key/value object. It mirrors GetCookies/GetSnapshot: when no page is
+// bound it returns (nil, nil). The JS arrow function iterates every
+// localStorage key into a plain object, which rod/gson hands back as a
+// map[string]interface{} via Val().
+func (a *PluginAPI) GetLocalStorage() (interface{}, error) {
+	if a.page == nil {
+		return nil, nil
+	}
+	result, err := a.page.Eval(`() => {
+		var out = {};
+		for (var i = 0; i < localStorage.length; i++) {
+			var k = localStorage.key(i);
+			out[k] = localStorage.getItem(k);
+		}
+		return out;
+	}`)
+	if err != nil {
+		return nil, err
+	}
+	return result.Value.Val(), nil
+}
