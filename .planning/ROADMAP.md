@@ -34,7 +34,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 **Plans**: 4 plans
 **Wave 1**
 
-- [ ] 21-01-PLAN.md — Add GetLocalStorage() accessor + integration test (corrective engine fix)
+- [x] 21-01-PLAN.md — Add GetLocalStorage() accessor + integration test (corrective engine fix)
 - [ ] 21-02-PLAN.md — Write docs/plugins/lifecycle-hooks.md (four lifecycle hooks)
 - [ ] 21-03-PLAN.md — Write docs/plugins/cli-reference.md (plugin load/list/run)
 
@@ -77,7 +77,7 @@ Phases execute in numeric order: 21 → 22 → 23
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 21. Reference Documentation | 0/4 | Not started | - |
+| 21. Reference Documentation | 1/4 | In Progress|  |
 | 22. Example Plugins | 0/TBD | Not started | - |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
