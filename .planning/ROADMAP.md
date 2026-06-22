@@ -4,8 +4,8 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 17 | Engine Sandbox | 0/1 | Planned    |  |
-| 18 | Lifecycle Emitters | Expose godoll browser events to the plugin engine. | PLUG-03, PLUG-04, PLUG-05, PLUG-06 | 3 |
+| 17 | Engine Sandbox | 1/1 | Complete   | 2026-06-22 |
+| 18 | Lifecycle Emitters | 0/1 | Planned    |  |
 | 19 | State Context Sharing | Allow scripts to securely read the DOM snapshot and network state. | PLUG-10, PLUG-11 | 2 |
 | 20 | Plugin CLI Interface | Expose commands to load, list, and run plugins manually. | PLUG-07, PLUG-08, PLUG-09 | 2 |
 
@@ -21,9 +21,9 @@
 1. Engine initializes properly inside the daemon process.
 2. A generic script can be parsed and executed via file path.
 
-**Plans**: 0/1 plans executed
+**Plans**: 1/1 plans complete
 
-- [ ] 17-01-PLAN.md
+- [x] 17-01-PLAN.md
 
 ### Phase 18: Lifecycle Emitters
 
@@ -36,7 +36,9 @@
 2. Engine can define `OnLoad` and `OnResponse` handlers that receive state.
 3. Engine can intercept dynamic DOM mutations (`OnDOMNodeInserted`).
 
-**Plans**: TBD
+**Plans**: 0/1 plans executed
+
+- [ ] 18-01-PLAN.md
 
 ### Phase 19: State Context Sharing
 
