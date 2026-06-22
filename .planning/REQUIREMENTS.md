@@ -1,27 +1,25 @@
-# Requirements: v1.4 Plugin Architecture
+# Requirements: v1.5 Plugin Ecosystem Documentation
 
-## 1. Plugin Engine Integration
-- [ ] **PLUG-01**: Select and embed a lightweight scripting engine (e.g., `goja` for JS, or `gopher-lua` for Lua) to avoid native CGO dependencies.
-- [ ] **PLUG-02**: Plugins must be dynamically loadable at runtime via file paths without requiring a recompilation of `rod-cli`.
+## 1. Plugin Documentation
+- [ ] **PDOC-01**: A plugin author can follow an authoring guide to write, load, and run their first plugin end-to-end.
+- [ ] **PDOC-02**: A plugin author can look up every lifecycle hook (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`) with its signature and payload shape in a reference page.
+- [ ] **PDOC-03**: A plugin author can look up the state/context API (token-optimized snapshot, cookies, localStorage, network context) with usage examples.
+- [ ] **PDOC-04**: A user can look up every plugin CLI command (`plugin load`, `plugin list`, `plugin run`) with its flags and exit codes in a reference page.
+- [ ] **PDOC-05**: A reader can discover all plugin documentation from a `docs/plugins/` index linked from the README.
 
-## 2. Lifecycle Event Hooks
-- [ ] **PLUG-03**: Implement `OnRequest` hook to allow plugins to observe outbound HTTP requests before they are sent.
-- [ ] **PLUG-04**: Implement `OnResponse` hook to allow plugins to observe incoming HTTP responses.
-- [ ] **PLUG-05**: Implement `OnLoad` hook to allow plugins to execute logic when a page finishes loading.
-- [ ] **PLUG-06**: Implement `OnDOMNodeInserted` hook for observing dynamic DOM mutations natively.
+## 2. Example Plugins
+- [ ] **PEX-01**: A user can read and run the documented XSS scanner as a complete, polished worked example.
+- [ ] **PEX-02**: A user can read and run a small recipe plugin demonstrating each lifecycle hook.
+- [ ] **PEX-03**: A plugin author can copy a starter/template plugin to scaffold a new plugin.
 
-## 3. CLI Management Commands
-- [ ] **PLUG-07**: `rod-cli plugin load <path>` - Registers a plugin into the active session's daemon.
-- [ ] **PLUG-08**: `rod-cli plugin list` - Displays all active plugins running in the daemon.
-- [ ] **PLUG-09**: `rod-cli plugin run <name>` - Manually triggers a named plugin script.
-
-## 4. State & Context Sharing
-- [ ] **PLUG-10**: Provide a secure API for plugins to access the cached, token-optimized DOM Snapshot state from the daemon.
-- [ ] **PLUG-11**: Provide a secure API for plugins to read active network context (cookies, local storage) without crashing the `godoll` context.
+## Future Requirements
+*(Deferred to a later milestone)*
+- A hosted/searchable docs site (e.g. generated static site) beyond in-repo Markdown.
+- A plugin registry or marketplace for sharing third-party plugins.
 
 ## Out of Scope
-- Native Go Plugins (`plugin` standard library) – Excluded because it relies heavily on CGO and breaks cross-compilation reliability.
-- Vulnerability scanning logic or specific payloads – `rod-cli` is a dual-use foundational tool; the implementation of specific functional testing or exploit logic must be handled entirely in user-written scripts, not baked into the binary.
+- New engine capabilities, lifecycle hooks, or CLI commands — this milestone documents and exemplifies the v1.4 plugin system as built. Any gaps surfaced during documentation are treated as small corrective fixes, not new features.
+- Vulnerability scanning logic or exploit payloads baked into the binary — consistent with v1.4, specific functional/exploit logic stays in user-written example scripts, not the core tool.
 
 ## Traceability
 *(To be populated by the roadmapper)*
