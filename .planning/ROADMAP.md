@@ -5,8 +5,8 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 17 | Engine Sandbox | 1/1 | Complete   | 2026-06-22 |
-| 18 | Lifecycle Emitters | 0/1 | Planned    |  |
-| 19 | State Context Sharing | Allow scripts to securely read the DOM snapshot and network state. | PLUG-10, PLUG-11 | 2 |
+| 18 | Lifecycle Emitters | 1/1 | Complete   | 2026-06-22 |
+| 19 | State Context Sharing | 0/1 | Planned    |  |
 | 20 | Plugin CLI Interface | Expose commands to load, list, and run plugins manually. | PLUG-07, PLUG-08, PLUG-09 | 2 |
 
 ### Phase Details
@@ -36,9 +36,9 @@
 2. Engine can define `OnLoad` and `OnResponse` handlers that receive state.
 3. Engine can intercept dynamic DOM mutations (`OnDOMNodeInserted`).
 
-**Plans**: 0/1 plans executed
+**Plans**: 1/1 plans complete
 
-- [ ] 18-01-PLAN.md
+- [x] 18-01-PLAN.md
 
 ### Phase 19: State Context Sharing
 
@@ -50,7 +50,9 @@
 1. Plugin scripts can query the token-optimized snapshot tree.
 2. Plugin scripts can read active cookies and local storage via standard API mappings.
 
-**Plans**: TBD
+**Plans**: 0/1 plans executed
+
+- [ ] 19-01-PLAN.md
 
 ### Phase 20: Plugin CLI Interface
 
