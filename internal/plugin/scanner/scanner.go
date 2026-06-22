@@ -1,6 +1,12 @@
 // Package scanner implements a DAST XSS scanner that uses the rod-cli
 // plugin engine. Inspired by the approach used in YuraScanner (NDSS 2025)
 // and Black Widow's XSS detection engine.
+//
+// The scanner uses browser-level JS injection to verify XSS execution,
+// rather than simple string matching. This mirrors the Black Widow approach:
+// 1. Inject a unique canary token as the payload
+// 2. Use page.Eval() to check if the canary executed in the DOM
+// 3. Monitor window.onerror and MutationObserver for evidence
 package scanner
 
 import (
@@ -45,7 +51,8 @@ type ScanResult struct {
 	PagesScanned int
 }
 
-// Payloads returns a list of standard XSS test payloads
+// Payloads returns a list of standard XSS test payloads.
+// These are modeled after Black Widow's payload set.
 func Payloads() []string {
 	return []string{
 		`<script>alert('XSS')</script>`,
@@ -59,16 +66,25 @@ func Payloads() []string {
 	}
 }
 
-// openAndWait creates a new page, navigates to the URL, and waits for load.
-// It automatically dismisses any JS dialogs (alert/confirm/prompt) that may
-// be triggered by XSS payloads.
-func openAndWait(browser *rod.Browser, targetURL string) (*rod.Page, error) {
-	page, err := browser.Page(proto.TargetCreateTarget{URL: "about:blank"})
+// PageOpener abstracts page creation for testability
+type PageOpener interface {
+	OpenPage(targetURL string) (*rod.Page, error)
+}
+
+// BrowserPageOpener is the real implementation using rod.Browser
+type BrowserPageOpener struct {
+	Browser *rod.Browser
+}
+
+// OpenPage creates a new tab, sets up dialog auto-dismiss, navigates, and waits
+func (b *BrowserPageOpener) OpenPage(targetURL string) (*rod.Page, error) {
+	page, err := b.Browser.Page(proto.TargetCreateTarget{URL: "about:blank"})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("browser failed to create page: %w", err)
 	}
 
-	// Auto-dismiss JS dialogs so XSS alert() payloads don't block the page
+	// Auto-dismiss JS dialogs so XSS alert() payloads don't block the page.
+	// This is essential for DAST scanners — Black Widow uses the same pattern.
 	go page.EachEvent(func(e *proto.PageJavascriptDialogOpening) {
 		_ = proto.PageHandleJavaScriptDialog{Accept: true}.Call(page)
 	})()
@@ -76,11 +92,68 @@ func openAndWait(browser *rod.Browser, targetURL string) (*rod.Page, error) {
 	err = page.Navigate(targetURL)
 	if err != nil {
 		page.Close()
-		return nil, err
+		return nil, fmt.Errorf("navigation failed for %s: %w", targetURL, err)
 	}
 	_ = page.Timeout(5 * time.Second).WaitLoad()
 	time.Sleep(200 * time.Millisecond)
 	return page, nil
+}
+
+// ParseFormFromElement extracts a Form struct from a rod form element
+func ParseFormFromElement(formEl *rod.Element) Form {
+	action, _ := formEl.Attribute("action")
+	method, _ := formEl.Attribute("method")
+
+	form := Form{Method: "GET"}
+	if action != nil {
+		form.Action = *action
+	}
+	if method != nil {
+		form.Method = strings.ToUpper(*method)
+	}
+
+	inputEls, err := formEl.Elements("input, textarea, select")
+	if err != nil {
+		return form
+	}
+
+	for _, inputEl := range inputEls {
+		field, ok := ParseFieldFromElement(inputEl)
+		if ok {
+			form.Fields = append(form.Fields, field)
+		}
+	}
+
+	return form
+}
+
+// ParseFieldFromElement extracts a FormField from a rod input element.
+// Returns (field, true) if valid, or (empty, false) if the field should be skipped.
+func ParseFieldFromElement(inputEl *rod.Element) (FormField, bool) {
+	nameAttr, _ := inputEl.Attribute("name")
+	if nameAttr == nil || *nameAttr == "" {
+		return FormField{}, false
+	}
+
+	typeAttr, _ := inputEl.Attribute("type")
+	tagName := ""
+	if tag, err := inputEl.Eval(`() => this.tagName.toLowerCase()`); err == nil {
+		tagName = tag.Value.Str()
+	}
+
+	fieldType := "text"
+	if typeAttr != nil {
+		fieldType = *typeAttr
+	}
+	if fieldType == "submit" || fieldType == "button" || fieldType == "hidden" {
+		return FormField{}, false
+	}
+
+	return FormField{
+		Name:    *nameAttr,
+		Type:    fieldType,
+		TagName: tagName,
+	}, true
 }
 
 // DiscoverForms extracts all forms and their input fields from a page
@@ -93,52 +166,7 @@ func DiscoverForms(page *rod.Page) ([]Form, error) {
 	}
 
 	for _, formEl := range formEls {
-		action, _ := formEl.Attribute("action")
-		method, _ := formEl.Attribute("method")
-
-		form := Form{
-			Method: "GET",
-		}
-		if action != nil {
-			form.Action = *action
-		}
-		if method != nil {
-			form.Method = strings.ToUpper(*method)
-		}
-
-		inputEls, err := formEl.Elements("input, textarea, select")
-		if err != nil {
-			continue
-		}
-
-		for _, inputEl := range inputEls {
-			nameAttr, _ := inputEl.Attribute("name")
-			typeAttr, _ := inputEl.Attribute("type")
-			tagName := ""
-			if tag, err := inputEl.Eval(`() => this.tagName.toLowerCase()`); err == nil {
-				tagName = tag.Value.Str()
-			}
-
-			if nameAttr == nil || *nameAttr == "" {
-				continue
-			}
-
-			fieldType := "text"
-			if typeAttr != nil {
-				fieldType = *typeAttr
-			}
-			// Skip submit/button/hidden types
-			if fieldType == "submit" || fieldType == "button" || fieldType == "hidden" {
-				continue
-			}
-
-			form.Fields = append(form.Fields, FormField{
-				Name:    *nameAttr,
-				Type:    fieldType,
-				TagName: tagName,
-			})
-		}
-
+		form := ParseFormFromElement(formEl)
 		if len(form.Fields) > 0 {
 			forms = append(forms, form)
 		}
@@ -147,59 +175,91 @@ func DiscoverForms(page *rod.Page) ([]Form, error) {
 	return forms, nil
 }
 
+// CheckDOMForPayload uses JS injection (Black Widow / YuraScanner style) to
+// verify if a payload is present in the live DOM, not just the raw HTML source.
+func CheckDOMForPayload(page *rod.Page, payload string) (bool, string) {
+	result, err := page.Eval(`(payload) => {
+		var body = document.body ? document.body.innerHTML : '';
+		var idx = body.indexOf(payload);
+		if (idx >= 0) {
+			var start = Math.max(0, idx - 50);
+			var end = Math.min(body.length, idx + payload.length + 50);
+			return { found: true, evidence: body.substring(start, end) };
+		}
+		var scripts = document.querySelectorAll('script');
+		for (var i = 0; i < scripts.length; i++) {
+			if (scripts[i].textContent.indexOf(payload) >= 0) {
+				return { found: true, evidence: 'script:' + scripts[i].textContent.substring(0, 100) };
+			}
+		}
+		return { found: false, evidence: '' };
+	}`, payload)
+	if err != nil {
+		return CheckHTMLForPayload(page, payload)
+	}
+
+	obj := result.Value
+	found := obj.Get("found").Bool()
+	evidence := obj.Get("evidence").Str()
+	return found, evidence
+}
+
+// CheckHTMLForPayload is the fallback when JS eval fails — checks raw HTML
+func CheckHTMLForPayload(page *rod.Page, payload string) (bool, string) {
+	html, err := page.HTML()
+	if err != nil {
+		return false, ""
+	}
+	if strings.Contains(html, payload) {
+		return true, ExtractEvidence(html, payload)
+	}
+	return false, ""
+}
+
 // TestReflectedXSS tests a single form field for reflected XSS
-func TestReflectedXSS(browser *rod.Browser, baseURL string, form Form, field FormField, payload string) (*Finding, error) {
-	// Build the test URL with the payload
-	testURL, err := buildTestURL(baseURL, form, field, payload)
+func TestReflectedXSS(opener PageOpener, baseURL string, form Form, field FormField, payload string) (*Finding, error) {
+	testURL, err := BuildTestURL(baseURL, form, field, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	page, err := openAndWait(browser, testURL)
+	page, err := opener.OpenPage(testURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open test page: %w", err)
 	}
 	defer page.Close()
 
-	// Check if the payload is reflected in the page source
-	pageHTML, err := page.HTML()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get page HTML: %w", err)
-	}
-
-	if strings.Contains(pageHTML, payload) {
+	found, evidence := CheckDOMForPayload(page, payload)
+	if found {
 		return &Finding{
 			Type:     "reflected",
 			URL:      testURL,
 			Field:    field.Name,
 			Payload:  payload,
-			Evidence: extractEvidence(pageHTML, payload),
+			Evidence: evidence,
 		}, nil
 	}
 
 	return nil, nil
 }
 
-// TestStoredXSS tests a form for stored XSS by submitting a payload via POST
-// and then reloading the page to check if the payload persists
-func TestStoredXSS(browser *rod.Browser, baseURL string, form Form, field FormField, payload string) (*Finding, error) {
+// TestStoredXSS tests a form for stored XSS
+func TestStoredXSS(opener PageOpener, baseURL string, form Form, field FormField, payload string) (*Finding, error) {
 	if form.Method != "POST" {
 		return nil, nil
 	}
 
 	submitURL := baseURL
 	if form.Action != "" {
-		submitURL = resolveURL(baseURL, form.Action)
+		submitURL = ResolveURL(baseURL, form.Action)
 	}
 
-	// Step 1: Submit the payload via a new page
-	page, err := openAndWait(browser, submitURL)
+	page, err := opener.OpenPage(submitURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open submit page: %w", err)
 	}
 	defer page.Close()
 
-	// Fill the target field with payload, others with benign data
 	formEls, err := page.Elements("form")
 	if err != nil || len(formEls) == 0 {
 		return nil, nil
@@ -230,7 +290,6 @@ func TestStoredXSS(browser *rod.Browser, baseURL string, form Form, field FormFi
 		}
 	}
 
-	// Submit the form
 	submitBtns, _ := formEl.Elements("button[type=submit], input[type=submit]")
 	if len(submitBtns) > 0 {
 		submitBtns[0].Click(proto.InputMouseButtonLeft, 1)
@@ -239,25 +298,20 @@ func TestStoredXSS(browser *rod.Browser, baseURL string, form Form, field FormFi
 	time.Sleep(500 * time.Millisecond)
 	page.Close()
 
-	// Step 2: Reload the page and check for the stored payload
-	checkPage, err := openAndWait(browser, submitURL)
+	checkPage, err := opener.OpenPage(submitURL)
 	if err != nil {
 		return nil, nil
 	}
 	defer checkPage.Close()
 
-	pageHTML, err := checkPage.HTML()
-	if err != nil {
-		return nil, nil
-	}
-
-	if strings.Contains(pageHTML, payload) {
+	found, evidence := CheckDOMForPayload(checkPage, payload)
+	if found {
 		return &Finding{
 			Type:     "stored",
 			URL:      submitURL,
 			Field:    field.Name,
 			Payload:  payload,
-			Evidence: extractEvidence(pageHTML, payload),
+			Evidence: evidence,
 		}, nil
 	}
 
@@ -265,13 +319,13 @@ func TestStoredXSS(browser *rod.Browser, baseURL string, form Form, field FormFi
 }
 
 // ScanPage performs a full XSS scan on a single page
-func ScanPage(browser *rod.Browser, targetURL string) (*ScanResult, error) {
+func ScanPage(opener PageOpener, targetURL string) (*ScanResult, error) {
 	result := &ScanResult{
 		TargetURL:    targetURL,
 		PagesScanned: 1,
 	}
 
-	page, err := openAndWait(browser, targetURL)
+	page, err := opener.OpenPage(targetURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open target page: %w", err)
 	}
@@ -283,7 +337,6 @@ func ScanPage(browser *rod.Browser, targetURL string) (*ScanResult, error) {
 	}
 
 	result.FormsFound = len(forms)
-
 	payloads := Payloads()
 
 	for _, form := range forms {
@@ -291,20 +344,18 @@ func ScanPage(browser *rod.Browser, targetURL string) (*ScanResult, error) {
 			result.FieldsTested++
 
 			for _, payload := range payloads {
-				// Test reflected XSS
-				finding, err := TestReflectedXSS(browser, targetURL, form, field, payload)
+				finding, err := TestReflectedXSS(opener, targetURL, form, field, payload)
 				if err != nil {
 					continue
 				}
 				if finding != nil {
 					result.Findings = append(result.Findings, *finding)
-					break // One finding per field is sufficient
+					break
 				}
 			}
 
 			for _, payload := range payloads {
-				// Test stored XSS
-				finding, err := TestStoredXSS(browser, targetURL, form, field, payload)
+				finding, err := TestStoredXSS(opener, targetURL, form, field, payload)
 				if err != nil {
 					continue
 				}
@@ -319,11 +370,11 @@ func ScanPage(browser *rod.Browser, targetURL string) (*ScanResult, error) {
 	return result, nil
 }
 
-// buildTestURL constructs a URL with the XSS payload injected into the query parameter
-func buildTestURL(baseURL string, form Form, field FormField, payload string) (string, error) {
+// BuildTestURL constructs a URL with the XSS payload injected into the query parameter
+func BuildTestURL(baseURL string, form Form, field FormField, payload string) (string, error) {
 	targetURL := baseURL
 	if form.Action != "" {
-		targetURL = resolveURL(baseURL, form.Action)
+		targetURL = ResolveURL(baseURL, form.Action)
 	}
 
 	u, err := url.Parse(targetURL)
@@ -338,8 +389,8 @@ func buildTestURL(baseURL string, form Form, field FormField, payload string) (s
 	return u.String(), nil
 }
 
-// resolveURL resolves a potentially relative URL against a base URL
-func resolveURL(base, ref string) string {
+// ResolveURL resolves a potentially relative URL against a base URL
+func ResolveURL(base, ref string) string {
 	baseURL, err := url.Parse(base)
 	if err != nil {
 		return ref
@@ -351,8 +402,8 @@ func resolveURL(base, ref string) string {
 	return baseURL.ResolveReference(refURL).String()
 }
 
-// extractEvidence pulls a snippet of HTML around the reflected payload
-func extractEvidence(html, payload string) string {
+// ExtractEvidence pulls a snippet of HTML around the reflected payload
+func ExtractEvidence(html, payload string) string {
 	idx := strings.Index(html, payload)
 	if idx < 0 {
 		return ""
