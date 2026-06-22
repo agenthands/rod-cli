@@ -147,3 +147,41 @@ func TestPluginAPI_GetSnapshot_ClosedPage(t *testing.T) {
 	// Closed page will return error — just verify no panic
 	_ = err
 }
+
+func TestPluginAPI_GetLocalStorage_RealPage(t *testing.T) {
+	page := openIntegPage(t, integServerURL)
+	defer page.MustClose()
+
+	// The served test HTML has no localStorage — seed a key before reading.
+	if _, err := page.Eval(`() => localStorage.setItem('theme', 'dark')`); err != nil {
+		t.Fatalf("seeding localStorage failed: %v", err)
+	}
+
+	api := NewPluginAPI(page)
+	data, err := api.GetLocalStorage()
+	if err != nil {
+		t.Fatalf("GetLocalStorage failed: %v", err)
+	}
+	if data == nil {
+		t.Fatal("expected non-nil localStorage data")
+	}
+
+	m, ok := data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map[string]interface{}, got %T", data)
+	}
+	if got := m["theme"]; got != "dark" {
+		t.Fatalf("expected seeded key theme=dark, got %v", got)
+	}
+}
+
+func TestPluginAPI_GetLocalStorage_NilPage(t *testing.T) {
+	api := NewPluginAPI(nil)
+	data, err := api.GetLocalStorage()
+	if err != nil {
+		t.Fatalf("expected nil error for nil page, got %v", err)
+	}
+	if data != nil {
+		t.Fatalf("expected nil data for nil page, got %v", data)
+	}
+}
