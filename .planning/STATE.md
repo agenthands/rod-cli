@@ -6,14 +6,14 @@ current_phase: 21
 current_phase_name: Reference Documentation
 status: executing
 stopped_at: ROADMAP.md and STATE.md written for v1.5; REQUIREMENTS.md traceability populated.
-last_updated: "2026-06-22T14:24:27.397Z"
+last_updated: "2026-06-22T14:26:53.899Z"
 last_activity: 2026-06-22
 last_activity_desc: Phase 21 execution started
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 21 (Reference Documentation) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-22 — Phase 21 execution started
 
@@ -65,6 +65,7 @@ All 8 requirements mapped, 100% coverage.
 - Phase 21–23: Document v1.4 as built; surface gaps as small corrective fixes, not new features (per REQUIREMENTS.md Out of Scope).
 - Reference-first ordering: reference pages (21) and examples (22) precede the authoring guide (23), which links to both rather than duplicating them.
 - [Phase ?]: GetLocalStorage uses gson Val() (not Export, absent in gson v0.7.3) to return localStorage as map[string]interface{}
+- [Phase ?]: Plugin reference pages use lowercase JS handler names and link to go-rod CDP proto types for full payload shapes
 
 ### Pending Todos
 
@@ -76,7 +77,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-22T14:24:12.332Z
+Last session: 2026-06-22T14:26:45.769Z
 Stopped at: ROADMAP.md and STATE.md written for v1.5; REQUIREMENTS.md traceability populated.
 Resume file: None
 
@@ -85,3 +86,4 @@ Resume file: None
 | Phase | Plan | Duration | Notes |
 |-------|------|----------|-------|
 | Phase 21 P01 | 3m | 2 tasks | 2 files |
+| Phase 21 P02 | 1min | 1 tasks | 1 files |
