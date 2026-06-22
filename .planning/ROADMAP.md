@@ -27,7 +27,11 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
   2. A reader can open `docs/plugins/state-api.md` and find the `api` global's `GetSnapshot()` and `GetCookies()` calls documented with return shapes and a worked usage snippet, plus how localStorage and network context are reached.
   3. A reader can open `docs/plugins/cli-reference.md` and find `plugin load <path>`, `plugin list`, and `plugin run <name>` documented with their arguments, behavior, output format, and exit/error conditions (e.g. missing path error).
   4. Every documented hook name, API method, and command in these pages matches the actual `internal/plugin/` and `actions/plugin.go` source (no invented surfaces).
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 21-01-PLAN.md — Add GetLocalStorage() accessor + integration test (corrective engine fix)
+- [ ] 21-02-PLAN.md — Write docs/plugins/lifecycle-hooks.md (four lifecycle hooks)
+- [ ] 21-03-PLAN.md — Write docs/plugins/cli-reference.md (plugin load/list/run)
+- [ ] 21-04-PLAN.md — Write docs/plugins/state-api.md (GetSnapshot/GetCookies/GetLocalStorage)
 
 ### Phase 22: Example Plugins
 **Goal**: A user can read and run a complete polished worked example, a small recipe for each lifecycle hook, and a copyable starter — all under a documented examples tree.
@@ -58,7 +62,7 @@ Phases execute in numeric order: 21 → 22 → 23
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 21. Reference Documentation | 0/TBD | Not started | - |
+| 21. Reference Documentation | 0/4 | Not started | - |
 | 22. Example Plugins | 0/TBD | Not started | - |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
