@@ -40,7 +40,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 21-04-PLAN.md — Write docs/plugins/state-api.md (GetSnapshot/GetCookies/GetLocalStorage)
+- [x] 21-04-PLAN.md — Write docs/plugins/state-api.md (GetSnapshot/GetCookies/GetLocalStorage)
 
 ### Phase 22: Example Plugins
 
@@ -77,7 +77,7 @@ Phases execute in numeric order: 21 → 22 → 23
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 21. Reference Documentation | 3/4 | In Progress|  |
+| 21. Reference Documentation | 4/4 | Complete   | 2026-06-22 |
 | 22. Example Plugins | 0/TBD | Not started | - |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
