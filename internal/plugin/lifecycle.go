@@ -18,6 +18,10 @@ type LifecycleEmitter interface {
 
 // BindLifecycle attaches CDP event listeners to the active page and forwards them to JS functions
 func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page) {
+	if e.vm != nil {
+		e.vm.Set("api", NewPluginAPI(page))
+	}
+
 	go page.EachEvent(func(ev *proto.NetworkRequestWillBeSent) {
 		e.invokeJSFunc("onRequest", ev)
 	}, func(ev *proto.NetworkResponseReceived) {
