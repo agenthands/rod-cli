@@ -1,20 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Plugin Ecosystem Documentation
-current_phase: 5
-status: Awaiting next milestone
-stopped_at: Completed 22-03-PLAN.md
-last_updated: "2026-06-23T10:51:11.562Z"
+milestone: v1.6
+milestone_name: Proven & Configurable Stealth
+status: planning
+last_updated: "2026-06-23T21:25:30.539Z"
 last_activity: 2026-06-23
-last_activity_desc: Milestone v1.5 completed and archived
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
-current_phase_name: Authoring Guide & Docs Index
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE.md — rod-cli
@@ -28,10 +24,10 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: Milestone v1.5 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-23 — Milestone v1.5 completed and archived
+Status: Defining requirements
+Last activity: 2026-06-23 — Milestone v1.6 started
 
 ## Milestone Progress
 

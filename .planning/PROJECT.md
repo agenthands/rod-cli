@@ -20,9 +20,21 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 rod-cli has completed its v1.5 Plugin Ecosystem Documentation milestone. The v1.4 plugin engine — script sandbox, browser lifecycle hooks (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`), state/context sharing, and `plugin load/list/run` — is now fully documented in a `docs/plugins/` tree: reference pages, a flagship XSS-scanner worked example, per-hook recipes, a copyable starter, and an authoring tutorial, all linked from the README. v1.5 also landed three small engine fixes surfaced while documenting — `api.GetLocalStorage()`, a now-functional `plugin run` (invokes a named plugin function and returns its result), and CDP DOM-domain enablement so the `onDOMNodeInserted` hook fires — and removed the always-on startup banner for token-efficiency.
 
-## Next Milestone
+## Current Milestone: v1.6 Proven & Configurable Stealth
 
-None yet — run `/gsd-new-milestone` to scope the next version.
+**Goal:** Turn rod-cli's already-wired godoll stealth from "compiles and runs" into "provably evades detection and is configurable per session" — validated against real detection, expanded with the evasion features that matter, and exposed through an agent-friendly config surface.
+
+**Target features:**
+- Repeatable, bundled detection test harness (CI-able) — the deterministic backbone for stealth validation.
+- Validation against fingerprint suites (CreepJS, bot.sannysoft, fingerprintjs) and elimination of classic headless tells (`navigator.webdriver`, plugins, `HeadlessChrome` UA, WebGL vendor, permissions).
+- Best-effort validation against real WAF/anti-bot challenges (Cloudflare/DataDome) — kept out of blocking CI.
+- Per-session proxy support (HTTP/SOCKS with auth, `--proxy`).
+- Configurable fingerprints — pin UA / locale / timezone / screen / platform per session (not random-only).
+- Canvas/WebGL/WebRTC hardening — fingerprint noise + WebRTC IP-leak prevention.
+- Human-like behavior tuning — configurable typing speed, mouse-path realism, delays, scroll.
+- Stealth config surface: session-persistent CLI flags (daemon model) plus a named-profile stealth config file, flag-overridable.
+
+**Note:** The godoll wiring already exists (`types/context.go`, `actions/actions.go`); this milestone proves and extends it rather than rebuilding it.
 
 <details>
 <summary>Archived: v1.5 Plugin Ecosystem Documentation</summary>
@@ -94,10 +106,11 @@ None yet — run `/gsd-new-milestone` to scope the next version.
 - ✓ Expand tool coverage to support the full categorized suite: Core, Navigation, Keyboard, Mouse, Storage, Network, and DevTools.
 - ✓ Enable `rod-cli show --annotate` for interactive design feedback flows.
 - ✓ [STEALTH-03] Implement `humanize` mouse and typing handlers over `rod-cli` actions. - v1.1
+- ✓ [STEALTH-01] Import `godoll` network module for advanced request mocking. - delivered v1.3, validated v1.6
+- ✓ [STEALTH-02] Replace inline `go-rod` browser initialization with `godoll.NewBrowser()`. - delivered v1.3, validated v1.6
 
 ### Active
-- [ ] [STEALTH-01] Import `godoll` network module for advanced request mocking.
-- [ ] [STEALTH-02] Replace inline `go-rod` browser initialization with `godoll.NewBrowser()`.
+- See **Current Milestone: v1.6** target features. Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
 
 ### Out of Scope
 
@@ -119,7 +132,7 @@ The project currently exists as an MCP server (`rod-mcp`). The goal is to transf
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Transform from MCP Server to CLI | Allows usage both as an interactive CLI and an automated LLM skill, providing a more versatile developer experience. | ✅ Complete |
-| Integrate godoll stealth | Prevent modern bot detection systems from blocking rod-cli sessions. | — Pending |
+| Integrate godoll stealth | Prevent modern bot detection systems from blocking rod-cli sessions. | ✅ Wired v1.3; proven & extended v1.6 |
 
 ## Evolution
 
@@ -139,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-23 — completed milestone v1.5 Plugin Ecosystem Documentation*
+*Last updated: 2026-06-24 — started milestone v1.6 Proven & Configurable Stealth*
