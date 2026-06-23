@@ -33,9 +33,9 @@
 | PDOC-02 | Phase 21 — Reference Documentation | Complete |
 | PDOC-03 | Phase 21 — Reference Documentation | Complete |
 | PDOC-04 | Phase 21 — Reference Documentation | Complete |
-| PEX-01 | Phase 22 — Example Plugins | Pending |
-| PEX-02 | Phase 22 — Example Plugins | Pending |
-| PEX-03 | Phase 22 — Example Plugins | Pending |
+| PEX-01 | Phase 22 — Example Plugins | In Progress |
+| PEX-02 | Phase 22 — Example Plugins | In Progress |
+| PEX-03 | Phase 22 — Example Plugins | In Progress |
 | PDOC-01 | Phase 23 — Authoring Guide & Docs Index | Pending |
 | PDOC-05 | Phase 23 — Authoring Guide & Docs Index | Pending |
 
