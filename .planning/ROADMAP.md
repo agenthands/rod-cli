@@ -86,7 +86,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 23-02-PLAN.md — plugin docs index (docs/plugins/README.md) + top-level README one-click link
+- [x] 23-02-PLAN.md — plugin docs index (docs/plugins/README.md) + top-level README one-click link
 
 ## Progress
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 21 → 22 → 23
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
 | 22. Example Plugins | 5/5 | Complete    | 2026-06-23 |
-| 23. Authoring Guide & Docs Index | 1/2 | In Progress|  |
+| 23. Authoring Guide & Docs Index | 2/2 | Complete   | 2026-06-23 |
 
 ---
 
