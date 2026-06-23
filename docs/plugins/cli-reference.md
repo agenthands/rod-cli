@@ -52,25 +52,29 @@ rod-cli plugin list
 
 ## `plugin run <name>`
 
-Triggers a named plugin.
+Invokes a named JavaScript function in the loaded plugin and prints its result.
 
 ```bash
-rod-cli plugin run xss_scanner
+rod-cli plugin run getFindings
 ```
 
-**Arguments:** one positional `<name>`.
+**Arguments:** one positional `<name>` — the name of a top-level function defined in the currently loaded plugin's VM.
 
-**Behavior — current stub (known limitation):** `plugin run` is **not yet fully implemented**. The daemon's `PluginRun` does not re-execute a registry-resolved plugin; it simply returns the string `Triggered plugin <name>` and does nothing else. The source carries a comment noting that fully running named plugins requires a plugin registry that does not exist yet. Treat the success message as a stub acknowledgement, not as confirmation that any plugin logic ran.
+**Behavior:** `plugin run <name>` invokes the JS function named `<name>` in the loaded plugin's VM and returns its result stringified. The daemon's `PluginRun` delegates to `engine.RunFunc`, which looks the name up in the goja runtime (`vm.Get` + `goja.AssertFunction`), calls it with no arguments, and stringifies the returned value. This is the read path for in-VM plugin state: the canonical use is `rod-cli plugin run getFindings`, which calls the example XSS scanner's `getFindings` accessor and returns its collected findings as JSON. It operates on the single loaded plugin VM — there is no multi-plugin registry, so `<name>` resolves against whatever plugin is currently loaded.
 
-**The real execution path today is `plugin load`.** A plugin's hooks fire continuously after it is loaded — there is no separate "run" step needed to make a loaded plugin do its work. See [lifecycle-hooks.md](./lifecycle-hooks.md).
+This complements `plugin load`: a plugin's hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) still fire automatically after load and accumulate state as you browse; `plugin run` is how you invoke a named accessor or function — such as `getFindings` or `getRequestLog` — to read that state back. See [lifecycle-hooks.md](./lifecycle-hooks.md) for the hooks and the [XSS scanner worked example](./examples/xss-scanner.md) for the full load → drive page → `plugin run getFindings` flow.
 
-**Output:** the literal string
+**Output:** the function's returned value, stringified. The example accessors call `JSON.stringify(...)`, so the CLI prints clean JSON. A function that returns `undefined` or `null` prints an empty string.
 
-```
-Triggered plugin <name>
-```
+**Error / exit conditions:**
 
-**Error / exit conditions:** as with the other subcommands, a daemon transport failure yields a non-zero exit; the stub itself does not validate the name against any registry.
+- **Missing name argument** — an empty `<name>` is guarded with `plugin function name is required`.
+- **No such function** — a name that is not defined in the loaded plugin's VM yields `function "<name>" not found`.
+- **Not callable** — a name bound to a non-callable value yields `"<name>" is not a callable function`.
+- **Runtime error inside the function** — an exception thrown while the function runs is wrapped as `error calling "<name>"`.
+- **Uninitialized engine** — if no plugin VM is available, `engine.RunFunc` returns `plugin engine not initialized`.
+
+Each of these causes a non-zero process exit, as does a daemon transport failure.
 
 ## Thin-Client Model
 
@@ -83,4 +87,4 @@ All three subcommands are thin clients over the daemon. `cmd.go` builds a `daemo
 
 ## Source
 
-The CLI argument parsing, the `plugin path is required` client guard, and the `daemon.Request` dispatch live in [`cmd.go`](../../cmd.go). The daemon-side behavior, output strings, and the `plugin run` stub live in [`actions/plugin.go`](../../actions/plugin.go) (`PluginLoad`, `PluginList`, `PluginRun`). The `failed to open script file` error originates in `internal/plugin/engine.go` (`LoadScript`), and the command dispatch table is in `daemon/daemon.go`.
+The CLI argument parsing, the `plugin path is required` client guard, and the `daemon.Request` dispatch live in [`cmd.go`](../../cmd.go). The daemon-side behavior and output strings live in [`actions/plugin.go`](../../actions/plugin.go) (`PluginLoad`, `PluginList`, `PluginRun`); `PluginRun` delegates to `engine.RunFunc`. The `failed to open script file` error originates in `internal/plugin/engine.go` (`LoadScript`), the `function "<name>" not found` / `"<name>" is not a callable function` / `error calling "<name>"` errors come from `RunFunc` in the same file, and the command dispatch table is in `daemon/daemon.go`.
