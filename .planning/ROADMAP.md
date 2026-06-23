@@ -15,7 +15,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 
 - [x] **Phase 21: Reference Documentation** - Authoritative reference pages for lifecycle hooks, state/context API, and CLI commands (completed 2026-06-22)
 - [x] **Phase 22: Example Plugins** - Polished XSS scanner, per-hook recipe plugins, and a copyable starter template (completed 2026-06-23)
-- [ ] **Phase 23: Authoring Guide & Docs Index** - First-plugin tutorial plus a `docs/plugins/` index linked from the README
+- [x] **Phase 23: Authoring Guide & Docs Index** - First-plugin tutorial plus a `docs/plugins/` index linked from the README (completed 2026-06-23)
 
 ## Phase Details
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 21 → 22 → 23
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
 | 22. Example Plugins | 5/5 | Complete    | 2026-06-23 |
-| 23. Authoring Guide & Docs Index | 2/2 | Complete   | 2026-06-23 |
+| 23. Authoring Guide & Docs Index | 2/2 | Complete    | 2026-06-23 |
 
 ---
 
