@@ -54,7 +54,18 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
   3. A plugin author can copy a `starter`/template plugin that defines empty stubs for all four hooks plus a results accessor, load it unchanged, and confirm it runs without errors.
   4. Each example references the Phase 21 reference pages for the hooks and API calls it uses, and every example script actually loads via `plugin load`.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+**Wave 1**
+
+- [ ] 22-01-PLAN.md — Engine fix: add RunFunc + rewrite PluginRun + tests (makes `plugin run` functional)
+- [ ] 22-02-PLAN.md — Per-hook recipe scripts + copyable starter (plugins/examples/recipes/*.js, starter.js)
+- [ ] 22-03-PLAN.md — Polish flagship xss_scanner.js in place
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 22-04-PLAN.md — xss-scanner worked-example doc + cli-reference.md `plugin run` update
+- [ ] 22-05-PLAN.md — recipes doc + starter doc (docs/plugins/examples/)
 
 ### Phase 23: Authoring Guide & Docs Index
 
@@ -78,7 +89,7 @@ Phases execute in numeric order: 21 → 22 → 23
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
-| 22. Example Plugins | 0/TBD | Not started | - |
+| 22. Example Plugins | 0/5 | Not started | - |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
 ---
