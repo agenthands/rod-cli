@@ -57,10 +57,10 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   3. A `.github/workflows/test.yml` job runs the harness on every push and its first run records a baseline where pre-existing leaks (e.g. WebRTC, any hardcoded-CH mismatch) show as known red signals rather than silent passes.
   4. The evasion path fails loudly: `EvasionManager.Apply()` and fingerprint-generation errors are surfaced/logged instead of being discarded (`_ = em.Apply()`), so a silent no-op is observable in the harness output.
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 
 - [x] 24-01-PLAN.md — Offline 127.0.0.1:0 detection fixture server + self-authored go:embed page (HARNESS-01)
-- [ ] 24-02-PLAN.md — VALIDATE-03: surface swallowed fingerprint/Apply() errors to stderr (no hard-fail)
+- [x] 24-02-PLAN.md — VALIDATE-03: surface swallowed fingerprint/Apply() errors to stderr (no hard-fail)
 - [ ] 24-03-PLAN.md — E2e harness driving the live binary, reading each signal from the live page via eval, KNOWN-RED baseline markers (HARNESS-02)
 - [ ] 24-04-PLAN.md — First test CI workflow (go 1.25.x, push + PR to main) + stray-artifact cleanup + CDP-footprint findings note (HARNESS-03)
 
@@ -142,7 +142,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 21. Reference Documentation | v1.5 | 4/4 | Complete | 2026-06-22 |
 | 22. Example Plugins | v1.5 | 5/5 | Complete | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
-| 24. Detection Harness & CI Backbone | v1.6 | 1/4 | In Progress|  |
+| 24. Detection Harness & CI Backbone | v1.6 | 2/4 | In Progress|  |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 0/TBD | Not started | - |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |

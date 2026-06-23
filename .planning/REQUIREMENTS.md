@@ -17,7 +17,7 @@
 
 - [ ] **VALIDATE-01**: A user can run a stealth-check command against a page and get a per-signal verdict (`navigator.webdriver`, `navigator.plugins`, UA-without-`HeadlessChrome`, WebGL vendor ≠ SwiftShader/llvmpipe, `navigator.permissions`, `navigator.languages`, screen dims, `window.chrome`/`chrome.runtime`, timezone).
 - [ ] **VALIDATE-02**: With `--raw`, the stealth-check emits a single-line machine-readable `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`), token-efficient for LLM callers — no full-page dump.
-- [ ] **VALIDATE-03**: A silent no-op in the evasion path fails loudly — fingerprint generation / `EvasionManager.Apply()` errors surface instead of being swallowed (today `_ = em.Apply()` discards them).
+- [x] **VALIDATE-03**: A silent no-op in the evasion path fails loudly — fingerprint generation / `EvasionManager.Apply()` errors surface instead of being swallowed (today `_ = em.Apply()` discards them).
 
 ### Configurable Fingerprint
 
@@ -84,7 +84,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | HARNESS-01 | Phase 24 | Complete |
 | HARNESS-02 | Phase 24 | Pending |
 | HARNESS-03 | Phase 24 | Pending |
-| VALIDATE-03 | Phase 24 | Pending |
+| VALIDATE-03 | Phase 24 | Complete |
 | PROFILE-01 | Phase 25 | Pending |
 | PROFILE-02 | Phase 25 | Pending |
 | PROXY-01 | Phase 25 | Pending |
