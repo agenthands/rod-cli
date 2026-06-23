@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/pkg/errors"
@@ -10,6 +11,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+)
+
+// seams for testing: indirections through which production calls are routed so
+// that otherwise-unreachable error branches can be exercised. Defaults are the
+// real functions; tests swap them and restore via defer. Zero behavior change.
+var (
+	yamlMarshal    = yaml.Marshal
+	yamlUnmarshal  = yaml.Unmarshal
+	pageEval       = func(p *rod.Page, js string, args ...any) (*proto.RuntimeRemoteObject, error) { return p.Eval(js, args...) }
+	pageInfo       = func(p *rod.Page) (*proto.TargetTargetInfo, error) { return p.Info() }
+	executeTemple  = utils.ExecuteTemple
+	queryEleByAria = utils.QueryEleByAria
 )
 
 const snapshotTpl = `
@@ -33,23 +46,23 @@ func BuildSnapshot(p *rod.Page) (*Snapshot, error) {
 		return nil, err
 	}
 
-	yamlBytes, err := yaml.Marshal(yamlDoc)
+	yamlBytes, err := yamlMarshal(yamlDoc)
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed,because of yaml marsha")
 	}
 
-	pageInfo, err := p.Info()
+	info, err := pageInfo(p)
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed")
 	}
 
 	tplInfo := map[string]any{
-		"URL":      pageInfo.URL,
-		"Title":    pageInfo.Title,
+		"URL":      info.URL,
+		"Title":    info.Title,
 		"Snapshot": strings.TrimSpace(string(yamlBytes)),
 		"Frames":   len(snapshot.frames),
 	}
-	res, err := utils.ExecuteTemple(snapshotTpl, tplInfo)
+	res, err := executeTemple(snapshotTpl, tplInfo)
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed, because of tple exec failed")
 	}
@@ -65,14 +78,14 @@ func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page) (*yaml.Node, error) {
 	s.frames = append(s.frames, p)
 	frameIndex := len(s.frames) - 1
 
-	rawSnapshot, err := p.Eval(js.AriaSnapshot, "document.body", "({ref: true})")
+	rawSnapshot, err := pageEval(p, js.AriaSnapshot, "document.body", "({ref: true})")
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed, frame index: %d", frameIndex)
 	}
 
 	var snapNode yaml.Node
 
-	err = yaml.Unmarshal([]byte(rawSnapshot.Value.String()), &snapNode)
+	err = yamlUnmarshal([]byte(rawSnapshot.Value.String()), &snapNode)
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed, frame index: %d", frameIndex)
 	}
@@ -146,7 +159,7 @@ func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page) (*yaml
 						},
 					}
 
-					childFrameEle, err := utils.QueryEleByAria(frame, ref)
+					childFrameEle, err := queryEleByAria(frame, ref)
 
 					if err != nil {
 						return pairNode, nil
@@ -196,7 +209,7 @@ func (s *Snapshot) LocatorInFrame(ref string) (*rod.Element, error) {
 		frame = s.frames[frameIndex]
 		ref = matches[2]
 	}
-	ele, err := utils.QueryEleByAria(frame, ref)
+	ele, err := queryEleByAria(frame, ref)
 	if err != nil {
 		return nil, errors.Wrapf(err, "locator frame failed, because of query element by aria failed")
 	}

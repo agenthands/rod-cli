@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/coverage"
 	"strings"
 	"syscall"
 	"time"
@@ -17,6 +18,18 @@ import (
 	"github.com/agenthands/rod-cli/actions"
 	"github.com/agenthands/rod-cli/types"
 )
+
+// exitDaemon terminates the daemon process. If the binary was built with
+// `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
+// accumulated coverage counters first, since os.Exit otherwise skips the
+// coverage runtime's atexit writer. In a normal build WriteCountersDir returns
+// an error and is ignored, so this is a no-op in production.
+func exitDaemon(code int) {
+	if dir := os.Getenv("GOCOVERDIR"); dir != "" {
+		_ = coverage.WriteCountersDir(dir)
+	}
+	os.Exit(code)
+}
 
 type Request struct {
 	Command string            `json:"command"`
@@ -136,7 +149,7 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			json.NewEncoder(w).Encode(Response{Result: "closing"})
 			go func() {
 				time.Sleep(10 * time.Millisecond)
-				os.Exit(0)
+				exitDaemon(0)
 			}()
 			return
 		}
@@ -152,7 +165,7 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 	go func() {
 		<-idleTimer.C
 		log.Info("Idle timeout reached, shutting down daemon")
-		os.Exit(0)
+		exitDaemon(0)
 	}()
 
 	if ppid > 0 {
@@ -161,10 +174,10 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 				time.Sleep(2 * time.Second)
 				process, err := os.FindProcess(ppid)
 				if err != nil {
-					os.Exit(0)
+					exitDaemon(0)
 				}
 				if err := process.Signal(syscall.Signal(0)); err != nil {
-					os.Exit(0)
+					exitDaemon(0)
 				}
 			}
 		}()

@@ -7,6 +7,10 @@ import (
 	"github.com/agenthands/rod-cli/types"
 )
 
+// seam for testing — overridden in *_test.go to exercise the otherwise
+// unreachable json.Marshal error branch. Defaults to encoding/json.Marshal.
+var jsonMarshal = json.Marshal
+
 // PluginLoad registers a plugin into the active session's daemon.
 func PluginLoad(ctx *types.Context, path string) (string, error) {
 	if path == "" {
@@ -34,7 +38,7 @@ func PluginList(ctx *types.Context) (string, error) {
 		return "No active plugins loaded.", nil
 	}
 
-	data, err := json.Marshal(plugins)
+	data, err := jsonMarshal(plugins)
 	if err != nil {
 		return "", err
 	}
