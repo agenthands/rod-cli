@@ -9,7 +9,7 @@
 
 ### Detection Harness
 
-- [ ] **HARNESS-01**: A self-contained, offline detection test page (sannysoft-style assertions + a curated CreepJS-style subset) is bundled via `go:embed` and served from a local `127.0.0.1:0` fixture server, mirroring the existing `internal/plugin/scanner/testserver` pattern.
+- [x] **HARNESS-01**: A self-contained, offline detection test page (sannysoft-style assertions + a curated CreepJS-style subset) is bundled via `go:embed` and served from a local `127.0.0.1:0` fixture server, mirroring the existing `internal/plugin/scanner/testserver` pattern.
 - [ ] **HARNESS-02**: An end-to-end test drives the real `rod-cli` binary against the harness, navigates, and asserts each table-stakes signal by reading it back from the live page (not from source) — running with zero network egress so it is deterministic green-or-red.
 - [ ] **HARNESS-03**: A test CI job runs the harness on every push (no test CI exists today), baselined against the current binary so existing leaks are surfaced rather than hidden.
 
@@ -81,7 +81,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HARNESS-01 | Phase 24 | Pending |
+| HARNESS-01 | Phase 24 | Complete |
 | HARNESS-02 | Phase 24 | Pending |
 | HARNESS-03 | Phase 24 | Pending |
 | VALIDATE-03 | Phase 24 | Pending |
@@ -100,11 +100,13 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | LIVEWAF-01 | Phase 29 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 17 total
 - Mapped to phases: 17 ✓ (100% — every requirement maps to exactly one phase)
 - Unmapped: 0
 
 **Phase → Requirement summary:**
+
 - Phase 24 (Detection Harness & CI Backbone): HARNESS-01, HARNESS-02, HARNESS-03, VALIDATE-03
 - Phase 25 (Stealth Config Surface & Per-Session Proxy): PROFILE-01, PROFILE-02, PROXY-01, PROXY-02
 - Phase 26 (Configurable Fingerprint & Consistency Validator): FINGERPRINT-01, FINGERPRINT-02, FINGERPRINT-03, VALIDATE-01, VALIDATE-02

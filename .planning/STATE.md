@@ -2,15 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Proven & Configurable Stealth
+current_phase: 24
+current_phase_name: Detection Harness & CI Backbone
 status: planning
-last_updated: "2026-06-24T00:40:00.000Z"
+stopped_at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
+last_updated: "2026-06-23T22:41:28.808Z"
 last_activity: 2026-06-24
+last_activity_desc: Roadmap created for v1.6 (Phases 24–29), 17 requirements mapped at 100% coverage
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # STATE.md — rod-cli
@@ -25,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 24 of 29 (Detection Harness & CI Backbone) — first of 6 v1.6 phases (24–29)
-Plan: — (not yet planned)
-Status: Ready to plan
-Last activity: 2026-06-24 — Roadmap created for v1.6 (Phases 24–29), 17 requirements mapped at 100% coverage
+Plan: 1 of 4 complete (24-01 — detection fixture server + embedded probe page)
+Status: In progress
+Last activity: 2026-06-24 — Executed 24-01: internal/detect offline fixture server + self-authored window.__detect probe page (HARNESS-01)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Roadmap Summary
 
@@ -57,6 +61,8 @@ All 17 v1 requirements mapped, 100% coverage.
 - Consistency before hardening: the single source of truth + consistency invariant (Phase 26) must precede canvas/WebGL/WebRTC noise (Phase 27) so hardening has a coherent stable base rather than *creating* lies.
 - Every stealth assertion reads back via `page.Eval` from the live (daemon-reused) browser, never from a Go config field — carried forward from the v1.5 `onDOMNodeInserted` wired-but-silent lesson.
 - VALIDATE-01/02 (user-facing stealth-check verdict) placed in Phase 26 alongside the consistency validator since both surface per-signal reads of the pinned identity.
+- [Phase ?]: Phase 24-01: detection page self-authored (no bot.sannysoft); offline //go:embed probe page writes per-signal verdicts into window.__detect, ready-gated.
+- [Phase ?]: Phase 24-01: webrtcIce + cdpTell are informational/non-blocking KNOWN-RED signals — harness records current truth; HARDEN-01 (Phase 27) fixes WebRTC leak.
 
 ### Pending Todos
 
@@ -75,13 +81,14 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T00:40:00.000Z
+Last session: 2026-06-23T22:40:57.859Z
 Stopped at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
 Resume file: None
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v1.6)
 - Average duration: —
 - Total execution time: —
@@ -90,3 +97,4 @@ Resume file: None
 |-------|-------|-------|----------|
 | - | - | - | - |
 </content>
+| Phase 24 P01 | 2min | 2 tasks | 5 files |
