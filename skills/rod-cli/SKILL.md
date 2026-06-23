@@ -25,9 +25,8 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `--json` / `--raw`: Suppress banners and output clean JSON or raw text.
 - `-s, --session`: Specify a named session string.
 
-### Setup & MCP
+### Setup
 - `rod-cli install`: Install the Chromium browser required by rod-cli.
-- `rod-cli serve`: Run the MCP server for agentic integrations.
 
 ### Browser Lifecycle & Tabs
 - `rod-cli sessions`: List all currently active background daemon sessions.

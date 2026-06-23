@@ -2,14 +2,14 @@
 
 `rod-cli` is a lightweight, zero-dependency command-line interface (CLI) that gives AI assistants native web browsing, scraping, and interaction capabilities. Built on top of [godoll](https://github.com/agenthands/godoll) (which wraps [go-rod](https://github.com/go-rod/rod)), it replaces bulky Node.js setups with a fast, stealth-enabled compiled Go binary.
 
-Operating as a "Skill" rather than a traditional stateful MCP server, it is designed explicitly for LLMs (Claude, Gemini, and custom autonomous agents). It communicates via standard input/output (stdio) or acts directly as an MCP server. It features aggressive context-window optimization—stripping out DOM noise and converting web pages to LLM-friendly Markdown—so your AI can read the web without burning through token limits.
+Designed explicitly as a "Skill" for LLMs (Claude, Gemini, and custom autonomous agents), it is driven entirely through plain command-line invocations — each command runs and exits while a background daemon keeps the browser state alive between calls. It features aggressive context-window optimization—stripping out DOM noise and converting web pages to LLM-friendly Markdown—so your AI can read the web without burning through token limits.
 
 ## Key Benefits:
 
 - **Stealth First:** Powered by `godoll`, `rod-cli` natively masks browser fingerprints and provides seamless network interception capabilities to bypass anti-bot systems.
 - **Token-Efficient by Design:** It avoids loading massive accessibility trees or verbose JSON tool schemas into the model context. It relies on concise, purpose-built commands.
 - **Zero Dependency Hell:** It’s a single Go binary. No Node.js, no `node_modules`. Just download, run `rod-cli install` to fetch Chromium, and automate.
-- **Agent-Ready via Stdio/MCP:** Works seamlessly as a background process using the standard MCP stdio transport, making it a perfect drop-in skill for coding agents.
+- **Agent-Ready:** Each command runs as a one-shot invocation backed by a persistent daemon, making it a perfect drop-in skill for coding agents to call directly from a shell.
 - **Rock-Solid Stability:** Leverages `godoll/retry` logic for auto-waiting and crash resilience. No more flaky timeouts or zombie browser processes.
 
 ## Documentation

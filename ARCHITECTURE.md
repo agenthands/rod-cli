@@ -35,5 +35,5 @@ Commands like `click` and `goto` do not blindly fire `go-rod` primitives. Instea
 ## 3. Multiplexing
 You can run multiple isolated browser instances simultaneously by using the `--session` flag. Each named session spins up its own dedicated background daemon and Chromium instance. This makes it trivial for an agent to perform multi-user workflows (e.g., User A sending a message, User B receiving it).
 
-## 4. MCP Server Mode
-While the CLI is primarily used directly via terminal commands, running `rod-cli serve` launches it as a Model Context Protocol (MCP) server. In this mode, the CLI exposes its capabilities as structured tools to any MCP-compliant LLM, maintaining the same daemon-backed resilience under the hood.
+## 4. Invoking with no command
+Running `rod-cli` with no arguments prints the banner, description, and full command list (see `--help`). The tool is driven entirely through explicit subcommands; there is no long-running server mode to start.
