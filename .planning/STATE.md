@@ -4,17 +4,17 @@ milestone: v1.5
 milestone_name: Plugin Ecosystem Documentation
 current_phase: 22
 current_phase_name: Example Plugins
-status: executing
+status: verifying
 stopped_at: Completed 22-03-PLAN.md
-last_updated: "2026-06-23T08:50:38.919Z"
+last_updated: "2026-06-23T08:54:08.903Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 22 execution started
 progress:
   total_phases: 7
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 14
+  completed_plans: 9
+  percent: 29
 ---
 
 # STATE.md — rod-cli
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md
 
 Phase: 22 (Example Plugins) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-23 — Phase 22 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -70,6 +70,7 @@ All 8 requirements mapped, 100% coverage.
 - [Phase ?]: Phase 22: RunFunc stringifies via res.String() (no Go json.Marshal); accessors already JSON.stringify
 - [Phase 22]: Example plugin recipes mirror xss_scanner.js shape: module-level array + one lowercase hook + JSON.stringify getter
 - [Phase 22]: xss_scanner.js polished in place (PEX-01); onDOMNodeInserted left to its standalone recipe to keep flagship lean
+- [Phase ?]: 22-05: recipes documented as single recipes.md with one section per hook; starter documented as copy->load->plugin run getResults
 
 ### Pending Todos
 
@@ -81,7 +82,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T08:50:27.489Z
+Last session: 2026-06-23T08:53:24.754Z
 Stopped at: Completed 22-03-PLAN.md
 Resume file: None
 
@@ -97,3 +98,4 @@ Resume file: None
 | Phase 22 P02 | 6m | 3 tasks | 5 files |
 | Phase 22 P03 | 4m | 1 tasks | 1 files |
 | Phase 22 P04 | 1 | 2 tasks | 2 files |
+| Phase 22 P05 | 1 | 2 tasks | 2 files |

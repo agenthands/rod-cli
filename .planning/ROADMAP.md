@@ -65,7 +65,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 22-04-PLAN.md — xss-scanner worked-example doc + cli-reference.md `plugin run` update
-- [ ] 22-05-PLAN.md — recipes doc + starter doc (docs/plugins/examples/)
+- [x] 22-05-PLAN.md — recipes doc + starter doc (docs/plugins/examples/)
 
 ### Phase 23: Authoring Guide & Docs Index
 
@@ -89,7 +89,7 @@ Phases execute in numeric order: 21 → 22 → 23
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
-| 22. Example Plugins | 4/5 | In Progress|  |
+| 22. Example Plugins | 5/5 | Complete   | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
 ---
