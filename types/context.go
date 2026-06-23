@@ -284,12 +284,16 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// Apply stealth evasion
 		em := stealth.NewEvasionManager(page)
 		fg := rodfingerprint.NewFingerprintGenerator(rodfingerprint.FPWithBrowserNames("chrome"))
-		fp, err := fg.Generate()
-		if err == nil && fp != nil {
+		fp, fpErr := fg.Generate()
+		if fpErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
+		} else if fp != nil {
 			ctx.fingerprint = fp
 			em.SetFingerprint(fp)
 		}
-		_ = em.Apply()
+		if err := em.Apply(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: evasion Apply failed: %v\n", err)
+		}
 
 		page.EvalOnNewDocument(js.InjectedSnapShot)
 		
