@@ -60,7 +60,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 
 - [x] 22-01-PLAN.md — Engine fix: add RunFunc + rewrite PluginRun + tests (makes `plugin run` functional)
 - [x] 22-02-PLAN.md — Per-hook recipe scripts + copyable starter (plugins/examples/recipes/*.js, starter.js)
-- [ ] 22-03-PLAN.md — Polish flagship xss_scanner.js in place
+- [x] 22-03-PLAN.md — Polish flagship xss_scanner.js in place
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -89,7 +89,7 @@ Phases execute in numeric order: 21 → 22 → 23
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
-| 22. Example Plugins | 2/5 | In Progress|  |
+| 22. Example Plugins | 3/5 | In Progress|  |
 | 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
 
 ---

@@ -5,15 +5,15 @@ milestone_name: Plugin Ecosystem Documentation
 current_phase: 22
 current_phase_name: Example Plugins
 status: executing
-stopped_at: Completed 21-03-PLAN.md
-last_updated: "2026-06-23T08:43:54.232Z"
+stopped_at: Completed 22-03-PLAN.md
+last_updated: "2026-06-23T08:47:15.270Z"
 last_activity: 2026-06-23
 last_activity_desc: Phase 22 execution started
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 14
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: 22 (Example Plugins) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-06-23 — Phase 22 execution started
 
@@ -69,6 +69,7 @@ All 8 requirements mapped, 100% coverage.
 - [Phase ?]: state-api.md documents only the three accessors in internal/plugin/api.go; network context deferred to lifecycle hook payloads
 - [Phase ?]: Phase 22: RunFunc stringifies via res.String() (no Go json.Marshal); accessors already JSON.stringify
 - [Phase 22]: Example plugin recipes mirror xss_scanner.js shape: module-level array + one lowercase hook + JSON.stringify getter
+- [Phase 22]: xss_scanner.js polished in place (PEX-01); onDOMNodeInserted left to its standalone recipe to keep flagship lean
 
 ### Pending Todos
 
@@ -80,8 +81,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T08:43:33.524Z
-Stopped at: Completed 21-03-PLAN.md
+Last session: 2026-06-23T08:47:15.265Z
+Stopped at: Completed 22-03-PLAN.md
 Resume file: None
 
 ## Performance Metrics
@@ -94,3 +95,4 @@ Resume file: None
 | Phase 21 P04 | 3m | 1 tasks | 1 files |
 | Phase 22 P01 | 5m | 3 tasks | 3 files |
 | Phase 22 P02 | 6m | 3 tasks | 5 files |
+| Phase 22 P03 | 4m | 1 tasks | 1 files |
