@@ -22,11 +22,22 @@ func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page) {
 		e.vm.Set("api", NewPluginAPI(page))
 	}
 
+	// Enable the CDP DOM domain and fetch the full document tree so the backend
+	// emits DOMChildNodeInserted events to the onDOMNodeInserted hook. Without an
+	// enabled DOM domain Chrome never sends childNodeInserted, so the hook would
+	// otherwise be wired but silent. The document is (re)fetched on each page load
+	// so node tracking covers freshly navigated pages.
+	fullDepth := -1
+	_ = proto.DOMEnable{}.Call(page)
+	_, _ = proto.DOMGetDocument{Depth: &fullDepth}.Call(page)
+
 	go page.EachEvent(func(ev *proto.NetworkRequestWillBeSent) {
 		e.invokeJSFunc("onRequest", ev)
 	}, func(ev *proto.NetworkResponseReceived) {
 		e.invokeJSFunc("onResponse", ev)
 	}, func(ev *proto.PageLoadEventFired) {
+		d := -1
+		_, _ = proto.DOMGetDocument{Depth: &d}.Call(page)
 		e.invokeJSFunc("onLoad", ev)
 	}, func(ev *proto.DOMChildNodeInserted) {
 		e.invokeJSFunc("onDOMNodeInserted", ev)
