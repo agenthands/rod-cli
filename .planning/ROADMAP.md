@@ -53,7 +53,11 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   2. Each table-stakes assertion (`navigator.webdriver`, plugins, UA-without-`HeadlessChrome`, WebGL vendor, permissions, languages, screen, `window.chrome`, timezone) is verified by reading the value back via `page.Eval` on the live page — never from a Go config field — and runs in both headless and headful matrix rows.
   3. A `.github/workflows/test.yml` job runs the harness on every push and its first run records a baseline where pre-existing leaks (e.g. WebRTC, any hardcoded-CH mismatch) show as known red signals rather than silent passes.
   4. The evasion path fails loudly: `EvasionManager.Apply()` and fingerprint-generation errors are surfaced/logged instead of being discarded (`_ = em.Apply()`), so a silent no-op is observable in the harness output.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 24-01-PLAN.md — Offline 127.0.0.1:0 detection fixture server + self-authored go:embed page (HARNESS-01)
+- [ ] 24-02-PLAN.md — VALIDATE-03: surface swallowed fingerprint/Apply() errors to stderr (no hard-fail)
+- [ ] 24-03-PLAN.md — E2e harness driving the live binary, reading each signal from the live page via eval, KNOWN-RED baseline markers (HARNESS-02)
+- [ ] 24-04-PLAN.md — First test CI workflow (go 1.25.x, push + PR to main) + stray-artifact cleanup + CDP-footprint findings note (HARNESS-03)
 
 ### Phase 25: Stealth Config Surface & Per-Session Proxy
 **Goal**: A session-persistent stealth configuration surface (CLI flags plus a named JSON profile file) resolves with deterministic precedence once at daemon-spawn time and is inherited by every later command on the same session — and the first feature riding it, a per-session HTTP/SOCKS5 proxy with CDP-based auth, validates the whole flag → config → godoll path end-to-end without bleeding across named sessions.
@@ -118,7 +122,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 21. Reference Documentation | v1.5 | 4/4 | Complete | 2026-06-22 |
 | 22. Example Plugins | v1.5 | 5/5 | Complete | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
-| 24. Detection Harness & CI Backbone | v1.6 | 0/TBD | Not started | - |
+| 24. Detection Harness & CI Backbone | v1.6 | 0/4 | Not started | - |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 0/TBD | Not started | - |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
