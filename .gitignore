@@ -50,4 +50,16 @@ debug/
 
 # Build output directory
 build/
-dist/ 
+dist/
+
+# Stray test/build artifacts (Phase 24 cleanup)
+# Note: tests/coverage.out is already covered by *.out; *.log covers log files
+# but not the log/ dir, so tests/log/ is listed explicitly.
+/rod-cli
+/test_rod
+/state.json
+/init_output.json
+/fix_test.patch
+tests/rod/
+tests/log/
+*.orig
