@@ -11,8 +11,8 @@
 ## 2. Example Plugins
 
 - [ ] **PEX-01**: A user can read and run the documented XSS scanner as a complete, polished worked example.
-- [ ] **PEX-02**: A user can read and run a small recipe plugin demonstrating each lifecycle hook.
-- [ ] **PEX-03**: A plugin author can copy a starter/template plugin to scaffold a new plugin.
+- [x] **PEX-02**: A user can read and run a small recipe plugin demonstrating each lifecycle hook.
+- [x] **PEX-03**: A plugin author can copy a starter/template plugin to scaffold a new plugin.
 
 ## Future Requirements
 
