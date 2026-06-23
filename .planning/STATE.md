@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Plugin Ecosystem Documentation
-current_phase: 23
-status: verifying
+current_phase: 5
+status: Awaiting next milestone
 stopped_at: Completed 22-03-PLAN.md
-last_updated: "2026-06-23T10:41:22.114Z"
+last_updated: "2026-06-23T10:51:11.562Z"
 last_activity: 2026-06-23
-last_activity_desc: Phase 23 complete
+last_activity_desc: Milestone v1.5 completed and archived
 progress:
-  total_phases: 7
+  total_phases: 3
   completed_phases: 3
   total_plans: 11
   completed_plans: 11
-  percent: 43
+  percent: 100
 current_phase_name: Authoring Guide & Docs Index
 ---
 
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: 23
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-23 — Phase 23 complete
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Milestone v1.5 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-23 — Milestone v1.5 completed and archived
 
 ## Milestone Progress
 
@@ -56,7 +54,7 @@ All 8 requirements mapped, 100% coverage.
 
 ## Operator Next Steps
 
-- Plan Phase 21 with `/gsd-plan-phase 21`
+- Start the next milestone with /gsd-new-milestone
 
 ## Accumulated Context
 
