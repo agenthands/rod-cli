@@ -6,14 +6,14 @@ current_phase: 24
 current_phase_name: Detection Harness & CI Backbone
 status: executing
 stopped_at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
-last_updated: "2026-06-23T22:44:20.290Z"
+last_updated: "2026-06-23T22:49:00.207Z"
 last_activity: 2026-06-24
 last_activity_desc: "Executed 24-01: internal/detect offline fixture server + self-authored window.__detect probe page (HARNESS-01)"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 24 of 29 (Detection Harness & CI Backbone) — first of 6 v1.6 phases (24–29)
-Plan: 2 of 4 complete (24-01 — detection fixture server + embedded probe page)
+Plan: 3 of 4 complete (24-01 — detection fixture server + embedded probe page)
 Status: Ready to execute
 Last activity: 2026-06-24 — Executed 24-01: internal/detect offline fixture server + self-authored window.__detect probe page (HARNESS-01)
 
@@ -64,6 +64,7 @@ All 17 v1 requirements mapped, 100% coverage.
 - [Phase ?]: Phase 24-01: detection page self-authored (no bot.sannysoft); offline //go:embed probe page writes per-signal verdicts into window.__detect, ready-gated.
 - [Phase ?]: Phase 24-01: webrtcIce + cdpTell are informational/non-blocking KNOWN-RED signals — harness records current truth; HARDEN-01 (Phase 27) fixes WebRTC leak.
 - [Phase ?]: VALIDATE-03: swallowed evasion errors now write warning: to stderr (log-and-continue, no daemon abort)
+- [Phase ?]: 24-03: e2e detection harness reads window.__detect via eval (validate-live-not-source); WebRTC + Client-Hints kept as KNOWN-RED executing assertions, never skipped
 
 ### Pending Todos
 
@@ -82,7 +83,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:44:09.176Z
+Last session: 2026-06-23T22:48:39.230Z
 Stopped at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
 Resume file: None
 
@@ -100,3 +101,4 @@ Resume file: None
 </content>
 | Phase 24 P01 | 2min | 2 tasks | 5 files |
 | Phase 24 P02 | 5m | 1 tasks | 1 files |
+| Phase 24 P03 | 6min | 1 tasks | 1 files |

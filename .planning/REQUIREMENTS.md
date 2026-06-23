@@ -10,7 +10,7 @@
 ### Detection Harness
 
 - [x] **HARNESS-01**: A self-contained, offline detection test page (sannysoft-style assertions + a curated CreepJS-style subset) is bundled via `go:embed` and served from a local `127.0.0.1:0` fixture server, mirroring the existing `internal/plugin/scanner/testserver` pattern.
-- [ ] **HARNESS-02**: An end-to-end test drives the real `rod-cli` binary against the harness, navigates, and asserts each table-stakes signal by reading it back from the live page (not from source) — running with zero network egress so it is deterministic green-or-red.
+- [x] **HARNESS-02**: An end-to-end test drives the real `rod-cli` binary against the harness, navigates, and asserts each table-stakes signal by reading it back from the live page (not from source) — running with zero network egress so it is deterministic green-or-red.
 - [ ] **HARNESS-03**: A test CI job runs the harness on every push (no test CI exists today), baselined against the current binary so existing leaks are surfaced rather than hidden.
 
 ### Stealth Validation
@@ -82,7 +82,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | HARNESS-01 | Phase 24 | Complete |
-| HARNESS-02 | Phase 24 | Pending |
+| HARNESS-02 | Phase 24 | Complete |
 | HARNESS-03 | Phase 24 | Pending |
 | VALIDATE-03 | Phase 24 | Complete |
 | PROFILE-01 | Phase 25 | Pending |
