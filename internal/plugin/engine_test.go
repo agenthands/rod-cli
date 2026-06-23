@@ -307,3 +307,56 @@ func itoa(n int) string {
 	}
 	return s
 }
+
+// --- RunFunc Tests ---
+
+func TestPluginEngine_RunFunc(t *testing.T) {
+	engine := NewPluginEngine()
+	engine.Init()
+
+	if _, err := engine.vm.RunString(`function getFindings(){return JSON.stringify([{a:1}])}`); err != nil {
+		t.Fatalf("failed to define getFindings: %v", err)
+	}
+
+	out, err := engine.RunFunc("getFindings")
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if out != `[{"a":1}]` {
+		t.Fatalf("expected [{\"a\":1}], got %q", out)
+	}
+}
+
+func TestPluginEngine_RunFunc_Missing(t *testing.T) {
+	engine := NewPluginEngine()
+	engine.Init()
+
+	out, err := engine.RunFunc("nope")
+	if err == nil {
+		t.Fatal("expected error for missing function")
+	}
+	if out != "" {
+		t.Fatalf("expected empty result, got %q", out)
+	}
+}
+
+func TestPluginEngine_RunFunc_NilVM(t *testing.T) {
+	engine := NewPluginEngine()
+	// vm is nil; must return an error without panicking.
+	_, err := engine.RunFunc("x")
+	if err == nil {
+		t.Fatal("expected error for nil VM")
+	}
+}
+
+func TestPluginEngine_RunFunc_NotCallable(t *testing.T) {
+	engine := NewPluginEngine()
+	engine.Init()
+
+	engine.vm.Set("notAFunc", "str")
+
+	_, err := engine.RunFunc("notAFunc")
+	if err == nil {
+		t.Fatal("expected error for non-callable value")
+	}
+}
