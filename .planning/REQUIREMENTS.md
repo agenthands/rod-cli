@@ -77,33 +77,42 @@
 
 ## Traceability
 
-Phase mapping assigned by the roadmapper.
+Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HARNESS-01 | — | Pending |
-| HARNESS-02 | — | Pending |
-| HARNESS-03 | — | Pending |
-| VALIDATE-01 | — | Pending |
-| VALIDATE-02 | — | Pending |
-| VALIDATE-03 | — | Pending |
-| FINGERPRINT-01 | — | Pending |
-| FINGERPRINT-02 | — | Pending |
-| FINGERPRINT-03 | — | Pending |
-| PROFILE-01 | — | Pending |
-| PROFILE-02 | — | Pending |
-| PROXY-01 | — | Pending |
-| PROXY-02 | — | Pending |
-| HARDEN-01 | — | Pending |
-| HARDEN-02 | — | Pending |
-| HUMANIZE-01 | — | Pending |
-| LIVEWAF-01 | — | Pending |
+| HARNESS-01 | Phase 24 | Pending |
+| HARNESS-02 | Phase 24 | Pending |
+| HARNESS-03 | Phase 24 | Pending |
+| VALIDATE-03 | Phase 24 | Pending |
+| PROFILE-01 | Phase 25 | Pending |
+| PROFILE-02 | Phase 25 | Pending |
+| PROXY-01 | Phase 25 | Pending |
+| PROXY-02 | Phase 25 | Pending |
+| FINGERPRINT-01 | Phase 26 | Pending |
+| FINGERPRINT-02 | Phase 26 | Pending |
+| FINGERPRINT-03 | Phase 26 | Pending |
+| VALIDATE-01 | Phase 26 | Pending |
+| VALIDATE-02 | Phase 26 | Pending |
+| HARDEN-01 | Phase 27 | Pending |
+| HARDEN-02 | Phase 27 | Pending |
+| HUMANIZE-01 | Phase 28 | Pending |
+| LIVEWAF-01 | Phase 29 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0 (roadmapper to assign)
-- Unmapped: 17 ⚠️ (resolved at roadmap creation)
+- Mapped to phases: 17 ✓ (100% — every requirement maps to exactly one phase)
+- Unmapped: 0
+
+**Phase → Requirement summary:**
+- Phase 24 (Detection Harness & CI Backbone): HARNESS-01, HARNESS-02, HARNESS-03, VALIDATE-03
+- Phase 25 (Stealth Config Surface & Per-Session Proxy): PROFILE-01, PROFILE-02, PROXY-01, PROXY-02
+- Phase 26 (Configurable Fingerprint & Consistency Validator): FINGERPRINT-01, FINGERPRINT-02, FINGERPRINT-03, VALIDATE-01, VALIDATE-02
+- Phase 27 (Canvas/WebGL/WebRTC Hardening): HARDEN-01, HARDEN-02
+- Phase 28 (Human-Behavior Tuning): HUMANIZE-01
+- Phase 29 (Best-Effort Live Validation): LIVEWAF-01
 
 ---
 *Requirements defined: 2026-06-24*
-*Last updated: 2026-06-24 after initial definition*
+*Last updated: 2026-06-24 after roadmap creation (Phases 24–29 mapped)*
+</content>
