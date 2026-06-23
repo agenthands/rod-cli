@@ -23,7 +23,7 @@ rod-cli plugin run getResults
 []
 ```
 
-A clean load with no errors and an empty-array response from `getResults` confirms the plugin compiled in the goja VM, bound the `api` global, and attached its lifecycle listeners. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` and `plugin run` behavior and error conditions.
+A clean load with no errors and an empty-array response from `getResults` confirms the plugin compiled in the goja VM. The `api` global and the CDP lifecycle listeners bind when a browser page is open in the session — so open a page (e.g. `rod-cli goto <url>`) to see the hooks fire. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` and `plugin run` behavior and error conditions.
 
 ## How the template is structured
 

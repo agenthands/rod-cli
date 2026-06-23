@@ -10,7 +10,7 @@ This page walks the scanner end-to-end — loading it, driving a vulnerable page
 rod-cli plugin load ./plugins/examples/xss_scanner.js
 ```
 
-Loading is what activates a plugin: `plugin load` compiles the script in the goja VM, binds the `api` global, and attaches the CDP lifecycle listeners. From this point on the scanner's hooks fire automatically as you browse — there is no separate "start" step. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` behavior.
+Loading is what activates a plugin: `plugin load` compiles the script in the goja VM and — when a browser page is already open in the session — binds the `api` global and attaches the CDP lifecycle listeners to it. Open a page first (e.g. `rod-cli goto <url>`) so the listeners attach. From that point the scanner's hooks fire automatically as you browse — there is no separate "start" step. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` behavior.
 
 ## 2. How the scanner watches the session
 
