@@ -41,9 +41,12 @@ func PluginList(ctx *types.Context) (string, error) {
 	return string(data), nil
 }
 
-// PluginRun manually triggers a named plugin script.
+// PluginRun invokes the named JS function in the loaded plugin VM and returns
+// its result. It delegates lookup, calling, and stringification to RunFunc.
 func PluginRun(ctx *types.Context, name string) (string, error) {
-	// Note: Fully running named plugins might require a registry.
-	// For now, just execute a function or return a success message.
-	return fmt.Sprintf("Triggered plugin %s", name), nil
+	if name == "" {
+		return "", fmt.Errorf("plugin function name is required")
+	}
+
+	return ctx.GetPluginEngine().RunFunc(name)
 }
