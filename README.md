@@ -19,3 +19,4 @@ Operating as a "Skill" rather than a traditional stateful MCP server, it is desi
 - **[Usage Guide](USAGE.md)**: Comprehensive CLI reference and examples.
 - **[Agent Skill Definition](skills/rod-cli/SKILL.md)**: The prompt context to supply to your LLM agent so it knows how to use the CLI.
 - **[Reference Guides](skills/rod-cli/references/)**: Advanced tutorials on request mocking, code evaluation, tab management, and more.
+- **[Plugin Development](docs/plugins/README.md)**: Writing, loading, and running rod-cli plugins — start here for the plugin docs index.
