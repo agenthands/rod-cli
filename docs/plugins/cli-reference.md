@@ -80,6 +80,12 @@ Each of these causes a non-zero process exit, as does a daemon transport failure
 
 All three subcommands are thin clients over the daemon. `cmd.go` builds a `daemon.Request` with the matching command name (`"plugin-load"`, `"plugin-list"`, `"plugin-run"`) and arguments, the daemon dispatches it to the corresponding `actions.PluginLoad` / `actions.PluginList` / `actions.PluginRun` function, and the CLI prints the response. Any error returned by the action — or by the client-side argument guard — causes a non-zero process exit.
 
+## Output and the startup banner
+
+`rod-cli` prints a decorative startup banner, but only when standard output is an interactive terminal. When you pipe the output, redirect it to a file, or call `rod-cli` from a script or an LLM/agent, the banner is suppressed automatically so the command's output stays clean and token-efficient — e.g. `rod-cli plugin run getFindings | jq` yields only the JSON.
+
+To suppress the banner explicitly in any context (including an interactive shell), use any of the global flags `--raw` (raw result only), `--no-banner` / `--nb`, or `--json` (structured JSON). The plugin examples in this documentation assume clean output; in an interactive terminal, add `--raw` if you want to drop the banner.
+
 ## See Also
 
 - [lifecycle-hooks.md](./lifecycle-hooks.md) — the hooks that fire after `plugin load`; the live execution path for a plugin.

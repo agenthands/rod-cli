@@ -45,6 +45,18 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	return nil
 }
 
+// isInteractiveTerminal reports whether stdout is an interactive terminal.
+// The startup banner is suppressed for pipes, scripts, and agent/LLM callers so
+// their output stays token-efficient; it still shows in an interactive shell.
+// The explicit --no-banner/--raw/--json flags suppress it in all cases.
+func isInteractiveTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
 func getApp() *cli.App {
 	return &cli.App{
 		Name:        "rod-cli",
@@ -62,7 +74,7 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
 		},
 		Before: func(c *cli.Context) error {
-			if !c.Bool("no-banner") && !c.Bool("raw") && !c.Bool("json") {
+			if !c.Bool("no-banner") && !c.Bool("raw") && !c.Bool("json") && isInteractiveTerminal() {
 				fmt.Println(banner.ShowBanner())
 			}
 			return nil
