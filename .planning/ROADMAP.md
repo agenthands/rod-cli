@@ -79,7 +79,9 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
   3. A reader can open `docs/plugins/README.md` (the index) and reach every plugin doc page and example from it.
   4. A reader starting at the top-level `README.md` can find a link into `docs/plugins/` and reach the plugin documentation index in one click.
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 23-01-PLAN.md — first-plugin authoring tutorial (docs/plugins/authoring.md)
+- [ ] 23-02-PLAN.md — plugin docs index (docs/plugins/README.md) + top-level README one-click link
 
 ## Progress
 
@@ -90,7 +92,7 @@ Phases execute in numeric order: 21 → 22 → 23
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
 | 22. Example Plugins | 5/5 | Complete    | 2026-06-23 |
-| 23. Authoring Guide & Docs Index | 0/TBD | Not started | - |
+| 23. Authoring Guide & Docs Index | 0/2 | Not started | - |
 
 ---
 
