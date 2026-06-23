@@ -1,12 +1,12 @@
 # Example: Per-Hook Recipes
 
-The recipes under [`../../plugins/examples/recipes/`](../../plugins/examples/recipes/) are minimal, single-hook plugins — one script per lifecycle hook. Each defines exactly one hook, accumulates what that hook sees into a module-level array, and exposes a getter so you can read the collected state back with `plugin run <getter>`. They are the smallest possible demonstration of "load a plugin, drive the browser, watch a hook fire."
+The recipes under [`plugins/examples/recipes/`](../../../plugins/examples/recipes/) are minimal, single-hook plugins — one script per lifecycle hook. Each defines exactly one hook, accumulates what that hook sees into a module-level array, and exposes a getter so you can read the collected state back with `plugin run <getter>`. They are the smallest possible demonstration of "load a plugin, drive the browser, watch a hook fire."
 
 Each recipe is loadable on its own. The flow is always the same: `plugin load` the recipe to bind its single hook, drive the browser so that hook fires, then `plugin run <getter>` to print what it collected as JSON. The event payload shapes are documented once in [../lifecycle-hooks.md](../lifecycle-hooks.md); these recipes only show how each hook is wired and read back.
 
 ### onRequest — log every outgoing request
 
-[`plugins/examples/recipes/on_request.js`](../../plugins/examples/recipes/on_request.js) records the URL and method of every outgoing network request.
+[`plugins/examples/recipes/on_request.js`](../../../plugins/examples/recipes/on_request.js) records the URL and method of every outgoing network request.
 
 ```bash
 # 1. Load the recipe (binds onRequest).
@@ -27,7 +27,7 @@ rod-cli plugin run getRequestLog
 
 ### onResponse — log every response
 
-[`plugins/examples/recipes/on_response.js`](../../plugins/examples/recipes/on_response.js) records the URL and HTTP status of every response received.
+[`plugins/examples/recipes/on_response.js`](../../../plugins/examples/recipes/on_response.js) records the URL and HTTP status of every response received.
 
 ```bash
 # 1. Load the recipe (binds onResponse).
@@ -48,7 +48,7 @@ rod-cli plugin run getResponseLog
 
 ### onLoad — read page state after load
 
-[`plugins/examples/recipes/on_load.js`](../../plugins/examples/recipes/on_load.js) reads the rendered DOM through the `api` global after each page load and records the length of the HTML snapshot.
+[`plugins/examples/recipes/on_load.js`](../../../plugins/examples/recipes/on_load.js) reads the rendered DOM through the `api` global after each page load and records the length of the HTML snapshot.
 
 ```bash
 # 1. Load the recipe (binds onLoad).
@@ -69,7 +69,7 @@ rod-cli plugin run getLoadLog
 
 ### onDOMNodeInserted — log inserted DOM nodes
 
-[`plugins/examples/recipes/on_dom_node_inserted.js`](../../plugins/examples/recipes/on_dom_node_inserted.js) records the node name of every node inserted into the DOM.
+[`plugins/examples/recipes/on_dom_node_inserted.js`](../../../plugins/examples/recipes/on_dom_node_inserted.js) records the node name of every node inserted into the DOM.
 
 ```bash
 # 1. Load the recipe (binds onDOMNodeInserted).
@@ -98,4 +98,4 @@ rod-cli plugin run getInsertedNodes
 
 ## Source
 
-The recipe scripts live under [`../../plugins/examples/recipes/`](../../plugins/examples/recipes/). The engine that loads them and invokes their getters lives in [`../../internal/plugin/engine.go`](../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`../../internal/plugin/lifecycle.go`](../../internal/plugin/lifecycle.go) and [`../../internal/plugin/api.go`](../../internal/plugin/api.go).
+The recipe scripts live under [`plugins/examples/recipes/`](../../../plugins/examples/recipes/). The engine that loads them and invokes their getters lives in [`internal/plugin/engine.go`](../../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`internal/plugin/lifecycle.go`](../../../internal/plugin/lifecycle.go) and [`internal/plugin/api.go`](../../../internal/plugin/api.go).

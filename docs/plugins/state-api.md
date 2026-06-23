@@ -63,7 +63,8 @@ function onLoad(event) {
     var cookies = api.GetCookies();
     for (var i = 0; i < cookies.length; i++) {
       if (cookies[i].Name === "session") {
-        console.log("session cookie present for", cookies[i].Domain);
+        // Found the session cookie — record it (no console in the sandbox;
+        // accumulate into a module-level array and read it back via `plugin run`).
       }
     }
   }
@@ -83,7 +84,8 @@ function onLoad(event) {
   if (typeof api !== "undefined") {
     var store = api.GetLocalStorage();
     if (store && store["authToken"]) {
-      console.log("authToken found in localStorage");
+      // authToken present — record it (sandbox has no console; accumulate and
+      // read back via `plugin run`).
     }
   }
 }
@@ -101,7 +103,8 @@ Define those handlers to observe traffic; the engine delivers the raw CDP payloa
 ```javascript
 function onResponse(event) {
   if (event && event.Response && event.Response.Status >= 400) {
-    console.log("error response", event.Response.Status, event.Response.URL);
+    // Error response — record it (no console; accumulate to an array exposed
+    // via a getter, then `plugin run <getter>`).
   }
 }
 ```

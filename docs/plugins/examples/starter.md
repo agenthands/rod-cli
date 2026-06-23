@@ -1,6 +1,6 @@
 # Example: Starter Template
 
-[`plugins/examples/starter.js`](../../plugins/examples/starter.js) is a copyable scaffold for writing your own `rod-cli` plugin. It defines empty stubs for all four lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) plus a `getResults` accessor that returns a `results` array as JSON. Every hook is optional — the engine silently no-ops any hook a plugin does not define — so the starter loads and runs unchanged, doing nothing until you fill in the hooks you care about and push into `results`.
+[`plugins/examples/starter.js`](../../../plugins/examples/starter.js) is a copyable scaffold for writing your own `rod-cli` plugin. It defines empty stubs for all four lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) plus a `getResults` accessor that returns a `results` array as JSON. Every hook is optional — the engine silently no-ops any hook a plugin does not define — so the starter loads and runs unchanged, doing nothing until you fill in the hooks you care about and push into `results`.
 
 The workflow is copy-and-fill: copy the starter to your own file, fill in the hook bodies you need (and delete the ones you don't), then load and run it. Because the stubs are inert, the unmodified starter is also a sanity check that your plugin pipeline works end-to-end before you write any logic.
 
@@ -51,4 +51,4 @@ To turn the scaffold into a real plugin:
 
 ## Source
 
-The starter template is [`../../plugins/examples/starter.js`](../../plugins/examples/starter.js). The engine that loads it and invokes `getResults` lives in [`../../internal/plugin/engine.go`](../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`../../internal/plugin/lifecycle.go`](../../internal/plugin/lifecycle.go) and [`../../internal/plugin/api.go`](../../internal/plugin/api.go).
+The starter template is [`plugins/examples/starter.js`](../../../plugins/examples/starter.js). The engine that loads it and invokes `getResults` lives in [`internal/plugin/engine.go`](../../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`internal/plugin/lifecycle.go`](../../../internal/plugin/lifecycle.go) and [`internal/plugin/api.go`](../../../internal/plugin/api.go).

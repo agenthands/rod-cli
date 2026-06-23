@@ -70,4 +70,4 @@ If no payload was reflected, `getFindings` returns an empty array (`[]`) — the
 
 ## Source
 
-The flagship script is [`../../plugins/examples/xss_scanner.js`](../../plugins/examples/xss_scanner.js). The engine that loads it and invokes its accessors lives in [`../../internal/plugin/engine.go`](../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`../../internal/plugin/lifecycle.go`](../../internal/plugin/lifecycle.go) and [`../../internal/plugin/api.go`](../../internal/plugin/api.go).
+The flagship script is [`plugins/examples/xss_scanner.js`](../../../plugins/examples/xss_scanner.js). The engine that loads it and invokes its accessors lives in [`internal/plugin/engine.go`](../../../internal/plugin/engine.go) (`LoadScript`, `RunFunc`); the hook → CDP event wiring and the `api` global are in [`internal/plugin/lifecycle.go`](../../../internal/plugin/lifecycle.go) and [`internal/plugin/api.go`](../../../internal/plugin/api.go).

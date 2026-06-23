@@ -49,7 +49,8 @@ function onResponse(event) {
   if (event && event.Response) {
     var url = event.Response.URL || "";
     if (event.Response.Status >= 400) {
-      console.log("error response", event.Response.Status, url);
+      // No console in the goja sandbox — record it instead, e.g. push to a
+      // module-level array and read it back with `plugin run <getter>`.
     }
   }
 }
