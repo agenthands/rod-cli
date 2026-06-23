@@ -37,14 +37,16 @@ func TestStealthInitialization(t *testing.T) {
 		t.Errorf("Stealth failure: expected navigator.plugins.length > 0 to be true")
 	}
 
-	// 3. Check for Chrome/Chromium string in User-Agent, but NO "HeadlessChrome"
+	// 3. Check for a Chrome-family string in User-Agent, but NO "HeadlessChrome".
+	// The stealth fingerprint generator randomizes the UA and may pick Chrome on
+	// iOS ("CriOS"), which is still Chrome-family, so accept either spelling.
 	out, err = runCli("eval", "navigator.userAgent")
 	if err != nil {
 		t.Fatalf("Failed to eval userAgent: %v", err)
 	}
 	ua := strings.TrimSpace(out)
-	if !strings.Contains(ua, "Chrome") {
-		t.Errorf("Expected userAgent to contain 'Chrome', got: %s", ua)
+	if !strings.Contains(ua, "Chrome") && !strings.Contains(ua, "CriOS") {
+		t.Errorf("Expected userAgent to contain 'Chrome' or 'CriOS', got: %s", ua)
 	}
 	if strings.Contains(ua, "HeadlessChrome") {
 		t.Errorf("Stealth failure: userAgent contains 'HeadlessChrome': %s", ua)
