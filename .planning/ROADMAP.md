@@ -104,36 +104,6 @@ Phases execute in numeric order: 21 → 22 → 23
 <details>
 <summary>✅ v1.4 Plugin Architecture (Phases 17–20) — SHIPPED 2026-06-22</summary>
 
-### Phase 17: Engine Sandbox
-
-**Goal**: Implement the plugin engine sandbox and script loader.
-**Requirements**: PLUG-01, PLUG-02
-**Plans**: 1/1 complete
-
-- [x] 17-01-PLAN.md
-
-### Phase 18: Lifecycle Emitters
-
-**Goal**: Expose godoll browser events to the plugin engine.
-**Requirements**: PLUG-03, PLUG-04, PLUG-05, PLUG-06
-**Plans**: 1/1 complete
-
-- [x] 18-01-PLAN.md
-
-### Phase 19: State Context Sharing
-
-**Goal**: Allow scripts to securely read the DOM snapshot and network state.
-**Requirements**: PLUG-10, PLUG-11
-**Plans**: 1/1 complete
-
-- [x] 19-01-PLAN.md
-
-### Phase 20: Plugin CLI Interface
-
-**Goal**: Expose commands to load, list, and run plugins manually.
-**Requirements**: PLUG-07, PLUG-08, PLUG-09
-**Plans**: 1/1 complete
-
-- [x] 20-01-PLAN.md
+The v1.4 milestone — the plugin engine sandbox & script loader (Phase 17), lifecycle emitters (Phase 18), state/context sharing (Phase 19), and the `plugin load`/`list`/`run` CLI (Phase 20) — shipped on 2026-06-22. Full per-phase detail lives in `.planning/PROJECT.md` (archived sections) and the git history; it is summarized here rather than re-listed so the v1.5 milestone tracking covers only Phases 21–23.
 
 </details>
