@@ -97,6 +97,11 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli screenshot --name [name]`: Capture a PNG of the viewport.
 - `rod-cli pdf --name [name]`: Export the page as a PDF.
 
+### Plugins
+- `rod-cli plugin load [path]`: Load a JavaScript plugin into the session. The plugin's lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) start firing automatically — open a page first (e.g. `goto`) so the hooks and the `api` global bind to it.
+- `rod-cli plugin list`: List the plugins loaded in the session.
+- `rod-cli plugin run [name]`: Invoke a named function defined in the loaded plugin (e.g. an accessor like `getFindings`) and print its returned value. This is how you read back the state a plugin accumulated while you browsed.
+
 ## Usage Example
 
 ```bash
@@ -128,3 +133,4 @@ For more detailed guides on advanced features, refer to the following documents:
 * **Storage state**: [references/storage-state.md](references/storage-state.md)
 * **File uploads and drag-and-drop**: [references/file-uploads.md](references/file-uploads.md)
 * **Tabs and windows management**: [references/tabs-and-windows.md](references/tabs-and-windows.md)
+* **Writing plugins (lifecycle hooks, state API, CLI)**: [references/plugins.md](references/plugins.md)
