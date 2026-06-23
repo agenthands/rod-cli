@@ -82,7 +82,7 @@ Continuing from v1.4 (ended at Phase 20). This milestone runs Phases 21–23.
 **Plans**: 2 plans
 **Wave 1**
 
-- [ ] 23-01-PLAN.md — first-plugin authoring tutorial (docs/plugins/authoring.md)
+- [x] 23-01-PLAN.md — first-plugin authoring tutorial (docs/plugins/authoring.md)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 21 → 22 → 23
 |-------|----------------|--------|-----------|
 | 21. Reference Documentation | 4/4 | Complete    | 2026-06-22 |
 | 22. Example Plugins | 5/5 | Complete    | 2026-06-23 |
-| 23. Authoring Guide & Docs Index | 0/2 | Not started | - |
+| 23. Authoring Guide & Docs Index | 1/2 | In Progress|  |
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 1. Plugin Documentation
 
-- [ ] **PDOC-01**: A plugin author can follow an authoring guide to write, load, and run their first plugin end-to-end.
+- [x] **PDOC-01**: A plugin author can follow an authoring guide to write, load, and run their first plugin end-to-end.
 - [x] **PDOC-02**: A plugin author can look up every lifecycle hook (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`) with its signature and payload shape in a reference page.
 - [x] **PDOC-03**: A plugin author can look up the state/context API (token-optimized snapshot, cookies, localStorage, network context) with usage examples.
 - [x] **PDOC-04**: A user can look up every plugin CLI command (`plugin load`, `plugin list`, `plugin run`) with its flags and exit codes in a reference page.
@@ -36,7 +36,7 @@
 | PEX-01 | Phase 22 — Example Plugins | Complete |
 | PEX-02 | Phase 22 — Example Plugins | Complete |
 | PEX-03 | Phase 22 — Example Plugins | Complete |
-| PDOC-01 | Phase 23 — Authoring Guide & Docs Index | Pending |
+| PDOC-01 | Phase 23 — Authoring Guide & Docs Index | Complete |
 | PDOC-05 | Phase 23 — Authoring Guide & Docs Index | Pending |
 
 **Coverage:** 8/8 requirements mapped to exactly one phase. No orphans, no duplicates.
