@@ -3,8 +3,6 @@ package types
 import (
 	"context"
 	"fmt"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 	"os"
 	"strings"
 	"sync"
@@ -21,6 +19,14 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
+)
+
+// seams for testing: indirections through which production calls are routed so
+// that otherwise-unreachable error branches can be exercised. Defaults are the
+// real functions; tests swap them and restore via defer. Zero behavior change.
+var (
+	launcherLookPath = launcher.LookPath
+	osRemoveAll      = os.RemoveAll
 )
 
 func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
@@ -55,7 +61,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 	if cfg.BrowserBinPath != "" {
 		browserLauncher.Bin(cfg.BrowserBinPath)
 	} else {
-		if browserPath, has := launcher.LookPath(); has {
+		if browserPath, has := launcherLookPath(); has {
 			browserLauncher.Bin(browserPath)
 		} else {
 			return nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
@@ -210,23 +216,6 @@ func (ctx *Context) AddLoadedPlugin(path string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	ctx.loadedPlugins = append(ctx.loadedPlugins, path)
-}
-
-func (ctx *Context) Execute(handlerFunc server.ToolHandlerFunc, handlerCallOpts ToolHandlerCallOpts) server.ToolHandlerFunc {
-	return func(stdCtx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		result, err := handlerFunc(stdCtx, request)
-		if err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
-		}
-		if handlerCallOpts.WitSnapshot {
-			snapshot, _ := ctx.BuildSnapshot()
-			result.Content = append(result.Content, mcp.TextContent{
-				Type: "text",
-				Text: snapshot,
-			})
-		}
-		return result, nil
-	}
 }
 
 func (ctx *Context) BuildSnapshot() (string, error) {
@@ -444,7 +433,7 @@ func (ctx *Context) Close() error {
 
 	// remove browser temp dir
 	if ctx.config.BrowserTempDir != "" && ctx.config.CDPEndpoint == "" {
-		err := os.RemoveAll(ctx.config.BrowserTempDir)
+		err := osRemoveAll(ctx.config.BrowserTempDir)
 		if err != nil {
 			return errors.Wrap(err, "remove browser temp dir failed")
 		}

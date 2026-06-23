@@ -28,7 +28,7 @@ var DefaultLoggerConfig = LoggerConfig{
 	LoggerFileMaxBackups: 5,
 	LoggerFileMaxSize:    50,
 	LoggerFileMaxAge:     30,
-	LoggerPrefix:         "RodMCP 🦅",
+	LoggerPrefix:         "RodCLI 🦅",
 }
 
 // InitLogger init logger

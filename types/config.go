@@ -9,13 +9,11 @@ import (
 	"strings"
 )
 
-const ConfigName = "rod-mcp.yaml"
+const ConfigName = "rod-cli.yaml"
 
 type Config struct {
 	Mode           Mode         `yaml:"mode" json:"mode"`
 	CDPEndpoint    string       `yaml:"cdpEndpoint" json:"cdpEndpoint"`
-	ServerName     string       `yaml:"serverName" json:"serverName"`
-	ServerVersion  string       `yaml:"-" json:"-"`
 	BrowserBinPath string       `yaml:"browserBinPath" json:"browserBinPath"`
 	Headless       bool         `yaml:"headless" json:"headless"`
 	BrowserTempDir string       `yaml:"browserTempDir" json:"browserTempDir"`
@@ -28,7 +26,6 @@ type Config struct {
 
 var (
 	DefaultBrowserTempDir = "./rod/browser"
-	DefaultServerName     = "Rod Server"
 
 	DefaultConfig = Config{
 		BrowserBinPath: "",
@@ -36,7 +33,6 @@ var (
 		BrowserTempDir: DefaultBrowserTempDir,
 		NoSandbox:      false,
 		Proxy:          "",
-		ServerName:     DefaultServerName,
 		LoggerConfig:   DefaultLoggerConfig,
 		Mode:           Text,
 		Raw:            false,

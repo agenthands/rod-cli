@@ -80,13 +80,6 @@ func getApp() *cli.App {
 				},
 			},
 			{
-				Name:  "serve",
-				Usage: "Run the MCP server (default behavior when no command is provided)",
-				Action: func(c *cli.Context) error {
-					return runMCPServer(c)
-				},
-			},
-			{
 				Name:   "daemon",
 				Hidden: true,
 				Flags: []cli.Flag{
@@ -691,7 +684,10 @@ func getApp() *cli.App {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			return runMCPServer(c)
+			if !c.Bool("no-banner") {
+				fmt.Println(banner.ShowBanner())
+			}
+			return cli.ShowAppHelp(c)
 		},
 	}
 }
