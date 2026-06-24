@@ -15,14 +15,14 @@
 
 ### Stealth Validation
 
-- [ ] **VALIDATE-01**: A user can run a stealth-check command against a page and get a per-signal verdict (`navigator.webdriver`, `navigator.plugins`, UA-without-`HeadlessChrome`, WebGL vendor ≠ SwiftShader/llvmpipe, `navigator.permissions`, `navigator.languages`, screen dims, `window.chrome`/`chrome.runtime`, timezone).
-- [ ] **VALIDATE-02**: With `--raw`, the stealth-check emits a single-line machine-readable `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`), token-efficient for LLM callers — no full-page dump.
+- [x] **VALIDATE-01**: A user can run a stealth-check command against a page and get a per-signal verdict (`navigator.webdriver`, `navigator.plugins`, UA-without-`HeadlessChrome`, WebGL vendor ≠ SwiftShader/llvmpipe, `navigator.permissions`, `navigator.languages`, screen dims, `window.chrome`/`chrome.runtime`, timezone).
+- [x] **VALIDATE-02**: With `--raw`, the stealth-check emits a single-line machine-readable `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`), token-efficient for LLM callers — no full-page dump.
 - [x] **VALIDATE-03**: A silent no-op in the evasion path fails loudly — fingerprint generation / `EvasionManager.Apply()` errors surface instead of being swallowed (today `_ = em.Apply()` discards them).
 
 ### Configurable Fingerprint
 
-- [ ] **FINGERPRINT-01**: A user can pin a coherent fingerprint per session — browser/OS/locale tuple (UA, platform, locale, timezone, screen, hardwareConcurrency, deviceMemory, vendor) — via CLI flags mapped onto godoll `stealth.Profile`, deriving dependent fields rather than setting raw contradictory values.
-- [ ] **FINGERPRINT-02**: A consistency validator rejects or auto-derives incoherent combinations per the invariants (UA ↔ Client-Hints ↔ platform, locale ↔ languages ↔ Accept-Language, timezone ↔ proxy-IP geo, plausible screen geometry / hardware) and fails loudly on contradiction.
+- [x] **FINGERPRINT-01**: A user can pin a coherent fingerprint per session — browser/OS/locale tuple (UA, platform, locale, timezone, screen, hardwareConcurrency, deviceMemory, vendor) — via CLI flags mapped onto godoll `stealth.Profile`, deriving dependent fields rather than setting raw contradictory values.
+- [x] **FINGERPRINT-02**: A consistency validator rejects or auto-derives incoherent combinations per the invariants (UA ↔ Client-Hints ↔ platform, locale ↔ languages ↔ Accept-Language, timezone ↔ proxy-IP geo, plausible screen geometry / hardware) and fails loudly on contradiction.
 - [ ] **FINGERPRINT-03**: Client-Hints are derived from the active UA/OS instead of the current hardcoded version `121`, eliminating the UA↔UA-CH mismatch tell.
 
 ### Stealth Profiles & Config Surface
@@ -89,11 +89,11 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | PROFILE-02 | Phase 25 | Complete |
 | PROXY-01 | Phase 25 | Complete |
 | PROXY-02 | Phase 25 | Complete |
-| FINGERPRINT-01 | Phase 26 | Pending |
-| FINGERPRINT-02 | Phase 26 | Pending |
+| FINGERPRINT-01 | Phase 26 | Complete |
+| FINGERPRINT-02 | Phase 26 | Complete |
 | FINGERPRINT-03 | Phase 26 | Pending |
-| VALIDATE-01 | Phase 26 | Pending |
-| VALIDATE-02 | Phase 26 | Pending |
+| VALIDATE-01 | Phase 26 | Complete |
+| VALIDATE-02 | Phase 26 | Complete |
 | HARDEN-01 | Phase 27 | Pending |
 | HARDEN-02 | Phase 27 | Pending |
 | HUMANIZE-01 | Phase 28 | Pending |

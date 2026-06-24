@@ -4,16 +4,16 @@ milestone: v1.6
 milestone_name: Proven & Configurable Stealth
 current_phase: 26
 current_phase_name: Configurable Fingerprint & Consistency Validator
-status: planning
+status: executing
 stopped_at: Completed Phase 25 (config surface + per-session proxy) — verified 4/4; code review fixed CR-01 proxy-auth argv leak + credential-safety warnings
-last_updated: "2026-06-24T01:35:00.000Z"
+last_updated: "2026-06-24T07:45:20.739Z"
 last_activity: 2026-06-24
-last_activity_desc: "Phase 25 complete: StealthConfig substrate + per-session HTTP/SOCKS5 proxy (CDP auth); proxy-auth now env-passed (not argv), ProxyAuth never serialized, leak test scans argv+log"
+last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
   percent: 33
 ---
 
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-24)
 
 **Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** Phase 25 — Stealth Config Surface & Per-Session Proxy
+**Current focus:** Phase 26 — Configurable Fingerprint & Consistency Validator
 
 ## Current Position
 
-Phase: 25 of 29 (Stealth Config Surface & Per-Session Proxy) — second of 6 v1.6 phases (24–29)
-Plan: 3 of 3 complete (25-01 + 25-02 done; 25-03 e2e egress/isolation/auth tests remain)
-Status: Plan 25-02 executed — per-session proxy wired through godoll, CDP auth, relay cleanup (PROXY-01/02)
-Last activity: 2026-06-24 — 25-02 complete: per-session HTTP/SOCKS5 proxy via godoll ProxyConfig.ApplyToLauncher (replaced bare launcher.Proxy), CDP SetupBrowserAuth, embedded-cred strip, relay stopped on session close
+Phase: 26 (Configurable Fingerprint & Consistency Validator) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-06-24 — Phase 26 execution started
 
 Progress: [██░░░░░░░░] 17% (1 of 6 phases)
 
@@ -85,7 +85,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T06:18:11.627Z
+Last session: 2026-06-24T07:45:13.718Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -107,3 +107,4 @@ Resume file: None
 | Phase 25 P01 | 20min | 3 tasks | 6 files |
 | Phase 25 P02 | 15min | 2 tasks | 2 files |
 | Phase 25 P03 | 25min | 2 tasks | 2 files |
+| Phase 26 P01 | 3m47s | 3 tasks | 3 files |
