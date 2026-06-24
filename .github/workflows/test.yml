@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      # Build the binary so the e2e harness (tests/*.go) can drive ../rod-cli.
+      - name: Build rod-cli
+        run: go build -o rod-cli .
+
+      # Install Chromium up front so the first detection test isn't slowed or
+      # made flaky by a mid-test download.
+      - name: Install Chromium
+        run: ./rod-cli install
+
+      # Headless is the blocking gate. The detection harness is fully offline
+      # (internal/detect fixture on 127.0.0.1) — no external-network step here.
+      - name: Run tests (headless)
+        run: go test ./... -count=1
