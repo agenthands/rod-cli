@@ -47,6 +47,16 @@ func runDaemonServer(c *cli.Context) error {
 		Timezone:  c.String("timezone"),
 		Platform:  c.String("platform"),
 	}
+	// Phase-27 hardening toggles: capture as *bool only when explicitly set so an
+	// unset flag leaves the field nil = keep the default-true baseline.
+	if c.IsSet("webrtc-protection") {
+		v := c.Bool("webrtc-protection")
+		stealthFlags.WebRTCLeakProtection = &v
+	}
+	if c.IsSet("canvas-noise") {
+		v := c.Bool("canvas-noise")
+		stealthFlags.CanvasNoise = &v
+	}
 	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
 		return err
 	}

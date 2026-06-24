@@ -55,6 +55,10 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	if c.String("locale") != "" { flags = append(flags, "--locale", c.String("locale")) }
 	if c.String("timezone") != "" { flags = append(flags, "--timezone", c.String("timezone")) }
 	if c.String("platform") != "" { flags = append(flags, "--platform", c.String("platform")) }
+	// Phase-27 hardening toggles default ON; forward ONLY when the user explicitly
+	// set them so the daemon's *bool stays nil = keep-default-true otherwise.
+	if c.IsSet("webrtc-protection") { flags = append(flags, fmt.Sprintf("--webrtc-protection=%t", c.Bool("webrtc-protection"))) }
+	if c.IsSet("canvas-noise") { flags = append(flags, fmt.Sprintf("--canvas-noise=%t", c.Bool("canvas-noise"))) }
 
 	// proxy-auth is a CREDENTIAL — it must NEVER enter the daemon argv (argv is
 	// world-readable via /proc/<pid>/cmdline and `ps`). Pass it out-of-band through
@@ -70,7 +74,8 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// config. No silent ignore, no surprise auto-restart. The proxy-auth value is
 	// never echoed.
 	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != "" ||
-		c.String("user-agent") != "" || c.String("locale") != "" || c.String("timezone") != "" || c.String("platform") != ""
+		c.String("user-agent") != "" || c.String("locale") != "" || c.String("timezone") != "" || c.String("platform") != "" ||
+		c.IsSet("webrtc-protection") || c.IsSet("canvas-noise")
 	if stealthRequested && daemonRunning(session) {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
@@ -127,6 +132,8 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "locale", Usage: "pin the BCP-47 locale (e.g. en-US); derived from languages when unset"},
 			&cli.StringFlag{Name: "timezone", Usage: "pin the IANA timezone (e.g. America/New_York)"},
 			&cli.StringFlag{Name: "platform", Usage: "pin navigator.platform (e.g. Win32, MacIntel, Linux); auto-derived from the UA OS token when unset"},
+			&cli.BoolFlag{Name: "webrtc-protection", Usage: "Prevent WebRTC local-IP leaks (default on; --webrtc-protection=false to disable)", Value: true},
+			&cli.BoolFlag{Name: "canvas-noise", Usage: "Apply stable-per-session canvas/WebGL/audio noise (default on; --canvas-noise=false to disable)", Value: true},
 		},
 		Commands: []*cli.Command{
 			{

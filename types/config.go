@@ -26,10 +26,10 @@ const ConfigName = "rod-cli.yaml"
 // Screen/AcceptLanguage/Languages/HardwareConcurrency/DeviceMemory/Vendor/
 // SpoofClientHints) declared below. They overlay onto the same precedence
 // resolver, so the flag → forward → Config.Stealth → NewContext path is reused.
-// Phases 27–28 still reserve their fields:
+// Phase 27 implements the canvas/WebGL/WebRTC hardening toggles
+// (WebRTCLeakProtection, CanvasNoise) declared below. Phase 28 still reserves
+// its fields:
 //
-//	Reserved for Phase 27 (canvas/WebGL/WebRTC hardening):
-//	  WebRTC (leak-protection toggle), CanvasNoise.
 //	Reserved for Phase 28 (human-behavior tuning):
 //	  Typing/typo/jitter/mouse/scroll humanize knobs.
 //
@@ -92,6 +92,20 @@ type StealthConfig struct {
 	// SpoofClientHints enables injection of Sec-Ch-Ua headers + navigator.userAgentData.
 	SpoofClientHints bool `yaml:"spoofClientHints" json:"spoofClientHints"`
 
+	// --- Phase 27: canvas/WebGL/WebRTC hardening toggles ---
+
+	// WebRTCLeakProtection prevents the real host IP from leaking past a proxy via
+	// WebRTC ICE candidates. When true (the default) launchBrowser sets the
+	// disable-non-proxied-UDP browser preference AND createPage injects godoll's
+	// EvadeWebRTC JS wrapper. Defaults TRUE (hardened-by-default).
+	WebRTCLeakProtection bool `yaml:"webRTCLeakProtection" json:"webRTCLeakProtection"`
+
+	// CanvasNoise enables seeded, stable-per-session canvas/WebGL/audio readback
+	// noise (HARDEN-02). When true (the default) the active profile's SpoofCanvas
+	// and SpoofAudioContext are enabled so canvas + audio fingerprints carry a
+	// session-stable per-pixel/per-sample delta. Defaults TRUE.
+	CanvasNoise bool `yaml:"canvasNoise" json:"canvasNoise"`
+
 	// Screen holds the spoofed screen geometry.
 	Screen struct {
 		Width             int     `yaml:"width" json:"width"`
@@ -135,6 +149,13 @@ type StealthFlags struct {
 	Timezone string
 	// Platform is the --platform value (navigator.platform, e.g. "Win32").
 	Platform string
+	// WebRTCLeakProtection is the --webrtc-protection value; nil when unset
+	// (default-on). A *bool so "unset" (keep the default-true) is distinguishable
+	// from an explicit "--webrtc-protection=false".
+	WebRTCLeakProtection *bool
+	// CanvasNoise is the --canvas-noise value; nil when unset (default-on). A
+	// *bool so "unset" is distinguishable from an explicit "--canvas-noise=false".
+	CanvasNoise *bool
 }
 
 // resolveProfilePath maps a --profile value to a concrete file path. An empty
@@ -204,6 +225,21 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.Screen.Width = prof.Screen.Width
 		cfg.Stealth.Screen.Height = prof.Screen.Height
 		cfg.Stealth.Screen.DeviceScaleFactor = prof.Screen.DeviceScaleFactor
+	}
+
+	// Phase-27 hardening toggles: default-true baseline (hardened-by-default),
+	// overridable only by an explicit flag. The godoll stealth.Profile carries no
+	// WebRTCLeakProtection/CanvasNoise field, so there is no Tier-2 profile leg for
+	// these — the resolved precedence is: explicit --flag=false > built-in default
+	// (true). Establish the baseline here so even a profile-loaded config (which
+	// did not touch these fields above) is hardened.
+	cfg.Stealth.WebRTCLeakProtection = true
+	cfg.Stealth.CanvasNoise = true
+	if flags.WebRTCLeakProtection != nil {
+		cfg.Stealth.WebRTCLeakProtection = *flags.WebRTCLeakProtection
+	}
+	if flags.CanvasNoise != nil {
+		cfg.Stealth.CanvasNoise = *flags.CanvasNoise
 	}
 
 	// Tier 1: CLI flags win over the profile and the defaults.
@@ -466,7 +502,9 @@ var (
 		BrowserTempDir: DefaultBrowserTempDir,
 		NoSandbox:      false,
 		Proxy:          "",
-		Stealth:        StealthConfig{},
+		// Hardened-by-default: a config loaded with zero StealthFlags still gets
+		// WebRTC leak protection and stable canvas/audio noise (Phase 27).
+		Stealth: StealthConfig{WebRTCLeakProtection: true, CanvasNoise: true},
 		LoggerConfig:   DefaultLoggerConfig,
 		Mode:           Text,
 		Raw:            false,
