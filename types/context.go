@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -398,6 +399,12 @@ func (ctx *Context) closeBrowser() error {
 	return nil
 }
 
+// defaultChromeMajor is the Sec-Ch-Ua brand version used when the active profile
+// UA carries no parseable Chrome token. It mirrors the Chrome major of
+// stealth.DefaultProfile()'s UA, preserving the prior hardcoded behavior for
+// empty/garbage UAs (matches godoll's defaultChromeMajor in stealth/evasion.go).
+const defaultChromeMajor = "121"
+
 // profileFromStealth builds the active stealth.Profile by overlaying every
 // non-zero identity field of the resolved cfg.Stealth onto stealth.DefaultProfile.
 // The resolved cfg.Stealth (produced by ResolveStealth's UA-anchored derive +
@@ -545,10 +552,14 @@ func (ctx *Context) updateInterceptorRules() {
 		})
 	}
 	
-	// Add evasion headers catch-all rule
+	// Add evasion headers catch-all rule.
+	// Prefer the pinned active profile (built from cfg.Stealth in createPage) so
+	// the interceptor headers tell the SAME identity story as godoll's JS injection.
+	// Fall back to the random-fingerprint-derived profile, then DefaultProfile.
 	var prof *stealth.Profile
-	fp := ctx.fingerprint
-	if fp != nil {
+	if ctx.profile != nil {
+		prof = ctx.profile
+	} else if fp := ctx.fingerprint; fp != nil {
 		p := stealth.FromFingerprint(fp)
 		prof = &p
 	} else {
@@ -572,7 +583,18 @@ func (ctx *Context) updateInterceptorRules() {
 		default:
 			chPlatform = fmt.Sprintf("\"%s\"", prof.Platform)
 		}
-		headers["Sec-Ch-Ua"] = "\"Not A(Brand\";v=\"99\", \"Google Chrome\";v=\"121\", \"Chromium\";v=\"121\""
+		// Derive the brand version from the active profile UA's `Chrome/<major>`
+		// token (parsed by parseChromeMajor's `Chrome/(\d+)` regexp) so the
+		// Sec-Ch-Ua header agrees with the UA and godoll's userAgentData brand
+		// version (the FINGERPRINT-02 triple-agreement). Reuse parseChromeMajor
+		// (same types package, from Plan 01) — ONE derivation path in rod-cli.
+		// Fall back to the prior default major when the UA has no Chrome token so
+		// behavior is preserved for empty/garbage UAs.
+		chMajor := defaultChromeMajor
+		if m, ok := parseChromeMajor(prof.UserAgent); ok {
+			chMajor = strconv.Itoa(m)
+		}
+		headers["Sec-Ch-Ua"] = fmt.Sprintf("\"Not A(Brand\";v=\"99\", \"Google Chrome\";v=\"%s\", \"Chromium\";v=\"%s\"", chMajor, chMajor)
 		headers["Sec-Ch-Ua-Mobile"] = "?0"
 		headers["Sec-Ch-Ua-Platform"] = chPlatform
 	}
