@@ -2,6 +2,8 @@ package types
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"net/url"
 	"os"
@@ -168,6 +170,12 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 		WithLauncher(browserLauncher).
 		SetBrowserPreferences(browser.NewBrowserOptions().StealthPreset())
 
+	// HARDEN-01 browser-pref leg: disable non-proxied UDP so the real host IP
+	// cannot leak past a proxy via WebRTC. Gated on the toggle (default on).
+	if cfg.Stealth.WebRTCLeakProtection {
+		opts = opts.WithWebRTCLeakProtection(true)
+	}
+
 	browserInstance, err := browser.NewBrowserE(ctx, opts)
 	if err != nil {
 		if proxyCleanup != nil {
@@ -225,6 +233,10 @@ type Context struct {
 	// making the resolved cfg.Stealth the SINGLE source of truth for the live page
 	// (FINGERPRINT-01 wiring). Nil until the first page is created.
 	profile *stealth.Profile
+	// noiseSeed is the per-session canvas/audio noise seed, generated once in
+	// NewContext so re-reads within a session are stable (HARDEN-02). One daemon =
+	// one session = one seed; a fresh daemon gets a fresh seed.
+	noiseSeed uint64
 	pluginEngine *plugin.PluginEngine
 	loadedPlugins []string
 	// proxyCleanup stops the per-session authenticated-proxy relay (godoll
@@ -235,12 +247,20 @@ type Context struct {
 }
 
 func NewContext(ctx context.Context, cfg Config) *Context {
-	return &Context{
+	c := &Context{
 		stdContext: ctx,
 		config:     cfg,
 		mode:       cfg.Mode,
 		routes:     make(map[string]string),
 	}
+	// Generate the per-session canvas/audio noise seed ONCE (crypto/rand for an
+	// unpredictable value). Generating it here guarantees the same seed across
+	// every createPage call for the life of the daemon, so re-reads of a canvas
+	// within the session are stable (HARDEN-02).
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	c.noiseSeed = binary.LittleEndian.Uint64(b[:])
+	return c
 }
 
 func (ctx *Context) EnsurePage() (*rod.Page, error) {
@@ -426,6 +446,10 @@ func profileFromStealth(s StealthConfig) stealth.Profile {
 	// below still lets an explicit profile keep it on; there is intentionally no way to
 	// ship an incoherent CH-off identity from the resolved active profile.
 	p.SpoofClientHints = true
+	// HARDEN-02: one toggle gates BOTH canvas and audio noise. With CanvasNoise
+	// defaulting true, the no-pin path now noises canvas+audio by default.
+	p.SpoofCanvas = s.CanvasNoise
+	p.SpoofAudioContext = s.CanvasNoise
 	if s.UserAgent != "" {
 		p.UserAgent = s.UserAgent
 	}
@@ -490,8 +514,20 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		prof := profileFromStealth(ctx.config.Stealth)
 		ctx.profile = &prof
 		em.SetProfile(prof)
+		// HARDEN-02: thread the stable per-session noise seed before Apply() so the
+		// seeded canvas/audio scripts produce identical re-reads within the session.
+		em.SetNoiseSeed(ctx.noiseSeed)
 		if err := em.Apply(); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: evasion Apply failed: %v\n", err)
+		}
+
+		// HARDEN-01 JS leg: wrap RTCPeerConnection so local-IP enumeration cannot
+		// leak past a proxy. Gated on the toggle; log-and-continue (VALIDATE-03) so a
+		// failure never aborts the daemon — matches the em.Apply() discipline above.
+		if ctx.config.Stealth.WebRTCLeakProtection {
+			if err := em.EvadeWebRTC(); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: WebRTC evasion failed: %v\n", err)
+			}
 		}
 
 		page.EvalOnNewDocument(js.InjectedSnapShot)
