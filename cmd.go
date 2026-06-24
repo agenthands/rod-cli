@@ -326,6 +326,22 @@ func getApp() *cli.App {
 				},
 			},
 			{
+				Name:  "stealth-check",
+				Usage: "Run per-signal stealth verdicts against the current page (or navigate to URL first)",
+				Action: func(c *cli.Context) error {
+					// url is OPTIONAL: navigate first only when given. Forward raw/json
+					// in Args (mirroring how `fill` forwards `submit`) so the daemon-side
+					// handler (Plan 04) can emit the --raw single-line vs --json vs human
+					// table form. runClientCommand reuses the daemon-spawn/flag-forward path.
+					url := c.Args().First()
+					return runClientCommand(c, daemon.Request{Command: "stealth-check", Args: map[string]string{
+						"url":  url,
+						"raw":  fmt.Sprint(c.Bool("raw")),
+						"json": fmt.Sprint(c.Bool("json")),
+					}})
+				},
+			},
+			{
 				Name:  "screenshot",
 				Usage: "Take a screenshot of the current page",
 				Flags: []cli.Flag{
