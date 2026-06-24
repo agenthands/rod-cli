@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Proven & Configurable Stealth
-current_phase: 24
-current_phase_name: Detection Harness & CI Backbone
-status: executing
-stopped_at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
-last_updated: "2026-06-23T22:49:00.207Z"
+current_phase: 25
+current_phase_name: Stealth Config Surface & Per-Session Proxy
+status: planning
+stopped_at: Completed Phase 24 (Detection Harness & CI Backbone) — verified passed 6/6, code review 0 critical
+last_updated: "2026-06-24T00:30:00.000Z"
 last_activity: 2026-06-24
-last_activity_desc: "Executed 24-01: internal/detect offline fixture server + self-authored window.__detect probe page (HARNESS-01)"
+last_activity_desc: "Phase 24 complete: offline detection harness + first test CI + VALIDATE-03 loud-failure; verified passed, 2 review warnings fixed"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 17
 ---
 
 # STATE.md — rod-cli
@@ -24,16 +24,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-24)
 
 **Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** Phase 24 — Detection Harness & CI Backbone
+**Current focus:** Phase 25 — Stealth Config Surface & Per-Session Proxy
 
 ## Current Position
 
-Phase: 24 of 29 (Detection Harness & CI Backbone) — first of 6 v1.6 phases (24–29)
-Plan: 3 of 4 complete (24-01 — detection fixture server + embedded probe page)
-Status: Ready to execute
-Last activity: 2026-06-24 — Executed 24-01: internal/detect offline fixture server + self-authored window.__detect probe page (HARNESS-01)
+Phase: 25 of 29 (Stealth Config Surface & Per-Session Proxy) — second of 6 v1.6 phases (24–29)
+Plan: not yet planned
+Status: Phase 24 complete; ready to discuss/plan Phase 25
+Last activity: 2026-06-24 — Phase 24 complete (detection harness + test CI + VALIDATE-03), verified passed 6/6
 
-Progress: [██░░░░░░░░] 25%
+Progress: [██░░░░░░░░] 17% (1 of 6 phases)
 
 ## Roadmap Summary
 
