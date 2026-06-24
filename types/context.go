@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -28,6 +29,70 @@ var (
 	launcherLookPath = launcher.LookPath
 	osRemoveAll      = os.RemoveAll
 )
+
+// parseProxyConfig maps a proxy URL (with scheme) and an optional "user:pass"
+// auth string onto a godoll browser.ProxyConfig.
+//
+//   - An empty proxyURL means "no proxy": it returns (nil, nil) and the caller
+//     skips all proxy wiring (proxyAuth alone never synthesizes a proxy).
+//   - The URL scheme becomes Protocol: "http"/"https" → "http", "socks5",
+//     "socks4". host:port becomes Address.
+//   - URL-embedded credentials (http://user:pass@host) are STRIPPED — they must
+//     never reach Chrome's --proxy-server (Chrome removed support and they leak;
+//     SOCKS5 auth is unsupported there). Auth flows exclusively through CDP via
+//     ProxyConfig.SetupBrowserAuth. The stripped Address stays credential-free.
+//   - proxyAuth is split on the FIRST colon only (the password may itself contain
+//     colons) into Username/Password.
+//
+// It is pure parsing: it performs NO logging, so neither the proxy URL nor the
+// credentials are ever emitted (T-25-05/T-25-08).
+func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) {
+	if proxyURL == "" {
+		return nil, nil
+	}
+
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, errors.Wrapf(err, "parse proxy url")
+	}
+	if u.Scheme == "" {
+		return nil, errors.Errorf("proxy url %q is missing a scheme (expected http://, socks5://, or socks4://)", proxyURL)
+	}
+	if u.Host == "" {
+		return nil, errors.Errorf("proxy url %q is missing a host:port", proxyURL)
+	}
+
+	var protocol string
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		protocol = "http"
+	case "socks5":
+		protocol = "socks5"
+	case "socks4":
+		protocol = "socks4"
+	default:
+		return nil, errors.Errorf("unsupported proxy scheme %q (expected http, https, socks5, or socks4)", u.Scheme)
+	}
+
+	// u.Host is host:port WITHOUT userinfo — any embedded user:pass@ in the URL
+	// is parked in u.User and deliberately dropped here so it can never reach
+	// LauncherURL()/--proxy-server.
+	cfg := &browser.ProxyConfig{
+		Protocol: protocol,
+		Address:  u.Host,
+	}
+
+	if proxyAuth != "" {
+		user, pass, found := strings.Cut(proxyAuth, ":")
+		if !found {
+			return nil, errors.Errorf("proxy auth must be in user:pass form")
+		}
+		cfg.Username = user
+		cfg.Password = pass
+	}
+
+	return cfg, nil
+}
 
 func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 
