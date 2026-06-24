@@ -92,6 +92,25 @@
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   });
 
+  // Canvas readback (informational / traceability). Draws DETERMINISTIC fixed
+  // content (no Date / no Math.random) so the only source of variability in the
+  // returned data URL is the injected seeded canvas noise (HARDEN-02). A human can
+  // inspect this to confirm the canvas surface is noised; the stable-per-session
+  // assertion lives in the harness (canvas_noise_stable subtest).
+  probe("canvasHash", function () {
+    var c = document.createElement("canvas");
+    c.width = 200;
+    c.height = 50;
+    var ctx = c.getContext("2d");
+    if (!ctx) return "no-context";
+    ctx.fillStyle = "#f60";
+    ctx.fillRect(10, 10, 100, 30);
+    ctx.fillStyle = "#069";
+    ctx.font = "16px sans-serif";
+    ctx.fillText("rod-cli-detect", 12, 30);
+    return c.toDataURL();
+  });
+
   // --- Informational, non-blocking probes (recorded, not asserted-blocking) --
 
   // CDP-presence heuristic (best-effort, informational only). The classic tell:

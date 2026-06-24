@@ -32,6 +32,7 @@ package tests
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -348,28 +349,86 @@ func TestDetectionHarness(t *testing.T) {
 		}
 	})
 
-	// --- KNOWN-RED baseline signals (assert CURRENT truth; never skipped) ------
-
-	// KNOWN-RED (Phase 27 HARDEN-01): WebRTC ICE candidate leaks the local IP.
-	// We assert the signal is OBSERVABLE and recorded at its current truth so CI
-	// stays green on the documented baseline; this assertion flips to
-	// required-green (empty / no leaked host IP) when EvadeWebRTC is wired.
-	// The probe records the connection-address of each ICE host candidate (field
-	// 4 of the SDP candidate line) regardless of form: a real IPv4/IPv6 address is
-	// the leak Phase 27 EvadeWebRTC must eliminate, while a modern-Chrome mDNS
-	// `<uuid>.local` hostname is the masked baseline truth. It records "" only when
-	// no candidate was gathered, "no-RTCPeerConnection" when the API is absent, or
-	// an "error: ..." string. Any of these is the documented baseline — what must
-	// NOT happen is the signal being unpopulated (undefined), which would mean the
-	// harness cannot see the WebRTC surface at all.
-	t.Run("webrtc_ice_known_red", func(t *testing.T) {
+	// REQUIRED-GREEN (Phase 27 HARDEN-01, was KNOWN-RED): the WebRTC surface must
+	// leak no real host IP. Plan 03 wired both legs — the disable-non-proxied-UDP
+	// browser preference (WithWebRTCLeakProtection) and the RTCPeerConnection JS
+	// wrapper (EvadeWebRTC) — so the live page must now report a clean ICE state.
+	// The probe records the connection-address of each ICE host candidate (field 4
+	// of the SDP candidate line) regardless of form. PASS conditions (no leak):
+	//   - "" (no candidate gathered — the clean WithWebRTCLeakProtection effect), OR
+	//   - "no-RTCPeerConnection" (API absent), OR
+	//   - every comma-separated token ends in ".local" (modern-Chrome mDNS masking).
+	// FAIL: "undefined" (surface unobservable — loud-fail guard retained), an
+	// "error:" string, or ANY token that parses as a routable IPv4/IPv6 address
+	// (net.ParseIP succeeds and it is not a .local hostname) — that is a leaked real IP.
+	t.Run("webrtc_ice", func(t *testing.T) {
 		ice := evalDetect(t, "webrtcIce")
 		if ice == "undefined" {
-			t.Errorf("KNOWN-RED WebRTC signal unpopulated — harness cannot observe "+
-				"the WebRTC surface; got: %q", ice)
+			t.Errorf("WebRTC signal unpopulated — harness cannot observe the WebRTC "+
+				"surface; got: %q", ice)
+			return
 		}
-		// Record the baseline truth in the test log for traceability.
-		t.Logf("KNOWN-RED webrtcIce baseline truth: %q (flips to required-empty in Phase 27 HARDEN-01)", ice)
+		if strings.HasPrefix(ice, "error:") {
+			t.Errorf("WebRTC probe errored: %q", ice)
+			return
+		}
+		if ice == "" || ice == "no-RTCPeerConnection" {
+			t.Logf("webrtc_ice clean: %q (no leaked host IP)", ice)
+			return
+		}
+		// One or more candidate addresses were gathered. None may be a routable IP.
+		for _, tok := range strings.Split(ice, ",") {
+			tok = strings.TrimSpace(tok)
+			if tok == "" {
+				continue
+			}
+			if strings.HasSuffix(tok, ".local") {
+				continue // mDNS-masked hostname, not a real IP
+			}
+			if ip := net.ParseIP(tok); ip != nil {
+				t.Errorf("WebRTC leaked a real host IP %q (full signal: %q) — "+
+					"EvadeWebRTC/WithWebRTCLeakProtection failed", tok, ice)
+			}
+		}
+	})
+
+	// REQUIRED-GREEN (Phase 27 HARDEN-02): seeded canvas noise must be STABLE within
+	// a session. We draw deterministic fixed content (no Date / no Math.random) into
+	// one canvas and read toDataURL twice; the seeded per-(seed,index) delta means
+	// both reads must be byte-identical. The result string is "stable:<len>" when the
+	// two reads agree (and len>0 guards against a blanked/unobservable surface) or
+	// "UNSTABLE" when they differ — which would mean a per-call-random (buggy) noise
+	// implementation, itself a detection tell.
+	t.Run("canvas_noise_stable", func(t *testing.T) {
+		expr := `(function(){` +
+			`var c=document.createElement('canvas');c.width=200;c.height=50;` +
+			`var x=c.getContext('2d');` +
+			`x.fillStyle='#f60';x.fillRect(10,10,100,30);` +
+			`x.fillStyle='#069';x.font='16px sans-serif';x.fillText('rod-cli-detect',12,30);` +
+			`var r1=c.toDataURL();var r2=c.toDataURL();` +
+			`return r1===r2?('stable:'+r1.length):'UNSTABLE';})()`
+		out, err := runCli("eval", expr)
+		if err != nil {
+			t.Fatalf("eval canvas stability expr failed: %v\nOutput: %s", err, out)
+		}
+		val := out
+		if i := strings.Index(out, evalResultPrefix); i >= 0 {
+			val = out[i+len(evalResultPrefix):]
+		}
+		val = strings.TrimSpace(val)
+		if val == "UNSTABLE" {
+			t.Errorf("canvas noise is not stable-per-session: two reads differ")
+			return
+		}
+		if !strings.HasPrefix(val, "stable:") {
+			t.Errorf("canvas stability probe returned unexpected/blanked result: %q", val)
+			return
+		}
+		lenStr := strings.TrimPrefix(val, "stable:")
+		if lenStr == "" || lenStr == "0" {
+			t.Errorf("canvas surface unobservable (data URL length %q) — blanked probe "+
+				"must not masquerade as a pass", lenStr)
+		}
 	})
 
 	// FINGERPRINT-03 (required-green, was KNOWN-RED): the Client-Hints version is
