@@ -17,23 +17,196 @@ package tests
 //   - network_evasion_test.go owns the full Sec-CH-UA header dump. The KNOWN-RED
 //     Client-Hints check here asserts only the CH-version baseline truth.
 //
-// KNOWN-RED baseline signals (WebRTC ICE leak, Client-Hints 121) are asserted at
-// their CURRENT truth with `// KNOWN-RED (Phase NN: <REQ>)` markers and are kept
-// as executing assertions — never skipped (no t.Skip). CI stays green on the
-// documented baseline; each marker flips to required-green when its later phase
-// lands. The verify gate negative-greps this file for any skip directive.
+// KNOWN-RED baseline signals are asserted at their CURRENT truth with
+// `// KNOWN-RED (Phase NN: <REQ>)` markers and are kept as executing assertions —
+// never skipped (no t.Skip). CI stays green on the documented baseline; each
+// marker flips to required-green when its later phase lands. The verify gate
+// negative-greps this file for any skip directive.
+//
+// Phase-26 flip (FINGERPRINT-03): the Client-Hints "121" KNOWN-RED is now a
+// REQUIRED-GREEN assertion (client_hints_ua_derived) — Sec-Ch-Ua major == UA
+// Chrome major == navigator.userAgentData version, all read from the live page.
+// The blocking consistency_invariant subtest additionally proves those surfaces
+// plus navigator.platform tell one OS+version story (success criterion 1). Only
+// the WebRTC ICE leak remains KNOWN-RED (flips in Phase 27 HARDEN-01).
 
 import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/agenthands/rod-cli/internal/detect"
 )
+
+// chromeMajorRe extracts the Chrome major version from a UA string (digits only).
+var chromeMajorRe = regexp.MustCompile(`Chrome/(\d+)`)
+
+// chromeMajor parses the Chrome major version out of a UA string, "" if absent.
+func chromeMajor(ua string) string {
+	m := chromeMajorRe.FindStringSubmatch(ua)
+	if len(m) < 2 {
+		return ""
+	}
+	return m[1]
+}
+
+// writeProfile writes a stealth profile JSON to a temp file and returns its path.
+// It is the only CLI-reachable way to enable Client-Hints spoofing: there is no
+// --spoof-client-hints flag, only the profile/config field SpoofClientHints, so
+// the FINGERPRINT-02/03 invariant (Sec-Ch-Ua / userAgentData coherence) can only
+// be ACTIVATED end-to-end through a --profile JSON. See SUMMARY "Coherence gap":
+// Client-Hints spoofing is opt-in, NOT the default identity, and --user-agent
+// alone does not enable it. Activating the feature is legitimate test setup; the
+// assertions below remain hard live-page reads, never weakened.
+func writeProfile(t *testing.T, fields map[string]interface{}) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "stealth-profile-*.json")
+	if err != nil {
+		t.Fatalf("create temp profile failed: %v", err)
+	}
+	defer f.Close()
+	if err := json.NewEncoder(f).Encode(fields); err != nil {
+		t.Fatalf("encode temp profile failed: %v", err)
+	}
+	return f.Name()
+}
+
+// liveEval evaluates an arbitrary JS expression against the LIVE page and returns
+// the trimmed String()-coerced value. READ FROM THE LIVE PAGE — never a Go field.
+func liveEval(t *testing.T, expr string) string {
+	t.Helper()
+	out, err := runCli("eval", "String("+expr+")")
+	if err != nil {
+		t.Fatalf("eval %s failed: %v\nOutput: %s", expr, err, out)
+	}
+	val := out
+	if i := strings.Index(out, evalResultPrefix); i >= 0 {
+		val = out[i+len(evalResultPrefix):]
+	}
+	return strings.TrimSpace(val)
+}
+
+// liveUserAgentDataMajor reads the navigator.userAgentData "Google Chrome" brand
+// version directly from the LIVE page (godoll spoofs this UA-derived in Plan 02).
+func liveUserAgentDataMajor(t *testing.T) string {
+	t.Helper()
+	expr := `(function(){var b=(navigator.userAgentData&&navigator.userAgentData.brands)||[];` +
+		`for(var i=0;i<b.length;i++){if(b[i].brand==='Google Chrome')return b[i].version;}return '';})()`
+	return liveEval(t, expr)
+}
+
+// liveHeader navigates the live daemon-driven browser to a loopback header-echo
+// server, reads back the named request header the SHIPPED binary actually sent
+// (zero network egress — only an httptest loopback server), and returns it.
+func liveHeader(t *testing.T, name string) string {
+	t.Helper()
+	hdr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(r.Header)
+	}))
+	defer hdr.Close()
+
+	if _, err := runCli("goto", hdr.URL); err != nil {
+		t.Fatalf("goto header-echo server failed: %v", err)
+	}
+	body, err := runCli("eval", "document.body.innerText")
+	if err != nil {
+		t.Fatalf("eval header-echo body failed: %v", err)
+	}
+	// The echoed body is http.Header JSON: {"Sec-Ch-Ua":["..."], ...}.
+	var headers map[string][]string
+	start := strings.Index(body, "{")
+	end := strings.LastIndex(body, "}")
+	if start < 0 || end < start {
+		t.Fatalf("header-echo body is not JSON: %s", body)
+	}
+	if err := json.Unmarshal([]byte(body[start:end+1]), &headers); err != nil {
+		t.Fatalf("failed to parse header-echo JSON: %v\nbody: %s", err, body)
+	}
+	if vals, ok := headers[name]; ok && len(vals) > 0 {
+		return vals[0]
+	}
+	return ""
+}
+
+// liveSecChUaMajor reads the live Sec-Ch-Ua header and parses the Google-Chrome
+// brand version (the "Google Chrome";v="<major>" entry).
+func liveSecChUaMajor(t *testing.T) string {
+	t.Helper()
+	val := liveHeader(t, "Sec-Ch-Ua")
+	if val == "" {
+		t.Fatalf("Sec-Ch-Ua header not observable on the live page")
+	}
+	re := regexp.MustCompile(`"Google Chrome";v="(\d+)"`)
+	m := re.FindStringSubmatch(val)
+	if len(m) < 2 {
+		return ""
+	}
+	return m[1]
+}
+
+// stripQuotes trims surrounding double-quotes from a Sec-Ch-Ua-Platform value
+// (the header form is quoted, e.g. "Windows").
+func stripQuotes(s string) string {
+	return strings.Trim(strings.TrimSpace(s), `"`)
+}
+
+// osFromUA classifies the OS family from a UA string's OS token.
+func osFromUA(ua string) string {
+	switch {
+	case strings.Contains(ua, "Windows"):
+		return "windows"
+	case strings.Contains(ua, "Macintosh"), strings.Contains(ua, "Mac OS X"):
+		return "macos"
+	case strings.Contains(ua, "Linux"):
+		return "linux"
+	}
+	return ""
+}
+
+// osFromPlatform classifies the OS family from a navigator.platform value.
+func osFromPlatform(p string) string {
+	switch {
+	case strings.HasPrefix(p, "Win"):
+		return "windows"
+	case p == "MacIntel", strings.Contains(p, "Mac"):
+		return "macos"
+	case strings.Contains(p, "Linux"):
+		return "linux"
+	}
+	return ""
+}
+
+// osFromChPlatform classifies the OS family from a Sec-Ch-Ua-Platform value.
+func osFromChPlatform(p string) string {
+	switch p {
+	case "Windows":
+		return "windows"
+	case "macOS":
+		return "macos"
+	case "Linux":
+		return "linux"
+	}
+	return ""
+}
+
+// restoreDefaultDaemon tears down a pinned/profile session spawned inside a
+// subtest and re-establishes the DEFAULT-identity daemon on the detect fixture,
+// so a pinned session never bleeds into a later subtest (the daemon-leak guard
+// the plan calls out). Used via defer at the end of profile-pinned subtests.
+func restoreDefaultDaemon(t *testing.T, url string) {
+	t.Helper()
+	runCli("close")
+	if _, err := runCli("goto", url); err != nil {
+		t.Fatalf("restore default daemon: goto %s failed: %v", url, err)
+	}
+	waitForDetectReady(t)
+}
 
 // evalResultPrefix is what the `eval` command prepends to every value it prints
 // (actions/actions.go: "Evaluate code successfully with result: <value>").
@@ -199,34 +372,130 @@ func TestDetectionHarness(t *testing.T) {
 		t.Logf("KNOWN-RED webrtcIce baseline truth: %q (flips to required-empty in Phase 27 HARDEN-01)", ice)
 	})
 
-	// KNOWN-RED (Phase 26 FINGERPRINT-03): Client-Hints version is hardcoded and
-	// can mismatch the UA (the "121" tell). We assert only the CH-version baseline
-	// truth via the header path here — network_evasion_test.go owns the full
-	// header dump, so we do NOT duplicate it. This flips to required-green when
-	// Sec-CH-UA is derived from the UA.
-	t.Run("client_hints_known_red", func(t *testing.T) {
-		// Echo headers as JSON from a loopback httptest server, then read the
-		// Sec-CH-UA value the SHIPPED binary actually sent.
-		hdr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(r.Header)
-		}))
-		defer hdr.Close()
+	// FINGERPRINT-03 (required-green, was KNOWN-RED): the Client-Hints version is
+	// now DERIVED from the active UA (Plan 03 killed the hardcoded "121" literal in
+	// the rod-cli interceptor; Plan 02 made godoll's navigator.userAgentData
+	// UA-derived). We assert the triple-agreement from the LIVE page:
+	//   live Sec-Ch-Ua major == UA Chrome major == navigator.userAgentData version.
+	// network_evasion_test.go owns the full header dump; here we assert only the
+	// version coherence baseline. No t.Skip, no t.Logf-only baseline — a future
+	// regression that re-introduces a mismatch FAILS this subtest.
+	t.Run("client_hints_ua_derived", func(t *testing.T) {
+		// Activate Client-Hints spoofing for this subtest (it is opt-in — see
+		// writeProfile and the SUMMARY coherence note). Use the DEFAULT-OS identity
+		// (Windows Chrome/121, Win32) so this proves the default-identity story is
+		// coherent once CH is enabled. Close the default daemon, spawn pinned, and
+		// restore the default daemon for any following subtests.
+		prof := writeProfile(t, map[string]interface{}{
+			"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+				"(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+			"platform":         "Win32",
+			"spoofClientHints": true,
+		})
+		runCli("close")
+		if _, err := runCli("--profile", prof, "goto", ds.URL()); err != nil {
+			t.Fatalf("goto with CH profile failed: %v", err)
+		}
+		waitForDetectReady(t)
+		defer restoreDefaultDaemon(t, ds.URL())
 
-		if _, err := runCli("goto", hdr.URL); err != nil {
-			t.Fatalf("goto header-echo server failed: %v", err)
+		// (1) Read the live Sec-Ch-Ua header the SHIPPED binary actually sent, via
+		// a loopback header-echo server (zero network egress).
+		chMajor := liveSecChUaMajor(t)
+
+		// (2) Read the live UA's Chrome major from the page.
+		uaMajor := chromeMajor(liveEval(t, "navigator.userAgent"))
+
+		// (3) Read the live navigator.userAgentData Google-Chrome brand version.
+		uadMajor := liveUserAgentDataMajor(t)
+
+		if chMajor == "" || uaMajor == "" || uadMajor == "" {
+			t.Fatalf("FINGERPRINT-03: a major version is empty (cannot assert coherence): "+
+				"Sec-Ch-Ua=%q UA=%q userAgentData=%q", chMajor, uaMajor, uadMajor)
 		}
-		body, err := runCli("eval", "document.body.innerText")
-		if err != nil {
-			t.Fatalf("eval body failed: %v", err)
+		if !(chMajor == uaMajor && uaMajor == uadMajor) {
+			t.Errorf("FINGERPRINT-03: Client-Hints major NOT UA-derived — surfaces disagree: "+
+				"Sec-Ch-Ua=%s UA=%s navigator.userAgentData=%s (all three must match)",
+				chMajor, uaMajor, uadMajor)
 		}
-		// The CH header surface must be present and observable. Its exact version
-		// is the KNOWN-RED baseline — we record it rather than fail on it.
-		if !strings.Contains(body, "Sec-Ch-Ua") {
-			t.Errorf("KNOWN-RED Client-Hints: Sec-Ch-Ua header surface not observable, got: %s", body)
+		if uaMajor != "121" {
+			t.Errorf("FINGERPRINT-03: default identity UA major changed unexpectedly, got %s (want 121)", uaMajor)
 		}
-		t.Logf("KNOWN-RED Client-Hints baseline: Sec-Ch-Ua header observed " +
-			"(version hardcoded; flips to required-green in Phase 26 FINGERPRINT-03 when derived from UA)")
+	})
+
+	// consistency_invariant — SUCCESS CRITERION 1 (FINGERPRINT-01/02), a BLOCKING
+	// harness test. It proves Sec-CH-UA, navigator.userAgentData, the UA, and
+	// navigator.platform all tell ONE OS+version story, read from the LIVE page
+	// (never a Go config field), with zero network egress. A disagreement among
+	// any surface fails the phase gate.
+	t.Run("consistency_invariant", func(t *testing.T) {
+		// Activate Client-Hints spoofing (opt-in; see writeProfile + SUMMARY) on the
+		// default-OS identity so the BLOCKING invariant proves real coherence across
+		// every surface rather than passing vacuously on empty CH.
+		prof := writeProfile(t, map[string]interface{}{
+			"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+				"(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+			"platform":         "Win32",
+			"spoofClientHints": true,
+		})
+		runCli("close")
+		if _, err := runCli("--profile", prof, "goto", ds.URL()); err != nil {
+			t.Fatalf("goto with CH profile failed: %v", err)
+		}
+		waitForDetectReady(t)
+		defer restoreDefaultDaemon(t, ds.URL())
+
+		// Read ALL live-page (JS) signals FIRST, while the detect fixture page (with
+		// window.__detect injected) is current. The header reads below navigate the
+		// session to the loopback echo server, after which window.__detect is gone —
+		// so order matters.
+		uaString := liveEval(t, "navigator.userAgent")
+		uaMajor := chromeMajor(uaString)
+		uadMajor := liveUserAgentDataMajor(t)
+		platform := liveEval(t, "navigator.platform")
+		vendor := evalDetect(t, "webglVendor")
+		renderer := evalDetect(t, "webglRenderer")
+
+		// Now the header surface (navigates to the loopback echo server, last).
+		chMajor := liveSecChUaMajor(t)
+		chPlatform := stripQuotes(liveHeader(t, "Sec-Ch-Ua-Platform"))
+
+		// --- Version story: Sec-Ch-Ua major == UA Chrome major == userAgentData ---
+		if chMajor == "" || uaMajor == "" || uadMajor == "" {
+			t.Fatalf("consistency_invariant: empty major — Sec-Ch-Ua=%q UA=%q userAgentData=%q",
+				chMajor, uaMajor, uadMajor)
+		}
+		if !(chMajor == uaMajor && uaMajor == uadMajor) {
+			t.Errorf("consistency_invariant: VERSION story disagrees — "+
+				"Sec-Ch-Ua=%s UA=%s userAgentData=%s", chMajor, uaMajor, uadMajor)
+		}
+
+		// --- OS story: UA OS token == navigator.platform == Sec-Ch-Ua-Platform ---
+		uaOS := osFromUA(uaString)
+		if uaOS == "" {
+			t.Errorf("consistency_invariant: could not classify OS from UA %q", uaString)
+		}
+		// platform must match the UA-implied OS family.
+		if got := osFromPlatform(platform); got != uaOS {
+			t.Errorf("consistency_invariant: OS story disagrees — UA implies %s but "+
+				"navigator.platform=%q (=>%s)", uaOS, platform, got)
+		}
+		// Sec-Ch-Ua-Platform must match the UA-implied OS family.
+		if chPlatform != "" {
+			if got := osFromChPlatform(chPlatform); got != uaOS {
+				t.Errorf("consistency_invariant: OS story disagrees — UA implies %s but "+
+					"Sec-Ch-Ua-Platform=%q (=>%s)", uaOS, chPlatform, got)
+			}
+		}
+
+		// --- WebGL: must not be a software rasterizer (headless tell) ------------
+		combined := strings.ToLower(vendor + " " + renderer)
+		for _, tell := range []string{"swiftshader", "llvmpipe", "software"} {
+			if strings.Contains(combined, tell) {
+				t.Errorf("consistency_invariant: WebGL reports software renderer %q "+
+					"(headless tell): vendor=%q renderer=%q", tell, vendor, renderer)
+			}
+		}
 	})
 
 	// --- Headful matrix row (CONTEXT.md:20) -----------------------------------
