@@ -152,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-24 — started milestone v1.6 Proven & Configurable Stealth*
+*Last updated: 2026-06-24 — v1.6 in progress; Phase 26 (Configurable Fingerprint & Consistency Validator) complete — pinnable coherent fingerprint, consistency validator, UA-derived Client-Hints (no hardcoded 121), and `stealth-check` verdict shipped.*
