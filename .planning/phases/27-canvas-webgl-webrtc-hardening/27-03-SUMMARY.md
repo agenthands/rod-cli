@@ -62,6 +62,15 @@ Wired both hardening features into the rod-cli runtime: a stable per-session noi
 
 None for the wiring. CR-05 (ignored rand error) was an independent-review finding fixed post-implementation (commit 09fe94a).
 
+## Post-handoff update (CR-02, commit 1e5a7f6)
+
+The hardening toggles became `*bool` (lead decision). The two context.go consumers
+were updated to deref with a nil→true default: `boolVal(cfg.Stealth.WebRTCLeakProtection, true)`
+in launchBrowser, `boolVal(ctx.config.Stealth.WebRTCLeakProtection, true)` in
+createPage, and `canvasNoise := boolVal(s.CanvasNoise, true)` driving both
+`p.SpoofCanvas` and `p.SpoofAudioContext` in profileFromStealth. Behavior is
+unchanged for the default/flag paths; a yaml-persisted false now also flows through.
+
 ## Self-Check: PASSED
-- types/context.go — `noiseSeed uint64`, `c.noiseSeed = binary.LittleEndian.Uint64`, `WithWebRTCLeakProtection`, `cfg.Stealth.WebRTCLeakProtection`, `p.SpoofCanvas = s.CanvasNoise`, `em.SetNoiseSeed(ctx.noiseSeed)`, `em.EvadeWebRTC()` inside `if ctx.config.Stealth.WebRTCLeakProtection`.
-- Commit bd08cbc, 09fe94a — FOUND.
+- types/context.go — `noiseSeed uint64`, `c.noiseSeed = binary.LittleEndian.Uint64`, `WithWebRTCLeakProtection`, `boolVal(cfg.Stealth.WebRTCLeakProtection, true)`, `canvasNoise := boolVal(s.CanvasNoise, true)` → SpoofCanvas/SpoofAudioContext, `em.SetNoiseSeed(ctx.noiseSeed)`, `em.EvadeWebRTC()` inside `if boolVal(ctx.config.Stealth.WebRTCLeakProtection, true)`.
+- Commit bd08cbc, 09fe94a, 1e5a7f6 — FOUND.

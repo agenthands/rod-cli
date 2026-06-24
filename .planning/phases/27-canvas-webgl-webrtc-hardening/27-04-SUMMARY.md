@@ -61,14 +61,23 @@ Flipped the harness to assert both hardening features on the live page: `webrtc_
 
 None for the harness flip. CR-03/CR-04 were independent-review hardening applied post-implementation (commit 09fe94a).
 
+## Resolved follow-ups (lead-directed, commits 1e5a7f6 / bab65d8)
+
+- **CR-02 [config precedence] — RESOLVED (lead decision):** the two `StealthConfig`
+  toggles are now `*bool`; ResolveStealth honors a yaml-persisted false (precedence:
+  flag > non-nil-yaml > default-true). Guarded by `TestResolveStealth_HardeningTogglesRoundTrip`
+  in types. See 27-01-SUMMARY.
+- **CR-03 audio coverage — CLOSED:** added the `audio_noise_stable` harness subtest
+  (commit bab65d8) — reads `getChannelData` twice in one session and asserts the two
+  reads are sample-identical (the regression guard for the CR-01 compounding-drift
+  fix), with a no-AudioContext / blanked-surface loud-fail guard. PASSES.
+
 ## Open Items Routed to qa / architect
 
-- **CR-02 [config precedence]**: a `rod-cli.yaml` that sets `webRTCLeakProtection: false` / `canvasNoise: false` is clobbered to true by the ResolveStealth default-true baseline (a plain `bool` cannot distinguish unset from a deliberate file-false; the *flags* are `*bool` for exactly this reason). Latent today (generated yaml omits the keys). The plan locked `bool` + default-true; converting the two StealthConfig fields to `*bool` is the clean fix but is a plan-level field-type change — routed UP to the architect rather than changed unilaterally.
-- **CR-03 audio coverage**: I added a within-session canvas applied-ness anchor; a dedicated 2-read `getChannelData` audio-stability harness subtest (the audio analog of canvas_noise_stable) is a coverage gap for qa to consider — the CR-01 fix is verified live but not yet guarded by a committed test.
 - **CR-06 [low]**: canvas delta keys on read-relative byte index, so a sub-region getImageData and a full toDataURL assign the same physical pixel different deltas. Full-canvas reads agree (the harness path); cross-API sub-region consistency is a deferred nicety.
 - **Reviewer note for qa**: godoll `Apply()` has `go em.EnableRequestInterception()` commented out, so Sec-Ch-Ua header spoofing depends entirely on rod-cli's own router — verify it isn't silently lost (pre-existing, not introduced this phase; TestNetworkEvasionHeaders passes).
 
 ## Self-Check: PASSED
 - detect.js — `canvasHash`, `toDataURL`, no Date/Math.random in the probe.
-- detection_test.go — no `webrtc_ice_known_red`, `t.Run("webrtc_ice"`, `net.ParseIP`, loud-fail on `undefined`, `t.Run("canvas_noise_stable"`, `UNSTABLE`.
-- Commit de3ff3a, 09fe94a — FOUND.
+- detection_test.go — no `webrtc_ice_known_red`, `t.Run("webrtc_ice"`, `net.ParseIP`, loud-fail on `undefined`, `t.Run("canvas_noise_stable"`, `t.Run("audio_noise_stable"`, `UNSTABLE`.
+- Commit de3ff3a, 09fe94a, bab65d8 — FOUND.

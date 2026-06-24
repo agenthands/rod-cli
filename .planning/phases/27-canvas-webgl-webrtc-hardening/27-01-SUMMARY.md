@@ -66,10 +66,19 @@ Added the two Phase-27 hardening toggles to the stealth config spine: `WebRTCLea
 
 ## Known Limitations
 
-- A `rod-cli.yaml` config file that explicitly set `webRTCLeakProtection: false` / `canvasNoise: false` would be clobbered back to true by the ResolveStealth baseline (a bool zero-value is indistinguishable from a deliberate false at the config-struct level — which is exactly why the *flags* are `*bool`). The plan lists no yaml tier; the override path is the CLI flag. Noted for the lead/qa in case yaml-driven disable is later desired.
+- ~~A `rod-cli.yaml` that set these toggles false would be clobbered to true.~~
+  **RESOLVED (CR-02, lead decision, commit 1e5a7f6):** the two `StealthConfig`
+  fields are now `*bool` (matching the `*bool` `StealthFlags`). Resolved precedence:
+  explicit `--flag` > yaml-loaded `cfg.Stealth.<field>` (honored when non-nil,
+  including an explicit false) > built-in default true. `DefaultConfig` uses
+  `boolPtr(true)`; consumers deref via `boolVal(p, true)`. `ResolveStealth` no
+  longer unconditionally re-baselines to true — a nil (omitted key + no flag)
+  resolves to true; a non-nil persisted false survives. Guarded by
+  `TestResolveStealth_HardeningTogglesRoundTrip` (persisted_false_survives /
+  omitted_resolves_true / flag_overrides_persisted).
 
 ## Self-Check: PASSED
-- types/config.go — `WebRTCLeakProtection bool` + `CanvasNoise bool` (StealthConfig), `WebRTCLeakProtection *bool` + `CanvasNoise *bool` (StealthFlags), default-true baseline + `flags.WebRTCLeakProtection != nil` / `flags.CanvasNoise != nil` overrides.
+- types/config.go — `WebRTCLeakProtection *bool` + `CanvasNoise *bool` (StealthConfig AND StealthFlags), `boolPtr`/`boolVal` helpers, `DefaultConfig` uses `boolPtr(true)`, precedence flag > non-nil-yaml > default-true in ResolveStealth.
 - cmd.go — both BoolFlags registered, `IsSet("webrtc-protection")` forwarding.
 - main.go — `IsSet("webrtc-protection")` capture into `stealthFlags.WebRTCLeakProtection`.
 - Commit 7f2e162 — FOUND.
