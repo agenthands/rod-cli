@@ -23,7 +23,7 @@
 
 - [x] **FINGERPRINT-01**: A user can pin a coherent fingerprint per session — browser/OS/locale tuple (UA, platform, locale, timezone, screen, hardwareConcurrency, deviceMemory, vendor) — via CLI flags mapped onto godoll `stealth.Profile`, deriving dependent fields rather than setting raw contradictory values.
 - [x] **FINGERPRINT-02**: A consistency validator rejects or auto-derives incoherent combinations per the invariants (UA ↔ Client-Hints ↔ platform, locale ↔ languages ↔ Accept-Language, timezone ↔ proxy-IP geo, plausible screen geometry / hardware) and fails loudly on contradiction.
-- [ ] **FINGERPRINT-03**: Client-Hints are derived from the active UA/OS instead of the current hardcoded version `121`, eliminating the UA↔UA-CH mismatch tell.
+- [x] **FINGERPRINT-03**: Client-Hints are derived from the active UA/OS instead of the current hardcoded version `121`, eliminating the UA↔UA-CH mismatch tell.
 
 ### Stealth Profiles & Config Surface
 
@@ -91,7 +91,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | PROXY-02 | Phase 25 | Complete |
 | FINGERPRINT-01 | Phase 26 | Complete |
 | FINGERPRINT-02 | Phase 26 | Complete |
-| FINGERPRINT-03 | Phase 26 | Pending |
+| FINGERPRINT-03 | Phase 26 | Complete |
 | VALIDATE-01 | Phase 26 | Complete |
 | VALIDATE-02 | Phase 26 | Complete |
 | HARDEN-01 | Phase 27 | Pending |

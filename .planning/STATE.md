@@ -6,14 +6,14 @@ current_phase: 26
 current_phase_name: Configurable Fingerprint & Consistency Validator
 status: executing
 stopped_at: Completed Phase 25 (config surface + per-session proxy) — verified 4/4; code review fixed CR-01 proxy-auth argv leak + credential-safety warnings
-last_updated: "2026-06-24T07:45:20.739Z"
+last_updated: "2026-06-24T07:53:53.973Z"
 last_activity: 2026-06-24
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 26 (Configurable Fingerprint & Consistency Validator) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-24 — Phase 26 execution started
 
@@ -66,6 +66,8 @@ All 17 v1 requirements mapped, 100% coverage.
 - [Phase ?]: VALIDATE-03: swallowed evasion errors now write warning: to stderr (log-and-continue, no daemon abort)
 - [Phase ?]: 24-03: e2e detection harness reads window.__detect via eval (validate-live-not-source); WebRTC + Client-Hints kept as KNOWN-RED executing assertions, never skipped
 - [Phase ?]: Phase 25 proxy/profile proven e2e via offline self-serving proxy fixture: auth by CONNECT/407 counters, isolation by live-page egress id, profile by JSON round-trip + session inheritance (identity overlay deferred to Phase 26).
+- [Phase ?]: 26-02: killed hardcoded CH-121 in godoll injectors (evasion.go Sec-Ch-Ua + js.go userAgentData); both derive the Chrome major from em.profile.UserAgent via chromeMajorFromUA so header CH == JS userAgentData == UA major (FINGERPRINT-03/02). godoll edits uncommitted in its working tree, consumed via replace.
+- [Phase ?]: 26-02: FromFingerprint timezone locale-derived (localeToTimezone map, America/New_York fallback) instead of hardcoded; locale is the only timezone signal available, keeps offline-determinism.
 
 ### Pending Todos
 
@@ -85,7 +87,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T07:45:13.718Z
+Last session: 2026-06-24T07:53:36.194Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -108,3 +110,4 @@ Resume file: None
 | Phase 25 P02 | 15min | 2 tasks | 2 files |
 | Phase 25 P03 | 25min | 2 tasks | 2 files |
 | Phase 26 P01 | 3m47s | 3 tasks | 3 files |
+| Phase 26 P02 | 9min | 4 tasks | 5 files |
