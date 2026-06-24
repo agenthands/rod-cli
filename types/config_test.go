@@ -1,12 +1,138 @@
 package types
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/agenthands/godoll/stealth"
 	"gopkg.in/yaml.v3"
 )
+
+// writeProfile saves a stealth.Profile JSON file at dir/<name>.json and returns
+// its path, for the profile-tier precedence tests.
+func writeProfile(t *testing.T, dir, name string, p stealth.Profile) string {
+	t.Helper()
+	path := filepath.Join(dir, name+".json")
+	data, err := json.Marshal(p)
+	if err != nil {
+		t.Fatalf("marshal profile: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write profile: %v", err)
+	}
+	return path
+}
+
+func TestResolveStealth_CLIFlagWins_NoProfile(t *testing.T) {
+	cfg := DefaultConfig
+	flags := &StealthFlags{Proxy: "http://127.0.0.1:8888"}
+	if err := ResolveStealth(&cfg, flags); err != nil {
+		t.Fatalf("ResolveStealth: %v", err)
+	}
+	if cfg.Stealth.Proxy != "http://127.0.0.1:8888" {
+		t.Fatalf("Stealth.Proxy = %q, want CLI value", cfg.Stealth.Proxy)
+	}
+	// Deprecated shim bridged from Stealth.Proxy.
+	if cfg.Proxy != "http://127.0.0.1:8888" {
+		t.Fatalf("Config.Proxy bridge = %q, want CLI value", cfg.Proxy)
+	}
+}
+
+func TestResolveStealth_ProfileTier(t *testing.T) {
+	dir := t.TempDir()
+	path := writeProfile(t, dir, "euro", stealth.DefaultProfile())
+
+	cfg := DefaultConfig
+	flags := &StealthFlags{Profile: path}
+	if err := ResolveStealth(&cfg, flags); err != nil {
+		t.Fatalf("ResolveStealth: %v", err)
+	}
+	if cfg.Stealth.ProfilePath != path {
+		t.Fatalf("ProfilePath = %q, want %q", cfg.Stealth.ProfilePath, path)
+	}
+	// No CLI proxy supplied → proxy stays at the built-in default (empty).
+	if cfg.Stealth.Proxy != "" {
+		t.Fatalf("Stealth.Proxy = %q, want default empty", cfg.Stealth.Proxy)
+	}
+}
+
+func TestResolveStealth_DefaultTier(t *testing.T) {
+	cfg := DefaultConfig
+	if err := ResolveStealth(&cfg, &StealthFlags{}); err != nil {
+		t.Fatalf("ResolveStealth: %v", err)
+	}
+	if cfg.Stealth.Proxy != "" || cfg.Stealth.ProxyAuth != "" || cfg.Stealth.ProfilePath != "" {
+		t.Fatalf("expected built-in defaults, got %+v", cfg.Stealth)
+	}
+}
+
+func TestResolveStealth_CLIOverridesProfile(t *testing.T) {
+	dir := t.TempDir()
+	path := writeProfile(t, dir, "p", stealth.DefaultProfile())
+
+	cfg := DefaultConfig
+	flags := &StealthFlags{Proxy: "socks5://10.0.0.1:1080", Profile: path}
+	if err := ResolveStealth(&cfg, flags); err != nil {
+		t.Fatalf("ResolveStealth: %v", err)
+	}
+	// CLI flag wins over the profile selection for the proxy field.
+	if cfg.Stealth.Proxy != "socks5://10.0.0.1:1080" {
+		t.Fatalf("Stealth.Proxy = %q, want CLI value (precedence CLI > profile)", cfg.Stealth.Proxy)
+	}
+	if cfg.Stealth.ProfilePath != path {
+		t.Fatalf("ProfilePath = %q, want %q", cfg.Stealth.ProfilePath, path)
+	}
+}
+
+func TestResolveStealth_MissingProfileIsLoudError(t *testing.T) {
+	cfg := DefaultConfig
+	flags := &StealthFlags{Profile: filepath.Join(t.TempDir(), "does-not-exist.json")}
+	if err := ResolveStealth(&cfg, flags); err == nil {
+		t.Fatal("expected loud error for non-existent profile, got nil")
+	}
+}
+
+func TestResolveStealth_ProxyAuthBridge(t *testing.T) {
+	cfg := DefaultConfig
+	flags := &StealthFlags{Proxy: "http://h:1", ProxyAuth: "user:secret"}
+	if err := ResolveStealth(&cfg, flags); err != nil {
+		t.Fatalf("ResolveStealth: %v", err)
+	}
+	if cfg.Stealth.ProxyAuth != "user:secret" {
+		t.Fatalf("ProxyAuth = %q, want CLI value", cfg.Stealth.ProxyAuth)
+	}
+}
+
+func TestLoadConfig_StealthBlockRoundTrips(t *testing.T) {
+	dir := chdirTemp(t)
+
+	want := DefaultConfig
+	want.Stealth.Proxy = "http://localhost:9090"
+	want.Stealth.ProxyAuth = "u:p"
+	want.Stealth.ProfilePath = "/tmp/euro.json"
+
+	p := filepath.Join(dir, ConfigName)
+	f, err := os.Create(p)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := yaml.NewEncoder(f).Encode(want); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	f.Close()
+
+	cfg, err := LoadConfig(p)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Stealth.Proxy != "http://localhost:9090" ||
+		cfg.Stealth.ProxyAuth != "u:p" ||
+		cfg.Stealth.ProfilePath != "/tmp/euro.json" {
+		t.Fatalf("stealth block did not round-trip: %+v", cfg.Stealth)
+	}
+}
 
 // chdirTemp switches into a fresh temp dir and restores cwd on cleanup so the
 // repo is not polluted with rod-cli.yaml / ./rod / ./log artifacts.
