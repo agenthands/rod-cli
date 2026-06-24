@@ -36,7 +36,7 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
 
 **Milestone Goal:** Turn rod-cli's already-wired godoll stealth from "compiles and runs" into "provably evades detection and is configurable per session" — validated against a deterministic offline detection harness (reading from the live page, never from source), exposed through an agent-friendly session-persistent config surface, and extended with the evasion wiring that matters (WebRTC leak prevention, stable canvas noise, fingerprint consistency). Brownfield: this milestone **proves, configures, and wires** existing godoll capability — it does not rebuild it.
 
-- [ ] **Phase 24: Detection Harness & CI Backbone** — Offline, deterministic detection test server + first test CI job, baselined against the current binary so existing leaks surface
+- [x] **Phase 24: Detection Harness & CI Backbone** — Offline, deterministic detection test server + first test CI job, baselined against the current binary so existing leaks surface (completed 2026-06-24)
 - [ ] **Phase 25: Stealth Config Surface & Per-Session Proxy** — Session-persistent stealth config (flags + named profile file, precedence-resolved at daemon spawn) plus per-session HTTP/SOCKS5 proxy with CDP auth
 - [ ] **Phase 26: Configurable Fingerprint & Consistency Validator** — Pinnable coherent fingerprint from a single source of truth, consistency invariant gate, the CH-121 fix, and a user-facing per-signal stealth-check verdict
 - [ ] **Phase 27: Canvas/WebGL/WebRTC Hardening** — Wire the two genuine godoll gaps: WebRTC IP-leak prevention and stable-per-session canvas/WebGL/audio noise, both harness-asserted
@@ -57,12 +57,12 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   3. A `.github/workflows/test.yml` job runs the harness on every push and its first run records a baseline where pre-existing leaks (e.g. WebRTC, any hardcoded-CH mismatch) show as known red signals rather than silent passes.
   4. The evasion path fails loudly: `EvasionManager.Apply()` and fingerprint-generation errors are surfaced/logged instead of being discarded (`_ = em.Apply()`), so a silent no-op is observable in the harness output.
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 
 - [x] 24-01-PLAN.md — Offline 127.0.0.1:0 detection fixture server + self-authored go:embed page (HARNESS-01)
 - [x] 24-02-PLAN.md — VALIDATE-03: surface swallowed fingerprint/Apply() errors to stderr (no hard-fail)
 - [x] 24-03-PLAN.md — E2e harness driving the live binary, reading each signal from the live page via eval, KNOWN-RED baseline markers (HARNESS-02)
-- [ ] 24-04-PLAN.md — First test CI workflow (go 1.25.x, push + PR to main) + stray-artifact cleanup + CDP-footprint findings note (HARNESS-03)
+- [x] 24-04-PLAN.md — First test CI workflow (go 1.25.x, push + PR to main) + stray-artifact cleanup + CDP-footprint findings note (HARNESS-03)
 
 ### Phase 25: Stealth Config Surface & Per-Session Proxy
 
@@ -142,7 +142,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 21. Reference Documentation | v1.5 | 4/4 | Complete | 2026-06-22 |
 | 22. Example Plugins | v1.5 | 5/5 | Complete | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
-| 24. Detection Harness & CI Backbone | v1.6 | 3/4 | In Progress|  |
+| 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 0/TBD | Not started | - |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
