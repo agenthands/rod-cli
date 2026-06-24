@@ -6,14 +6,14 @@ current_phase: 26
 current_phase_name: Configurable Fingerprint & Consistency Validator
 status: executing
 stopped_at: Completed Phase 25 (config surface + per-session proxy) — verified 4/4; code review fixed CR-01 proxy-auth argv leak + credential-safety warnings
-last_updated: "2026-06-24T07:59:38.545Z"
+last_updated: "2026-06-24T08:12:22.024Z"
 last_activity: 2026-06-24
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 26 (Configurable Fingerprint & Consistency Validator) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-06-24 — Phase 26 execution started
 
@@ -69,6 +69,8 @@ All 17 v1 requirements mapped, 100% coverage.
 - [Phase ?]: 26-02: killed hardcoded CH-121 in godoll injectors (evasion.go Sec-Ch-Ua + js.go userAgentData); both derive the Chrome major from em.profile.UserAgent via chromeMajorFromUA so header CH == JS userAgentData == UA major (FINGERPRINT-03/02). godoll edits uncommitted in its working tree, consumed via replace.
 - [Phase ?]: 26-02: FromFingerprint timezone locale-derived (localeToTimezone map, America/New_York fallback) instead of hardcoded; locale is the only timezone signal available, keeps offline-determinism.
 - [Phase ?]: Plan 26-03: config-pinned cfg.Stealth is the active stealth.Profile (SetProfile in createPage); interceptor Sec-Ch-Ua UA-derived via parseChromeMajor (no 121 literal)
+- [Phase ?]: stealth-check probe is a single shared //go:embed probe.js used by both the command and the detect.js harness
+- [Phase ?]: stealth-check --json passes through structured daemon results (isJSONValue) instead of double-wrapping
 
 ### Pending Todos
 
@@ -88,7 +90,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T07:59:21.166Z
+Last session: 2026-06-24T08:11:59.019Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -113,3 +115,4 @@ Resume file: None
 | Phase 26 P01 | 3m47s | 3 tasks | 3 files |
 | Phase 26 P02 | 9min | 4 tasks | 5 files |
 | Phase 26 P03 | 10m | 2 tasks | 1 files |
+| Phase 26 P04 | 9min | 3 tasks | 5 files |
