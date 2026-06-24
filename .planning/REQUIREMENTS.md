@@ -32,8 +32,8 @@
 
 ### Per-Session Proxy
 
-- [ ] **PROXY-01**: A user can route a session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound per named session (not a single global IP), using godoll's proxy API rather than the current bare `launcher.Proxy()`.
-- [ ] **PROXY-02**: Proxy authentication is handled via CDP (`Fetch.continueWithAuth`), not URL-embedded credentials (which Chrome removed), with `--proxy-auth` for credentials.
+- [x] **PROXY-01**: A user can route a session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound per named session (not a single global IP), using godoll's proxy API rather than the current bare `launcher.Proxy()`.
+- [x] **PROXY-02**: Proxy authentication is handled via CDP (`Fetch.continueWithAuth`), not URL-embedded credentials (which Chrome removed), with `--proxy-auth` for credentials.
 
 ### Anti-Fingerprint Hardening
 
@@ -87,8 +87,8 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | VALIDATE-03 | Phase 24 | Complete |
 | PROFILE-01 | Phase 25 | Complete |
 | PROFILE-02 | Phase 25 | Complete |
-| PROXY-01 | Phase 25 | Pending |
-| PROXY-02 | Phase 25 | Pending |
+| PROXY-01 | Phase 25 | Complete |
+| PROXY-02 | Phase 25 | Complete |
 | FINGERPRINT-01 | Phase 26 | Pending |
 | FINGERPRINT-02 | Phase 26 | Pending |
 | FINGERPRINT-03 | Phase 26 | Pending |

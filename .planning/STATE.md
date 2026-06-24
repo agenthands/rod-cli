@@ -6,14 +6,14 @@ current_phase: 25
 current_phase_name: Stealth Config Surface & Per-Session Proxy
 status: executing
 stopped_at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
-last_updated: "2026-06-24T06:30:00.000Z"
+last_updated: "2026-06-24T06:07:30.151Z"
 last_activity: 2026-06-24
-last_activity_desc: 25-01 complete — StealthConfig sub-struct + ResolveStealth precedence resolver + forwarded stealth flags + already-running stderr warning
+last_activity_desc: "25-02 complete: per-session HTTP/SOCKS5 proxy wired through godoll ProxyConfig.ApplyToLauncher (replacing bare launcher.Proxy), CDP SetupBrowserAuth for auth, embedded-cred strip, relay cleanup stopped on session close (PROXY-01/02)"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 17
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 25 of 29 (Stealth Config Surface & Per-Session Proxy) — second of 6 v1.6 phases (24–29)
-Plan: 1 of 3 complete (25-01 done; 25-02 proxy wiring + 25-03 e2e tests remain)
-Status: Plan 25-01 executed — stealth config substrate landed (PROFILE-01/02)
-Last activity: 2026-06-24 — 25-01 complete: StealthConfig sub-struct + ResolveStealth precedence resolver + --proxy/--proxy-auth/--profile flags forwarded across the daemon boundary, already-running stderr warning, loud bad-profile failure
+Plan: 2 of 3 complete (25-01 + 25-02 done; 25-03 e2e egress/isolation/auth tests remain)
+Status: Plan 25-02 executed — per-session proxy wired through godoll, CDP auth, relay cleanup (PROXY-01/02)
+Last activity: 2026-06-24 — 25-02 complete: per-session HTTP/SOCKS5 proxy via godoll ProxyConfig.ApplyToLauncher (replaced bare launcher.Proxy), CDP SetupBrowserAuth, embedded-cred strip, relay stopped on session close
 
 Progress: [██░░░░░░░░] 17% (1 of 6 phases)
 
@@ -83,7 +83,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24
+Last session: 2026-06-24T06:07:25.199Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -103,3 +103,4 @@ Resume file: None
 | Phase 24 P02 | 5m | 1 tasks | 1 files |
 | Phase 24 P03 | 6min | 1 tasks | 1 files |
 | Phase 25 P01 | 20min | 3 tasks | 6 files |
+| Phase 25 P02 | 15min | 2 tasks | 2 files |

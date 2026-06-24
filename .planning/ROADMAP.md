@@ -76,10 +76,10 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   3. A user can route a named session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound to that session, and a second session with a different `--proxy` reports its own egress identity (no shared-daemon bleed).
   4. Proxy authentication succeeds against an authenticated proxy via CDP (`Fetch.continueWithAuth`) using `--proxy-auth`, with no URL-embedded credentials and no 407/dialog hang; credentials never appear in default output.
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 
 - [x] 25-01-PLAN.md — StealthConfig substrate: sub-struct, --proxy/--proxy-auth/--profile flags, daemon-boundary forwarding, precedence resolver, already-running warning (PROFILE-01/02)
-- [ ] 25-02-PLAN.md — Per-session proxy wiring: parse into godoll ProxyConfig, ApplyToLauncher + CDP SetupBrowserAuth replacing bare launcher.Proxy, relay cleanup on Close (PROXY-01/02)
+- [x] 25-02-PLAN.md — Per-session proxy wiring: parse into godoll ProxyConfig, ApplyToLauncher + CDP SetupBrowserAuth replacing bare launcher.Proxy, relay cleanup on Close (PROXY-01/02)
 - [ ] 25-03-PLAN.md — Session-isolation/auth/profile-roundtrip/credential-leak e2e tests + offline proxy fixture (PROFILE-01/02, PROXY-01/02)
 
 ### Phase 26: Configurable Fingerprint & Consistency Validator
@@ -147,7 +147,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 22. Example Plugins | v1.5 | 5/5 | Complete | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
 | 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
-| 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 1/3 | In Progress|  |
+| 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 2/3 | In Progress|  |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |
