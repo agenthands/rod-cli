@@ -1,13 +1,17 @@
 package types
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/agenthands/godoll/stealth"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 const ConfigName = "rod-cli.yaml"
@@ -180,13 +184,26 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	// Tier 2: profile file. A bad load is loud — do NOT swallow and fall back.
 	if flags.Profile != "" {
 		path := resolveProfilePath(flags.Profile)
-		if _, err := stealth.LoadProfile(path); err != nil {
+		prof, err := stealth.LoadProfile(path)
+		if err != nil {
 			return errors.Wrapf(err, "load stealth profile %q", path)
 		}
 		cfg.Stealth.ProfilePath = path
-		// Identity fields from the loaded profile are reserved for Phase 26 — this
-		// phase only tracks that a profile was selected (ProfilePath). The proxy
-		// is not a profile field, so nothing else is overlaid here.
+		// Overlay the loaded profile's identity fields onto cfg.Stealth so the
+		// consistency validator (and downstream injectors) see one identity.
+		cfg.Stealth.UserAgent = prof.UserAgent
+		cfg.Stealth.Platform = prof.Platform
+		cfg.Stealth.AcceptLanguage = prof.AcceptLanguage
+		cfg.Stealth.Languages = prof.Languages
+		cfg.Stealth.Timezone = prof.Timezone
+		cfg.Stealth.Locale = prof.Locale
+		cfg.Stealth.Vendor = prof.Vendor
+		cfg.Stealth.HardwareConcurrency = prof.HardwareConcurrency
+		cfg.Stealth.DeviceMemory = prof.DeviceMemory
+		cfg.Stealth.SpoofClientHints = prof.SpoofClientHints
+		cfg.Stealth.Screen.Width = prof.Screen.Width
+		cfg.Stealth.Screen.Height = prof.Screen.Height
+		cfg.Stealth.Screen.DeviceScaleFactor = prof.Screen.DeviceScaleFactor
 	}
 
 	// Tier 1: CLI flags win over the profile and the defaults.
@@ -196,9 +213,169 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	if flags.ProxyAuth != "" {
 		cfg.Stealth.ProxyAuth = flags.ProxyAuth
 	}
+	if flags.UserAgent != "" {
+		cfg.Stealth.UserAgent = flags.UserAgent
+	}
+	if flags.Locale != "" {
+		cfg.Stealth.Locale = flags.Locale
+	}
+	if flags.Timezone != "" {
+		cfg.Stealth.Timezone = flags.Timezone
+	}
+	if flags.Platform != "" {
+		cfg.Stealth.Platform = flags.Platform
+	}
+
+	// Consistency gate: derive unset dependents from the UA anchor and loudly
+	// reject user-set contradictions BEFORE the browser launches. The error
+	// propagates up through main.go's ResolveStealth call and aborts the daemon
+	// rather than shipping a mismatched identity. Track which fields the user set
+	// explicitly so the validator only rejects user-set conflicts (derive-when-
+	// unset, reject-when-user-conflicts).
+	userSet := userSetFingerprint{
+		Platform: flags.Platform != "",
+		Locale:   flags.Locale != "",
+	}
+	if err := deriveAndValidateFingerprint(cfg, userSet); err != nil {
+		return err
+	}
 
 	// Bridge the deprecated compatibility shim.
 	cfg.Proxy = cfg.Stealth.Proxy
+	return nil
+}
+
+// chromeMajorRe extracts the integer Chrome major version from a UA string.
+var chromeMajorRe = regexp.MustCompile(`Chrome/(\d+)`)
+
+// parseChromeMajor returns the integer after "Chrome/" in a UA string. ok is
+// false when the UA contains no Chrome token. This is the single derivation
+// anchor for Client-Hints + navigator.userAgentData brand versions (the actual
+// brand-string formatting belongs to the runtime injector, not here).
+func parseChromeMajor(ua string) (int, bool) {
+	m := chromeMajorRe.FindStringSubmatch(ua)
+	if len(m) < 2 {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
+// uaOSToPlatform maps the OS token in a UA string to navigator.platform and the
+// Sec-Ch-Ua-Platform value. ok is false when no known OS token is present.
+func uaOSToPlatform(ua string) (platform string, chPlatform string, ok bool) {
+	switch {
+	case strings.Contains(ua, "Windows NT"):
+		return "Win32", "Windows", true
+	case strings.Contains(ua, "Macintosh"), strings.Contains(ua, "Mac OS X"):
+		return "MacIntel", "macOS", true
+	case strings.Contains(ua, "X11"), strings.Contains(ua, "Linux"):
+		return "Linux", "Linux", true
+	}
+	return "", "", false
+}
+
+// userSetFingerprint records which fingerprint fields the user explicitly set via
+// a CLI flag, so the validator rejects only genuine user-set contradictions and
+// silently auto-derives the rest.
+type userSetFingerprint struct {
+	Platform bool
+	Locale   bool
+}
+
+// deriveAndValidateFingerprint enforces the consistency policy on the already-
+// overlaid cfg.Stealth: derive-when-unset, reject-when-user-conflicts. It runs at
+// daemon-spawn config-resolution time, before NewContext freezes Config and the
+// browser launches, so any contradiction fails fast on stderr (via the returned
+// error, which main.go surfaces) rather than shipping a mismatched lie.
+func deriveAndValidateFingerprint(cfg *Config, userSet userSetFingerprint) error {
+	s := &cfg.Stealth
+
+	// The UA is the derivation anchor. With no UA set, DefaultProfile supplies a
+	// coherent identity downstream — leave validation a no-op.
+	ua := s.UserAgent
+	if ua == "" {
+		// Still range-check explicitly-set hardware/screen values even without a UA.
+		return validateHardwareAndScreen(s)
+	}
+
+	// Platform ↔ UA OS token. Derive when unset; reject a user-set contradiction.
+	if derivedPlatform, derivedCH, ok := uaOSToPlatform(ua); ok {
+		if userSet.Platform && s.Platform != "" && s.Platform != derivedPlatform {
+			return errors.Errorf(
+				"platform %q contradicts UA OS %q — remove --platform to auto-derive, or fix --user-agent",
+				s.Platform, derivedCH)
+		}
+		if s.Platform == "" {
+			s.Platform = derivedPlatform
+		}
+	}
+
+	// Locale ↔ languages ↔ Accept-Language. Reject only when the user explicitly
+	// set a Locale that contradicts the first navigator.languages entry; otherwise
+	// derive Locale from Languages[0] when unset.
+	if len(s.Languages) > 0 && s.Languages[0] != "" {
+		if userSet.Locale && s.Locale != "" && !localeMatchesLanguage(s.Locale, s.Languages[0]) {
+			return errors.Errorf(
+				"locale %q contradicts navigator.languages[0] %q — remove --locale to auto-derive, or fix the profile languages",
+				s.Locale, s.Languages[0])
+		}
+		if s.Locale == "" {
+			s.Locale = s.Languages[0]
+		}
+	}
+
+	if err := validateHardwareAndScreen(s); err != nil {
+		return err
+	}
+
+	// timezone ↔ proxy-geo is WARN-ONLY: geo-IP resolution needs network access
+	// and would break the offline-deterministic harness. Emit a single stderr line
+	// (never stdout, never a hard failure) when both are set.
+	if s.Timezone != "" && s.Proxy != "" {
+		fmt.Fprintf(os.Stderr,
+			"warning: --timezone %q is set alongside a proxy; rod-cli does not verify the timezone matches the proxy's geo-IP (offline-deterministic)\n",
+			s.Timezone)
+	}
+
+	return nil
+}
+
+// localeMatchesLanguage reports whether a locale and a navigator.languages entry
+// agree. Both are normalized to their primary subtag (case-insensitive) so e.g.
+// "en-US" matches "en-GB" at the language level but "fr-FR" does not match "en-US".
+func localeMatchesLanguage(locale, language string) bool {
+	primary := func(s string) string {
+		s = strings.TrimSpace(s)
+		if i := strings.IndexAny(s, "-_"); i >= 0 {
+			s = s[:i]
+		}
+		return strings.ToLower(s)
+	}
+	return primary(locale) == primary(language)
+}
+
+// validateHardwareAndScreen rejects implausible explicitly-set hardware/screen
+// values with a field-naming message (fail-fast, before browser launch). Zero
+// values mean "unset/derive downstream" and are not range-checked.
+func validateHardwareAndScreen(s *StealthConfig) error {
+	if s.Screen.Width < 0 || s.Screen.Height < 0 {
+		return errors.Errorf("implausible screen geometry: width=%d height=%d — both must be positive",
+			s.Screen.Width, s.Screen.Height)
+	}
+	if (s.Screen.Width > 0) != (s.Screen.Height > 0) {
+		return errors.Errorf("incomplete screen geometry: width=%d height=%d — set both or neither",
+			s.Screen.Width, s.Screen.Height)
+	}
+	if s.HardwareConcurrency != 0 && (s.HardwareConcurrency < 1 || s.HardwareConcurrency > 256) {
+		return errors.Errorf("implausible hardwareConcurrency %d — must be between 1 and 256", s.HardwareConcurrency)
+	}
+	if s.DeviceMemory != 0 && (s.DeviceMemory < 1 || s.DeviceMemory > 64) {
+		return errors.Errorf("implausible deviceMemory %d — must be between 1 and 64 (GB)", s.DeviceMemory)
+	}
 	return nil
 }
 
