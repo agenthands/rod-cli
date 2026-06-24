@@ -96,11 +96,18 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   5. With `--raw`, the stealth-check emits a single-line `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`) — no full-page dump.
 
 **Plans**: 5 plans
+**Wave 1**
 
 - [ ] 26-01-PLAN.md — Config + validation layer: StealthConfig identity fields, 4 override flags, stealth-check registration, consistency validator + UA-anchor derivation in ResolveStealth (FINGERPRINT-01/02, VALIDATE-01/02)
 - [ ] 26-02-PLAN.md — godoll: kill the hardcoded CH `121` in both runtime injectors (UA-derived Sec-Ch-Ua + userAgentData) and derive FromFingerprint timezone (FINGERPRINT-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 26-03-PLAN.md — rod-cli runtime wiring: pin the resolved profile as the active stealth.Profile in createPage + UA-derived interceptor Sec-Ch-Ua (FINGERPRINT-01/03)
 - [ ] 26-04-PLAN.md — stealth-check behavior: shared extracted probe, StealthCheck action (live-page reads, raw/json/human), daemon dispatch (VALIDATE-01/02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 26-05-PLAN.md — Harness gate: flip the CH KNOWN-RED to required-green, add blocking consistency-invariant + pinned-identity + stealth-check subtests (FINGERPRINT-01/02/03, VALIDATE-01/02)
 
 ### Phase 27: Canvas/WebGL/WebRTC Hardening
