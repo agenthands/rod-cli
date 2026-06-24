@@ -615,6 +615,26 @@ func TestDetectionHarness(t *testing.T) {
 		if err := json.Unmarshal([]byte(js[start:end+1]), &parsed); err != nil {
 			t.Errorf("stealth-check --json did not parse as JSON: %v\nOutput: %s", err, js)
 		}
+
+		// CR-01 regression guard: the shipped default stealth masks/deletes
+		// navigator.webdriver (godoll scriptHideAutomation), so it reads back as
+		// `undefined` on the LIVE page. computeVerdict MUST treat that as PASS —
+		// otherwise stealth-check FAILs against the binary's own correct stealth.
+		// Assert the actual per-signal verdict (not just output shape) so this
+		// defect cannot silently regress.
+		signals, ok := parsed["signals"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("stealth-check --json missing 'signals' object; got: %s", js)
+		}
+		wd, ok := signals["webdriver"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("stealth-check --json missing webdriver signal; got: %s", js)
+		}
+		if verdict, _ := wd["verdict"].(string); verdict != "PASS" {
+			t.Errorf("CR-01: webdriver MUST PASS on the default-stealthed page "+
+				"(undefined/false are non-tells); got verdict=%q value=%q reason=%q",
+				verdict, wd["value"], wd["reason"])
+		}
 	})
 
 	// --- Headful matrix row (CONTEXT.md:20) -----------------------------------

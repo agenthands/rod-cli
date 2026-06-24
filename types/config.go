@@ -278,6 +278,43 @@ func uaOSToPlatform(ua string) (platform string, chPlatform string, ok bool) {
 	return "", "", false
 }
 
+// knownPlatforms is the set of navigator.platform values rod-cli can emit a
+// coherent identity for. Used by WR-03 to validate a user-pinned --platform when
+// the UA carries no recognized OS token (so the contradiction check can't run).
+var knownPlatforms = []string{"Win32", "MacIntel", "Linux"}
+
+// isKnownPlatform reports whether p is one of the platforms rod-cli recognizes.
+func isKnownPlatform(p string) bool {
+	for _, k := range knownPlatforms {
+		if p == k {
+			return true
+		}
+	}
+	return false
+}
+
+// rejectUnsafeFingerprintValue rejects a fingerprint string field that carries a
+// control character (incl. \r/\n) or a double-quote. Such a value would need
+// escaping at the JS injection boundary (godoll's injected script literals) and
+// could smuggle/break interceptor headers, so it is almost certainly malformed:
+// fail loud and early, naming the field, rather than shipping it. An empty value
+// is always safe (means "unset/derive downstream").
+func rejectUnsafeFingerprintValue(field, val string) error {
+	if val == "" {
+		return nil
+	}
+	for _, r := range val {
+		if r == '"' {
+			return errors.Errorf("fingerprint field %s contains a double-quote, which is not allowed: %q", field, val)
+		}
+		// Reject ASCII control characters (C0, DEL) including CR/LF/tab.
+		if r < 0x20 || r == 0x7f {
+			return errors.Errorf("fingerprint field %s contains a control character (0x%02x), which is not allowed: %q", field, r, val)
+		}
+	}
+	return nil
+}
+
 // userSetFingerprint records which fingerprint fields the user explicitly set via
 // a CLI flag, so the validator rejects only genuine user-set contradictions and
 // silently auto-derives the rest.
@@ -293,6 +330,34 @@ type userSetFingerprint struct {
 // error, which main.go surfaces) rather than shipping a mismatched lie.
 func deriveAndValidateFingerprint(cfg *Config, userSet userSetFingerprint) error {
 	s := &cfg.Stealth
+
+	// Defense-in-depth (CR-02 / WR-02): reject any string field that carries a
+	// control character (incl. \r/\n) or a double-quote BEFORE it can reach the JS
+	// injection boundary (godoll interpolates these into injected script literals)
+	// or the interceptor header map. godoll now json.Marshal-escapes at that
+	// boundary, but a value that needs escaping is almost certainly malformed, so
+	// we fail loud and early — naming the field — rather than silently shipping a
+	// corrupted override or a smuggled header.
+	for _, f := range []struct {
+		name string
+		val  string
+	}{
+		{"--user-agent", s.UserAgent},
+		{"--platform", s.Platform},
+		{"--timezone", s.Timezone},
+		{"vendor", s.Vendor},
+		{"--locale", s.Locale},
+		{"acceptLanguage", s.AcceptLanguage},
+	} {
+		if err := rejectUnsafeFingerprintValue(f.name, f.val); err != nil {
+			return err
+		}
+	}
+	for i, lang := range s.Languages {
+		if err := rejectUnsafeFingerprintValue(fmt.Sprintf("languages[%d]", i), lang); err != nil {
+			return err
+		}
+	}
 
 	// The UA is the derivation anchor. With no UA set, DefaultProfile supplies a
 	// coherent identity downstream — leave validation a no-op.
@@ -311,6 +376,19 @@ func deriveAndValidateFingerprint(cfg *Config, userSet userSetFingerprint) error
 		}
 		if s.Platform == "" {
 			s.Platform = derivedPlatform
+		}
+	} else if userSet.Platform && s.Platform != "" {
+		// WR-03: the UA carries no recognized OS token, so platform↔UA coherence
+		// cannot be derived/verified. Do NOT fail open — a user-pinned platform that
+		// silently ships an unverifiable mismatch is a fingerprint tell. Validate the
+		// pin against the known navigator.platform set and reject anything else,
+		// naming the field so the user can fix the UA or the platform.
+		if !isKnownPlatform(s.Platform) {
+			return errors.Errorf(
+				"platform %q could not be verified against UA %q (UA carries no recognized OS token) "+
+					"and is not one of the known platforms %v — fix --user-agent so its OS token is "+
+					"recognized, or set --platform to a known value",
+				s.Platform, ua, knownPlatforms)
 		}
 	}
 

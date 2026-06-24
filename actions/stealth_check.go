@@ -155,7 +155,8 @@ func readSignal(page *rod.Page, name string) string {
 // computeVerdict applies the codified VALIDATE-01 threshold for a single signal.
 // Thresholds (all read from the live page):
 //
-//	webdriver             -> must be "false"
+//	webdriver             -> must be "false" or "undefined" (masked/deleted by
+//	                         stealth); only "true" is the automation tell
 //	pluginsLength         -> integer > 0
 //	userAgent             -> must NOT contain "HeadlessChrome"
 //	webglVendor           -> not software (swiftshader/llvmpipe/software) and not
@@ -180,10 +181,14 @@ func computeVerdict(name, val string) signalVerdict {
 
 	switch name {
 	case "webdriver":
-		if val == "false" {
+		// godoll's scriptHideAutomation masks/deletes navigator.webdriver, so on a
+		// correctly-stealthed page it reads back as `undefined` (String-coerced to
+		// "undefined"). A genuine human browser reads "false". Both are non-tells;
+		// only "true" (or a read-error, handled above) is the automation tell.
+		if val == "false" || val == "undefined" {
 			return pass()
 		}
-		return fail(val)
+		return fail(val) // only "true" (the automation tell) fails here
 
 	case "pluginsLength":
 		if n, err := strconv.Atoi(val); err == nil && n > 0 {

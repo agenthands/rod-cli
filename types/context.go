@@ -410,8 +410,12 @@ const defaultChromeMajor = "121"
 // The resolved cfg.Stealth (produced by ResolveStealth's UA-anchored derive +
 // coherence validation) is the single source of truth for the live page: this
 // profile drives godoll's evasion JS injection AND the rod-cli interceptor.
-// With an empty cfg.Stealth identity the result equals DefaultProfile(), so the
-// no-pin path is byte-for-byte the prior default behavior (no regression).
+// With an empty cfg.Stealth identity the result equals DefaultProfile() EXCEPT
+// that Client-Hints spoofing is forced on (p.SpoofClientHints = true below) for
+// coherence — DefaultProfile() ships it off. The no-pin path therefore emits
+// Sec-Ch-Ua headers + navigator.userAgentData where the bare default would emit
+// neither; see the lines below for the rationale (this is intentional, not a
+// regression).
 func profileFromStealth(s StealthConfig) stealth.Profile {
 	p := stealth.DefaultProfile()
 	// rod-cli emits coherent, UA-derived Client-Hints by default so Sec-Ch-Ua,
