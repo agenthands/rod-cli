@@ -465,6 +465,54 @@ func TestDetectionHarness(t *testing.T) {
 		}
 	})
 
+	// REQUIRED-GREEN (Phase 27 HARDEN-02): seeded AUDIO noise must be STABLE within a
+	// session. This is the regression guard for the CR-01 bug — godoll's patched
+	// AudioBuffer.getChannelData returns a REFERENCE to the live internal buffer, so
+	// perturbing it in place would COMPOUND on every re-read (a per-read-varying
+	// audio fingerprint, the exact tell HARDEN-02 forbids). The fix copies-then-
+	// perturbs; this subtest reads getChannelData twice in one session and asserts
+	// the two reads are sample-identical, with a non-empty/observable guard so a
+	// blanked AudioContext surface fails loudly instead of vacuously passing.
+	t.Run("audio_noise_stable", func(t *testing.T) {
+		expr := `(function(){` +
+			`var ac=null;` +
+			`var OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;` +
+			`if(OAC){try{ac=new OAC(1,2048,44100);}catch(e){ac=null;}}` +
+			`if(!ac){var AC=window.AudioContext||window.webkitAudioContext;if(AC){try{ac=new AC();}catch(e){ac=null;}}}` +
+			`if(!ac)return 'no-AudioContext';` +
+			`var buf=ac.createBuffer(1,2048,44100);var src=buf.getChannelData(0);` +
+			`for(var i=0;i<src.length;i++)src[i]=Math.sin(i/10);` +
+			`var a=buf.getChannelData(0);var b=buf.getChannelData(0);` +
+			`var s1='',s2='';for(var j=0;j<src.length;j+=100){s1+=a[j].toFixed(8)+',';s2+=b[j].toFixed(8)+',';}` +
+			`return s1===s2?('stable:'+s1.length):'UNSTABLE';})()`
+		out, err := runCli("eval", expr)
+		if err != nil {
+			t.Fatalf("eval audio stability expr failed: %v\nOutput: %s", err, out)
+		}
+		val := out
+		if i := strings.Index(out, evalResultPrefix); i >= 0 {
+			val = out[i+len(evalResultPrefix):]
+		}
+		val = strings.TrimSpace(val)
+		if val == "no-AudioContext" {
+			t.Fatalf("AudioContext surface unobservable (no constructor) — cannot verify audio stability")
+		}
+		if val == "UNSTABLE" {
+			t.Errorf("audio noise is not stable-per-session: two getChannelData reads " +
+				"differ (CR-01 compounding-drift regression)")
+			return
+		}
+		if !strings.HasPrefix(val, "stable:") {
+			t.Errorf("audio stability probe returned unexpected/blanked result: %q", val)
+			return
+		}
+		lenStr := strings.TrimPrefix(val, "stable:")
+		if lenStr == "" || lenStr == "0" {
+			t.Errorf("audio surface unobservable (sampled length %q) — blanked probe "+
+				"must not masquerade as a pass", lenStr)
+		}
+	})
+
 	// FINGERPRINT-03 (required-green, was KNOWN-RED): the Client-Hints version is
 	// now DERIVED from the active UA (Plan 03 killed the hardcoded "121" literal in
 	// the rod-cli interceptor; Plan 02 made godoll's navigator.userAgentData
