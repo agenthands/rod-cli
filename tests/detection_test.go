@@ -181,11 +181,14 @@ func TestDetectionHarness(t *testing.T) {
 	// We assert the signal is OBSERVABLE and recorded at its current truth so CI
 	// stays green on the documented baseline; this assertion flips to
 	// required-green (empty / no leaked host IP) when EvadeWebRTC is wired.
-	// The probe records "" when no candidate IP was gathered, a comma-joined IP
-	// list when it leaks, "no-RTCPeerConnection" when the API is absent, or an
-	// "error: ..." string. Any of these is the documented baseline truth — what
-	// must NOT happen is the signal being unpopulated (undefined), which would
-	// mean the harness cannot see the WebRTC surface at all.
+	// The probe records the connection-address of each ICE host candidate (field
+	// 4 of the SDP candidate line) regardless of form: a real IPv4/IPv6 address is
+	// the leak Phase 27 EvadeWebRTC must eliminate, while a modern-Chrome mDNS
+	// `<uuid>.local` hostname is the masked baseline truth. It records "" only when
+	// no candidate was gathered, "no-RTCPeerConnection" when the API is absent, or
+	// an "error: ..." string. Any of these is the documented baseline — what must
+	// NOT happen is the signal being unpopulated (undefined), which would mean the
+	// harness cannot see the WebRTC surface at all.
 	t.Run("webrtc_ice_known_red", func(t *testing.T) {
 		ice := evalDetect(t, "webrtcIce")
 		if ice == "undefined" {

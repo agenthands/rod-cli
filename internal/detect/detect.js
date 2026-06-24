@@ -94,9 +94,12 @@
 
   // --- Informational, non-blocking probes (recorded, not asserted-blocking) --
 
-  // CDP-presence heuristic. The classic tell: serializing an Error triggers the
-  // stack getter, which DevTools/CDP hooks observe. We record whether the
-  // getter fired into the global as an informational string.
+  // CDP-presence heuristic (best-effort, informational only). The classic tell:
+  // serializing an Error triggers the stack getter, which DevTools/CDP remote-
+  // object preview may observe. This is a HEURISTIC — `console.debug` is not
+  // guaranteed to invoke accessor getters, so "no-signal" is a possible false
+  // negative even under CDP. It measures exposure, it does not prove its absence;
+  // see docs/cdp-footprint.md for the honest ceiling (fix deferred to v2 CDP-01).
   probe("cdpTell", function () {
     var fired = false;
     var e = new Error();
@@ -205,8 +208,16 @@
           finish();
           return;
         }
-        var m = /([0-9]{1,3}(?:\.[0-9]{1,3}){3})/.exec(ev.candidate.candidate || "");
-        if (m) ips[m[1]] = true;
+        // The SDP candidate line is: `candidate:<foundation> <component>
+        // <transport> <priority> <connection-address> <port> typ <type> ...`.
+        // The connection-address (field index 4) is the real host surface —
+        // capture it regardless of form so the probe is not blind to IPv6 or to
+        // modern Chrome's mDNS masking (`<uuid>.local`), which an IPv4-only regex
+        // silently misses (recording "" for the wrong reason). A real IPv4/IPv6
+        // address here is the leak Phase 27 EvadeWebRTC must eliminate; a `.local`
+        // mDNS hostname is the masked baseline truth.
+        var parts = (ev.candidate.candidate || "").split(" ");
+        if (parts.length > 4 && parts[4]) ips[parts[4]] = true;
       };
       pc.createDataChannel("probe");
       pc.createOffer()
