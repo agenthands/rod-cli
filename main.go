@@ -27,6 +27,22 @@ func runDaemonServer(c *cli.Context) error {
 		cfg.CDPEndpoint = cdp
 	}
 
+	// Resolve the stealth surface ONCE, before NewContext freezes Config, using
+	// the precedence CLI flag > profile file > built-in default. The forwarded
+	// --proxy/--proxy-auth/--profile are available on the same cli.Context because
+	// EnsureDaemon spawned `rod-cli --session <s> --proxy ... daemon`. A bad
+	// profile load fails the daemon loudly rather than shipping a half-resolved
+	// identity. Credentials are never logged here (they would otherwise reach the
+	// daemon log file).
+	stealthFlags := types.StealthFlags{
+		Proxy:     c.String("proxy"),
+		ProxyAuth: c.String("proxy-auth"),
+		Profile:   c.String("profile"),
+	}
+	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
+		return err
+	}
+
 	types.InitLogger(cfg.LoggerConfig)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -560,6 +560,30 @@ func TestRunDaemonServerBadConfig(t *testing.T) {
 	}
 }
 
+// TestRunDaemonServerBadProfile covers runDaemonServer's loud-failure path: a
+// --profile pointing at a non-existent file makes ResolveStealth return an error
+// BEFORE NewContext, so the daemon never starts a browser and the error
+// surfaces. This is the T-25-03 mitigation (no silent default identity).
+func TestRunDaemonServerBadProfile(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-profile.json")
+	// runDaemonServer with no --config writes a default config in cwd; chdir into
+	// a temp dir so the repo is not polluted.
+	orig, _ := os.Getwd()
+	work := t.TempDir()
+	if err := os.Chdir(work); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(orig) })
+
+	err := runApp("--profile", missing, "daemon")
+	if err == nil {
+		t.Fatal("expected loud error for non-existent profile")
+	}
+	if !strings.Contains(err.Error(), "stealth profile") {
+		t.Fatalf("expected stealth-profile error, got %v", err)
+	}
+}
+
 // TestRunDaemonServerStarts launches the hidden daemon command in-process
 // (which calls runDaemonServer -> StartServer with a real headless browser),
 // waits for it to answer ping, then abandons it. We never send "close" because

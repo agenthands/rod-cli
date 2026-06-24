@@ -5,6 +5,10 @@ headless: false
 browserTempDir: ./rod/browser
 noSandbox: false
 proxy: ""
+stealth:
+    proxy: ""
+    proxyAuth: ""
+    profilePath: ""
 loggerConfig:
     loggerLevel: info
     loggerFileName: ./log/server.log
