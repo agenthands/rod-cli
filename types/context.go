@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/agenthands/godoll/browser"
@@ -258,7 +259,13 @@ func NewContext(ctx context.Context, cfg Config) *Context {
 	// every createPage call for the life of the daemon, so re-reads of a canvas
 	// within the session are stable (HARDEN-02).
 	var b [8]byte
-	_, _ = rand.Read(b[:])
+	if _, err := rand.Read(b[:]); err != nil {
+		// crypto/rand failure is near-impossible, but a silent zero seed would be
+		// deterministic across every such daemon (cross-session fingerprint
+		// correlation — the opposite of "fresh session = fresh seed"). Fall back to
+		// a non-constant source rather than ship the predictable 0.
+		binary.LittleEndian.PutUint64(b[:], uint64(time.Now().UnixNano())^uint64(os.Getpid()))
+	}
 	c.noiseSeed = binary.LittleEndian.Uint64(b[:])
 	return c
 }

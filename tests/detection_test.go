@@ -385,10 +385,21 @@ func TestDetectionHarness(t *testing.T) {
 			if strings.HasSuffix(tok, ".local") {
 				continue // mDNS-masked hostname, not a real IP
 			}
-			if ip := net.ParseIP(tok); ip != nil {
+			// net.ParseIP misses an IPv6 with a zone (fe80::1%eth0); strip the zone
+			// before parsing so a zoned link-local can't slip through.
+			probe := tok
+			if z := strings.IndexByte(probe, '%'); z >= 0 {
+				probe = probe[:z]
+			}
+			if ip := net.ParseIP(probe); ip != nil {
 				t.Errorf("WebRTC leaked a real host IP %q (full signal: %q) — "+
 					"EvadeWebRTC/WithWebRTCLeakProtection failed", tok, ice)
+				continue
 			}
+			// Default-deny: a non-empty, non-.local token that we cannot positively
+			// classify is treated as a potential leak rather than silently passed.
+			t.Errorf("WebRTC reported an unrecognized non-.local candidate address %q "+
+				"(full signal: %q) — treating as a potential leak (default-deny)", tok, ice)
 		}
 	})
 
@@ -428,6 +439,29 @@ func TestDetectionHarness(t *testing.T) {
 		if lenStr == "" || lenStr == "0" {
 			t.Errorf("canvas surface unobservable (data URL length %q) — blanked probe "+
 				"must not masquerade as a pass", lenStr)
+		}
+
+		// Stability alone cannot distinguish "stable noise" from "no noise" (the
+		// pre-Phase-27 no-op was also perfectly stable). Anchor it: draw a FLAT fill
+		// and assert at least one read-back byte was perturbed off the fill value, so
+		// a regression to a no-op canvas (noise disabled/broken) fails here too.
+		applied := `(function(){var c=document.createElement('canvas');c.width=16;c.height=16;` +
+			`var x=c.getContext('2d');x.fillStyle='rgb(128,128,128)';x.fillRect(0,0,16,16);` +
+			`var d=x.getImageData(0,0,16,16).data;var n=0;` +
+			`for(var i=0;i<d.length;i+=4){if(d[i]!==128)n++;}` +
+			`return 'perturbed:'+n;})()`
+		out2, err := runCli("eval", applied)
+		if err != nil {
+			t.Fatalf("eval canvas-applied expr failed: %v\nOutput: %s", err, out2)
+		}
+		v2 := out2
+		if i := strings.Index(out2, evalResultPrefix); i >= 0 {
+			v2 = out2[i+len(evalResultPrefix):]
+		}
+		v2 = strings.TrimSpace(v2)
+		if v2 == "perturbed:0" {
+			t.Errorf("canvas noise was NOT applied: a flat rgb(128) fill read back "+
+				"unperturbed (got %q) — noise regressed to a no-op", v2)
 		}
 	})
 
