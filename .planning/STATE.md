@@ -2,19 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Proven & Configurable Stealth
-current_phase: 27
-current_phase_name: Canvas/WebGL/WebRTC Hardening
-status: planning
-stopped_at: Phase 26 code-review fixes verified green and closed; ready to plan Phase 27
-last_updated: "2026-06-24T11:00:00.000Z"
-last_activity: 2026-06-24
-last_activity_desc: Phase 26 code-review cycle closed (CR-01/CR-02/WR-01/WR-03 verified); Phase 27 not yet planned
+status: blocked
+stopped_at: Phase 27 executed + qa-verified PASSED (VERIFICATION a357942) but UNMARKED — anvil §13.2 close-gate blocked on missing manifest gsd/workflows/execute-phase.md (gsd→anvil migration); autonomous run stopped by user
+last_updated: "2026-06-24T13:00:00.000Z"
+last_activity: 2026-06-24 — Phase 27 built/verified; phase-complete blocked by anvil close-gate
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 12
+  total_plans: 16
   completed_plans: 12
-  percent: 50
+  percent: 17
 ---
 
 # STATE.md — rod-cli
@@ -28,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 
 ## Current Position
 
-Phase: 27 — Canvas/WebGL/WebRTC Hardening
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 27 of 4 (canvas webgl webrtc hardening)
+Plan: 1 of 4
+Status: Executing Phase 27
 Last activity: 2026-06-24 — Phase 26 complete, transitioned to Phase 27
 
 Progress: [██░░░░░░░░] 17% (1 of 6 phases)
@@ -91,8 +88,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T11:00:00.000Z
-Stopped at: Phase 26 code-review cycle verified and closed; Phase 27 not yet planned
+Last session: 2026-06-24T13:00:00.000Z
+Stopped at: Phase 27 (Canvas/WebGL/WebRTC Hardening) fully executed (4 plans, commits 7f2e162→7236c87), qa-verified status:passed (27-VERIFICATION.md, commit a357942). Phase NOT marked complete: `anvil-cc phase complete 27` blocked by the anvil §13.2 close-gate, which fails closed on an unresolved in-project workflow manifest `gsd/workflows/execute-phase.md` (ENOENT — the project has no gsd/ dir; workflows live in ~/.claude/anvil/workflows/). The no-Records/Contracts-section ledger findings are warnings, not the blocker. godoll changes (../godoll/stealth/*) remain uncommitted-by-design.
+Resume options: (a) set up the anvil in-project manifest(s) so the close-gate resolves, then `anvil-cc phase complete 27` and continue `/anvil-autonomous --from 28`; or (b) manually mark ROADMAP [x] + advance STATE + set HARDEN-01/02 validated, then continue. Same gate will block phases 28/29 and milestone-complete.
 Resume file: None
 
 ## Performance Metrics
