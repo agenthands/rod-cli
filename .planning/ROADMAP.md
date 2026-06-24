@@ -161,7 +161,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
 | 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 3/3 | Complete   | 2026-06-24 |
-| 26. Configurable Fingerprint & Consistency Validator | v1.6 | 5/5 | Complete   | 2026-06-24 |
+| 26. Configurable Fingerprint & Consistency Validator | v1.6 | 5/5 | Complete    | 2026-06-24 |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |
 | 29. Best-Effort Live Validation | v1.6 | 0/TBD | Not started | - |
