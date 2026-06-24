@@ -218,6 +218,12 @@ type Context struct {
 	interceptor *network.Interceptor
 	routes      map[string]string
 	fingerprint *rodfingerprint.Fingerprint
+	// profile is the active stealth.Profile that drives BOTH godoll's evasion JS
+	// injection and the rod-cli network interceptor. It is built in createPage by
+	// overlaying the config-pinned cfg.Stealth identity onto stealth.DefaultProfile,
+	// making the resolved cfg.Stealth the SINGLE source of truth for the live page
+	// (FINGERPRINT-01 wiring). Nil until the first page is created.
+	profile *stealth.Profile
 	pluginEngine *plugin.PluginEngine
 	loadedPlugins []string
 	// proxyCleanup stops the per-session authenticated-proxy relay (godoll
@@ -392,19 +398,79 @@ func (ctx *Context) closeBrowser() error {
 	return nil
 }
 
+// profileFromStealth builds the active stealth.Profile by overlaying every
+// non-zero identity field of the resolved cfg.Stealth onto stealth.DefaultProfile.
+// The resolved cfg.Stealth (produced by ResolveStealth's UA-anchored derive +
+// coherence validation) is the single source of truth for the live page: this
+// profile drives godoll's evasion JS injection AND the rod-cli interceptor.
+// With an empty cfg.Stealth identity the result equals DefaultProfile(), so the
+// no-pin path is byte-for-byte the prior default behavior (no regression).
+func profileFromStealth(s StealthConfig) stealth.Profile {
+	p := stealth.DefaultProfile()
+	if s.UserAgent != "" {
+		p.UserAgent = s.UserAgent
+	}
+	if s.Platform != "" {
+		p.Platform = s.Platform
+	}
+	if s.Locale != "" {
+		p.Locale = s.Locale
+	}
+	if s.Timezone != "" {
+		p.Timezone = s.Timezone
+	}
+	if s.AcceptLanguage != "" {
+		p.AcceptLanguage = s.AcceptLanguage
+	}
+	if len(s.Languages) > 0 {
+		p.Languages = s.Languages
+	}
+	if s.Screen.Width != 0 {
+		p.Screen.Width = s.Screen.Width
+	}
+	if s.Screen.Height != 0 {
+		p.Screen.Height = s.Screen.Height
+	}
+	if s.Screen.DeviceScaleFactor != 0 {
+		p.Screen.DeviceScaleFactor = s.Screen.DeviceScaleFactor
+	}
+	if s.HardwareConcurrency != 0 {
+		p.HardwareConcurrency = s.HardwareConcurrency
+	}
+	if s.DeviceMemory != 0 {
+		p.DeviceMemory = s.DeviceMemory
+	}
+	if s.Vendor != "" {
+		p.Vendor = s.Vendor
+	}
+	if s.SpoofClientHints {
+		p.SpoofClientHints = true
+	}
+	return p
+}
+
 func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	page, err := ctx.browser.Page(proto.TargetCreateTarget{URL: strings.Join(urls, "/")})
 	if page != nil {
 		// Apply stealth evasion
 		em := stealth.NewEvasionManager(page)
+		// Generate a random fingerprint ONLY for the dimensions godoll still needs
+		// from a Fingerprint (WebGL VideoCard etc.) — it is NOT the identity source.
 		fg := rodfingerprint.NewFingerprintGenerator(rodfingerprint.FPWithBrowserNames("chrome"))
 		fp, fpErr := fg.Generate()
 		if fpErr != nil {
 			fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
 		} else if fp != nil {
 			ctx.fingerprint = fp
-			em.SetFingerprint(fp)
 		}
+		// Build the active stealth.Profile from the resolved cfg.Stealth: the
+		// config-pinned identity is the SINGLE source of truth that drives both
+		// godoll's evasion JS and rod-cli's interceptor (FINGERPRINT-01 wiring).
+		// With an empty cfg.Stealth identity the overlay equals DefaultProfile(),
+		// so the no-pin path is unchanged from the prior default.
+		prof := profileFromStealth(ctx.config.Stealth)
+		ctx.profile = &prof
+		em.SetProfile(prof)
 		if err := em.Apply(); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: evasion Apply failed: %v\n", err)
 		}
