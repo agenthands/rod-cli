@@ -39,7 +39,7 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
 - [x] **Phase 24: Detection Harness & CI Backbone** — Offline, deterministic detection test server + first test CI job, baselined against the current binary so existing leaks surface (completed 2026-06-24)
 - [x] **Phase 25: Stealth Config Surface & Per-Session Proxy** — Session-persistent stealth config (flags + named profile file, precedence-resolved at daemon spawn) plus per-session HTTP/SOCKS5 proxy with CDP auth (completed 2026-06-24)
 - [x] **Phase 26: Configurable Fingerprint & Consistency Validator** — Pinnable coherent fingerprint from a single source of truth, consistency invariant gate, the CH-121 fix, and a user-facing per-signal stealth-check verdict (completed 2026-06-24)
-- [ ] **Phase 27: Canvas/WebGL/WebRTC Hardening** — Wire the two genuine godoll gaps: WebRTC IP-leak prevention and stable-per-session canvas/WebGL/audio noise, both harness-asserted
+- [x] **Phase 27: Canvas/WebGL/WebRTC Hardening** — Wire the two genuine godoll gaps: WebRTC IP-leak prevention and stable-per-session canvas/WebGL/audio noise, both harness-asserted (completed 2026-06-24)
 - [ ] **Phase 28: Human-Behavior Tuning** — Thread godoll humanize options (typing speed, typo rate, delay jitter, mouse path, scroll) through actions as flags/profile fields
 - [ ] **Phase 29: Best-Effort Live Validation** — Opt-in, non-blocking, build-tagged live smoke check (Cloudflare/DataDome/CreepJS) kept out of the CI gate
 
@@ -162,7 +162,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 3/3 | Complete   | 2026-06-24 |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 5/5 | Complete    | 2026-06-24 |
-| 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
+| 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 4/4 | Complete    | 2026-06-24 |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |
 | 29. Best-Effort Live Validation | v1.6 | 0/TBD | Not started | - |
 </content>

@@ -37,8 +37,8 @@
 
 ### Anti-Fingerprint Hardening
 
-- [ ] **HARDEN-01**: WebRTC local-IP leak prevention is wired (godoll `EvadeWebRTC` + `WithWebRTCLeakProtection`, which `Apply()` does not currently call) and asserted by the harness so a real local IP cannot leak past a proxy.
-- [ ] **HARDEN-02**: Canvas/WebGL/Audio noise is exposed as profile toggles with the noise **stable within a session** (re-reads return an identical hash), filling godoll's no-op `ApplyCanvasNoise` stub; the harness asserts hash stability.
+- [x] **HARDEN-01**: WebRTC local-IP leak prevention is wired (godoll `EvadeWebRTC` + `WithWebRTCLeakProtection`, which `Apply()` does not currently call) and asserted by the harness so a real local IP cannot leak past a proxy.
+- [x] **HARDEN-02**: Canvas/WebGL/Audio noise is exposed as profile toggles with the noise **stable within a session** (re-reads return an identical hash), filling godoll's no-op `ApplyCanvasNoise` stub; the harness asserts hash stability.
 
 ### Human-Behavior Tuning
 
@@ -94,8 +94,8 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | FINGERPRINT-03 | Phase 26 | Complete |
 | VALIDATE-01 | Phase 26 | Complete |
 | VALIDATE-02 | Phase 26 | Complete |
-| HARDEN-01 | Phase 27 | Pending |
-| HARDEN-02 | Phase 27 | Pending |
+| HARDEN-01 | Phase 27 | Complete |
+| HARDEN-02 | Phase 27 | Complete |
 | HUMANIZE-01 | Phase 28 | Pending |
 | LIVEWAF-01 | Phase 29 | Pending |
 
