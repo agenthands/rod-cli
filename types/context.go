@@ -173,7 +173,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 
 	// HARDEN-01 browser-pref leg: disable non-proxied UDP so the real host IP
 	// cannot leak past a proxy via WebRTC. Gated on the toggle (default on).
-	if cfg.Stealth.WebRTCLeakProtection {
+	if boolVal(cfg.Stealth.WebRTCLeakProtection, true) {
 		opts = opts.WithWebRTCLeakProtection(true)
 	}
 
@@ -454,9 +454,10 @@ func profileFromStealth(s StealthConfig) stealth.Profile {
 	// ship an incoherent CH-off identity from the resolved active profile.
 	p.SpoofClientHints = true
 	// HARDEN-02: one toggle gates BOTH canvas and audio noise. With CanvasNoise
-	// defaulting true, the no-pin path now noises canvas+audio by default.
-	p.SpoofCanvas = s.CanvasNoise
-	p.SpoofAudioContext = s.CanvasNoise
+	// defaulting true (nil resolves to true), the no-pin path noises canvas+audio.
+	canvasNoise := boolVal(s.CanvasNoise, true)
+	p.SpoofCanvas = canvasNoise
+	p.SpoofAudioContext = canvasNoise
 	if s.UserAgent != "" {
 		p.UserAgent = s.UserAgent
 	}
@@ -531,7 +532,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// HARDEN-01 JS leg: wrap RTCPeerConnection so local-IP enumeration cannot
 		// leak past a proxy. Gated on the toggle; log-and-continue (VALIDATE-03) so a
 		// failure never aborts the daemon — matches the em.Apply() discipline above.
-		if ctx.config.Stealth.WebRTCLeakProtection {
+		if boolVal(ctx.config.Stealth.WebRTCLeakProtection, true) {
 			if err := em.EvadeWebRTC(); err != nil {
 				fmt.Fprintf(os.Stderr, "warning: WebRTC evasion failed: %v\n", err)
 			}

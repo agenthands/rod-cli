@@ -97,14 +97,18 @@ type StealthConfig struct {
 	// WebRTCLeakProtection prevents the real host IP from leaking past a proxy via
 	// WebRTC ICE candidates. When true (the default) launchBrowser sets the
 	// disable-non-proxied-UDP browser preference AND createPage injects godoll's
-	// EvadeWebRTC JS wrapper. Defaults TRUE (hardened-by-default).
-	WebRTCLeakProtection bool `yaml:"webRTCLeakProtection" json:"webRTCLeakProtection"`
+	// EvadeWebRTC JS wrapper. A *bool so a yaml-persisted explicit false survives
+	// ResolveStealth (nil = unset = resolve to the default true); a plain bool
+	// could not distinguish "unset" from a deliberate file-set false. Read it via
+	// boolVal(cfg.Stealth.WebRTCLeakProtection, true) at consumers.
+	WebRTCLeakProtection *bool `yaml:"webRTCLeakProtection" json:"webRTCLeakProtection"`
 
 	// CanvasNoise enables seeded, stable-per-session canvas/WebGL/audio readback
 	// noise (HARDEN-02). When true (the default) the active profile's SpoofCanvas
 	// and SpoofAudioContext are enabled so canvas + audio fingerprints carry a
-	// session-stable per-pixel/per-sample delta. Defaults TRUE.
-	CanvasNoise bool `yaml:"canvasNoise" json:"canvasNoise"`
+	// session-stable per-pixel/per-sample delta. A *bool for the same round-trip
+	// reason as WebRTCLeakProtection (nil = unset = resolve to the default true).
+	CanvasNoise *bool `yaml:"canvasNoise" json:"canvasNoise"`
 
 	// Screen holds the spoofed screen geometry.
 	Screen struct {
@@ -227,19 +231,21 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.Screen.DeviceScaleFactor = prof.Screen.DeviceScaleFactor
 	}
 
-	// Phase-27 hardening toggles: default-true baseline (hardened-by-default),
-	// overridable only by an explicit flag. The godoll stealth.Profile carries no
-	// WebRTCLeakProtection/CanvasNoise field, so there is no Tier-2 profile leg for
-	// these — the resolved precedence is: explicit --flag=false > built-in default
-	// (true). Establish the baseline here so even a profile-loaded config (which
-	// did not touch these fields above) is hardened.
-	cfg.Stealth.WebRTCLeakProtection = true
-	cfg.Stealth.CanvasNoise = true
+	// Phase-27 hardening toggles, resolved precedence:
+	//   explicit --flag (StealthFlags *bool) > yaml-loaded cfg value (*bool, honored
+	//   when non-nil — INCLUDING an explicit false) > built-in default true.
+	// We do NOT unconditionally re-baseline to true: a config file that persisted
+	// `canvasNoise: false` arrives here as a non-nil *bool(false) and must survive.
+	// Only a nil (omitted key, no flag) resolves to the hardened default true.
 	if flags.WebRTCLeakProtection != nil {
-		cfg.Stealth.WebRTCLeakProtection = *flags.WebRTCLeakProtection
+		cfg.Stealth.WebRTCLeakProtection = flags.WebRTCLeakProtection
+	} else if cfg.Stealth.WebRTCLeakProtection == nil {
+		cfg.Stealth.WebRTCLeakProtection = boolPtr(true)
 	}
 	if flags.CanvasNoise != nil {
-		cfg.Stealth.CanvasNoise = *flags.CanvasNoise
+		cfg.Stealth.CanvasNoise = flags.CanvasNoise
+	} else if cfg.Stealth.CanvasNoise == nil {
+		cfg.Stealth.CanvasNoise = boolPtr(true)
 	}
 
 	// Tier 1: CLI flags win over the profile and the defaults.
@@ -493,6 +499,21 @@ func validateHardwareAndScreen(s *StealthConfig) error {
 	return nil
 }
 
+// boolPtr returns a pointer to b. Used for the *bool default-true hardening
+// toggles (WebRTCLeakProtection / CanvasNoise) so "unset" (nil) is distinguishable
+// from a deliberate false.
+func boolPtr(b bool) *bool { return &b }
+
+// boolVal dereferences a *bool toggle, returning def when the pointer is nil
+// (unset). Consumers of the hardening toggles read them through this so a nil
+// (never-resolved) value still falls back to the hardened default.
+func boolVal(p *bool, def bool) bool {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
 var (
 	DefaultBrowserTempDir = "./rod/browser"
 
@@ -504,7 +525,7 @@ var (
 		Proxy:          "",
 		// Hardened-by-default: a config loaded with zero StealthFlags still gets
 		// WebRTC leak protection and stable canvas/audio noise (Phase 27).
-		Stealth: StealthConfig{WebRTCLeakProtection: true, CanvasNoise: true},
+		Stealth: StealthConfig{WebRTCLeakProtection: boolPtr(true), CanvasNoise: boolPtr(true)},
 		LoggerConfig:   DefaultLoggerConfig,
 		Mode:           Text,
 		Raw:            false,

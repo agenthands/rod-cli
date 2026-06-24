@@ -87,6 +87,65 @@ func TestResolveStealth_CLIOverridesProfile(t *testing.T) {
 	}
 }
 
+// TestResolveStealth_HardeningTogglesRoundTrip proves the *bool round-trip
+// (CR-02): a config that persisted webRTCLeakProtection/canvasNoise = false
+// SURVIVES ResolveStealth with no flags set (stays false, not clobbered to the
+// hardened default), an OMITTED key resolves to the default true, and an explicit
+// --flag still wins over the persisted value.
+func TestResolveStealth_HardeningTogglesRoundTrip(t *testing.T) {
+	// (a) yaml-persisted explicit false survives (no flags).
+	t.Run("persisted_false_survives", func(t *testing.T) {
+		var cfg Config
+		if err := yaml.Unmarshal([]byte(
+			"stealth:\n  webRTCLeakProtection: false\n  canvasNoise: false\n",
+		), &cfg); err != nil {
+			t.Fatalf("yaml unmarshal: %v", err)
+		}
+		// Sanity: the loaded *bool must be non-nil(false) BEFORE resolution.
+		if cfg.Stealth.CanvasNoise == nil || *cfg.Stealth.CanvasNoise {
+			t.Fatalf("precondition: loaded CanvasNoise = %v, want non-nil false", cfg.Stealth.CanvasNoise)
+		}
+		if err := ResolveStealth(&cfg, &StealthFlags{}); err != nil {
+			t.Fatalf("ResolveStealth: %v", err)
+		}
+		if boolVal(cfg.Stealth.WebRTCLeakProtection, true) {
+			t.Errorf("persisted webRTCLeakProtection=false was clobbered to true")
+		}
+		if boolVal(cfg.Stealth.CanvasNoise, true) {
+			t.Errorf("persisted canvasNoise=false was clobbered to true")
+		}
+	})
+
+	// (b) omitted keys resolve to the hardened default true.
+	t.Run("omitted_resolves_true", func(t *testing.T) {
+		var cfg Config // zero Config: both *bool are nil (omitted)
+		if err := ResolveStealth(&cfg, &StealthFlags{}); err != nil {
+			t.Fatalf("ResolveStealth: %v", err)
+		}
+		if !boolVal(cfg.Stealth.WebRTCLeakProtection, false) {
+			t.Errorf("omitted webRTCLeakProtection did not resolve to true")
+		}
+		if !boolVal(cfg.Stealth.CanvasNoise, false) {
+			t.Errorf("omitted canvasNoise did not resolve to true")
+		}
+	})
+
+	// (c) explicit flag wins over a persisted value (flag true over file false).
+	t.Run("flag_overrides_persisted", func(t *testing.T) {
+		var cfg Config
+		if err := yaml.Unmarshal([]byte("stealth:\n  canvasNoise: false\n"), &cfg); err != nil {
+			t.Fatalf("yaml unmarshal: %v", err)
+		}
+		on := true
+		if err := ResolveStealth(&cfg, &StealthFlags{CanvasNoise: &on}); err != nil {
+			t.Fatalf("ResolveStealth: %v", err)
+		}
+		if !boolVal(cfg.Stealth.CanvasNoise, false) {
+			t.Errorf("explicit --canvas-noise=true did not override persisted false")
+		}
+	})
+}
+
 func TestResolveStealth_MissingProfileIsLoudError(t *testing.T) {
 	cfg := DefaultConfig
 	flags := &StealthFlags{Profile: filepath.Join(t.TempDir(), "does-not-exist.json")}
