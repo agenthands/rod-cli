@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-24T14:07:38.661Z",
+  "phase": "27",
+  "phase_name": "Canvas/WebGL/WebRTC Hardening",
+  "phase_dir": ".planning/phases/27-canvas-webgl-webrtc-hardening",
+  "milestone": "v1.6",
+  "plan": 4,
+  "task": null,
+  "total_tasks": null,
+  "status": "blocked",
+  "summary": "Phase 27 is FULLY EXECUTED (4/4 plans, commits 7f2e162..7236c87 + 1e5a7f6/bab65d8 fixes) and qa-VERIFIED status:passed (27-VERIFICATION.md, commit a357942 — 6/6 must-haves, HARDEN-01 + HARDEN-02). It is NOT marked complete in ROADMAP/STATE because `anvil-cc phase complete 27` fails closed on the anvil §13.2 close-gate (manifest_unresolved[gsd/workflows/execute-phase.md]). The autonomous run (/anvil-autonomous --from 27) was stopped by the user to resolve the gsd→anvil migration; a manifest fix attempt (anvil-up) errored. Phase work is complete and trustworthy; only the anvil bookkeeping gate blocks.",
+  "completed_tasks": [
+    {"id": 1, "name": "27-01 config + flags (WebRTCLeakProtection/CanvasNoise *bool toggles, default-on)", "status": "done", "commit": "7f2e162"},
+    {"id": 2, "name": "27-02 godoll seeded canvas/audio noise + SpoofCanvas gate (uncommitted in ../godoll by design)", "status": "done", "commit": "bd08cbc"},
+    {"id": 3, "name": "27-03 runtime wiring (session seed, gated EvadeWebRTC + WithWebRTCLeakProtection + SpoofCanvas/Audio)", "status": "done", "commit": "bd08cbc"},
+    {"id": 4, "name": "27-04 harness (webrtc_ice required-green, canvas_noise_stable, audio_noise_stable, canvasHash probe)", "status": "done", "commit": "de3ff3a"},
+    {"id": 5, "name": "Code-review fixes CR-01..CR-05 (audio compounding, default-deny webrtc, applied-noise assert, rand guard)", "status": "done", "commit": "09fe94a"},
+    {"id": 6, "name": "CR-02 *bool tri-state config + round-trip test; CR-01 audio_noise_stable regression guard", "status": "done", "commit": "1e5a7f6"},
+    {"id": 7, "name": "qa goal verification PASSED (6/6 must-haves)", "status": "done", "commit": "a357942"}
+  ],
+  "remaining_tasks": [
+    {"id": 8, "name": "Resolve anvil §13.2 close-gate so `anvil-cc phase complete 27` succeeds", "status": "blocked", "detail": "The gate looks for an in-project workflow manifest at ./gsd/workflows/execute-phase.md (ENOENT — project has no gsd/ dir; anvil workflows live in ~/.claude/anvil/workflows/). Options: (a) create the expected gsd/workflows/*.md manifest(s); (b) fix `anvil-up`; (c) bypass with manual bookkeeping. Same gate blocks phases 28/29 + milestone-complete."},
+    {"id": 9, "name": "Mark Phase 27 complete (ROADMAP [x] + date, advance STATE to 28, HARDEN-01/02 -> validated in REQUIREMENTS)", "status": "not_started", "detail": "Either via `anvil-cc phase complete 27` once the gate resolves, or manually."},
+    {"id": 10, "name": "Continue autonomous: Phase 28 (Human-Behavior Tuning, HUMANIZE-01)", "status": "not_started"},
+    {"id": 11, "name": "Phase 29 (Best-Effort Live Validation, LIVEWAF-01)", "status": "not_started"},
+    {"id": 12, "name": "Milestone v1.6 lifecycle: audit -> complete -> cleanup (after 27-29)", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "anvil-cc phase/milestone complete fails closed on missing in-project manifest gsd/workflows/execute-phase.md (gsd->anvil migration artifact). Blocks marking Phase 27 complete and the whole milestone tail.", "type": "technical", "workaround": "Manual bookkeeping (ROADMAP/STATE/REQUIREMENTS by hand) replicates phase-complete minus the gate; OR create the gsd/workflows manifest(s); OR fix the anvil onboarding/anvil-up setup."}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Decide how to clear the anvil close-gate (set up manifest / fix anvil-up / authorize manual-bookkeeping bypass)", "context": "User stopped the autonomous run to resolve the gsd->anvil migration rather than bypass the gate. Their `anvil-up` attempt errored (Claude CLI --print needs a prompt).", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "Hardening toggles are *bool (tri-state), not bool", "rationale": "CR-02: plain bool can't distinguish unset from explicit-false, so a yaml-persisted `canvasNoise: false` was clobbered by the default-true baseline. *bool honors precedence: explicit flag > non-nil yaml value (incl. false) > default true. Proven by TestResolveStealth_HardeningTogglesRoundTrip.", "phase": "27"},
+    {"decision": "CanvasNoise toggle gates BOTH canvas and audio noise", "rationale": "profileFromStealth sets SpoofCanvas + SpoofAudioContext from cfg.Stealth.CanvasNoise; one user-facing knob for the readback-noise surfaces.", "phase": "27"},
+    {"decision": "Session noise seed on the Context (crypto/rand), not Config", "rationale": "launchBrowser takes Config by value, so a seed there can't propagate; generated once in NewContext gives a stable per-session seed across all createPage calls (HARDEN-02 stability).", "phase": "27"},
+    {"decision": "godoll changes stay UNCOMMITTED in ../godoll", "rationale": "consumed via replace => ../godoll; phases 24-26 pattern; the CR-01 audio fix lives in ../godoll/stealth/js.go.", "phase": "27"},
+    {"decision": "Stopped the autonomous run at the close-gate rather than bypassing", "rationale": "User chose to resolve the gsd->anvil migration; phase work is done/verified, only the anvil gate blocks.", "phase": "27"}
+  ],
+  "uncommitted_files": [
+    "../godoll/stealth/{profile,webgl,js,evasion,fingerprint_bridge}.go (+ carryover phase 25/26 godoll edits) — SEPARATE REPO, uncommitted by design",
+    "rod-cli.yaml + tests/test_upload.txt (runtime/test artifacts — do NOT commit)",
+    "daemon/daemon_more_test.go (PRE-EXISTING, NOT part of phase 27 — do not attribute/commit)"
+  ],
+  "next_action": "Decide how to clear the anvil §13.2 close-gate (manifest setup / fix anvil-up / authorize manual bookkeeping). Then mark Phase 27 complete and resume /anvil-autonomous --from 28. Do NOT re-execute phase 27 — its plans are done (SUMMARYs present) and qa-verified; the only outstanding work is the completion bookkeeping blocked by the gate.",
+  "context_notes": "Mid gsd->anvil migration: skills/agents switched to anvil-* and the model to Opus 4.8 mid-session. anvil-cc is the new CLI (replaces gsd-tools for lifecycle). On opus the lead plans in-band and delegates execute->engineer, verify->qa. Operational traps carried from phase 26 and respected this session: (1) `go build -o rod-cli .` before any runCli test (tests exec the prebuilt binary); (2) `pkill -9 -x rod-cli`, NEVER `pkill -f` (self-matches shell); (3) never kill the user's interactive Chromium /usr/lib/chromium; (4) never run full `go test ./...` (timeout + flaky daemon_more_test). All targeted suites are green at this pause: TestDetectionHarness (incl. webrtc_ice/canvas_noise_stable/audio_noise_stable), TestNetworkEvasionHeaders, ./types (incl. round-trip test), ./actions, godoll ./stealth."
+}
