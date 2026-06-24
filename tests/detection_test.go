@@ -498,6 +498,61 @@ func TestDetectionHarness(t *testing.T) {
 		}
 	})
 
+	// pinned_identity_macos — FINGERPRINT-01 (the --user-agent pin reaches the live
+	// page end-to-end) + FINGERPRINT-03 (UA-derived CH) on a NON-DEFAULT identity.
+	// Pin a macOS Chrome/130 UA via the --user-agent GLOBAL flag (stealth flags
+	// apply at daemon SPAWN, so close first) with --platform MacIntel, and enable
+	// Client-Hints via a --profile (opt-in; CLI flags override the profile UA/
+	// platform per ResolveStealth precedence). Then read EVERY surface back from
+	// the live page and assert the pinned 130 / MacIntel story. Zero egress (only
+	// ds.URL() and the loopback header-echo). Closes the pinned session at the end
+	// so it never bleeds into a later subtest (daemon-leak guard).
+	t.Run("pinned_identity_macos", func(t *testing.T) {
+		const macUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+			"(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+		// Profile only supplies spoofClientHints=true (the CLI flags below pin the
+		// actual identity); without it the CH surfaces would be empty, not coherent.
+		prof := writeProfile(t, map[string]interface{}{"spoofClientHints": true})
+
+		runCli("close")
+		out, err := runCli("--user-agent", macUA, "--platform", "MacIntel",
+			"--profile", prof, "goto", ds.URL())
+		if err != nil {
+			t.Fatalf("pinned spawn (goto) failed: %v\nOutput: %s", err, out)
+		}
+		// The pinned identity is internally consistent (Mac UA + MacIntel), so the
+		// daemon-spawn consistency gate must NOT reject it.
+		if strings.Contains(strings.ToLower(out), "warning:") ||
+			strings.Contains(strings.ToLower(out), "contradict") {
+			t.Errorf("pinned spawn emitted an unexpected warning/rejection: %s", out)
+		}
+		waitForDetectReady(t)
+		defer restoreDefaultDaemon(t, ds.URL())
+
+		// --- Live-page JS surfaces first (window.__detect present here) ----------
+		ua := liveEval(t, "navigator.userAgent")
+		if !strings.Contains(ua, "Chrome/130") {
+			t.Errorf("pinned UA did not reach the live page: got %q (want Chrome/130)", ua)
+		}
+		if strings.Contains(ua, "HeadlessChrome") {
+			t.Errorf("pinned live UA leaks HeadlessChrome: %q", ua)
+		}
+		if platform := liveEval(t, "navigator.platform"); platform != "MacIntel" {
+			t.Errorf("pinned navigator.platform: got %q (want MacIntel)", platform)
+		}
+		if uad := liveUserAgentDataMajor(t); uad != "130" {
+			t.Errorf("pinned navigator.userAgentData major: got %q (want 130)", uad)
+		}
+
+		// --- Header surfaces last (navigates to the loopback echo server) --------
+		if chMajor := liveSecChUaMajor(t); chMajor != "130" {
+			t.Errorf("pinned Sec-Ch-Ua major: got %q (want 130)", chMajor)
+		}
+		if chPlat := stripQuotes(liveHeader(t, "Sec-Ch-Ua-Platform")); chPlat != "macOS" {
+			t.Errorf("pinned Sec-Ch-Ua-Platform: got %q (want macOS)", chPlat)
+		}
+	})
+
 	// --- Headful matrix row (CONTEXT.md:20) -----------------------------------
 	// Headless is the blocking CI gate (the run above). Headful needs xvfb in CI
 	// and is slow/flaky, so it is an OPT-IN local row gated by ROD_HEADFUL=1,
