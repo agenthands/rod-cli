@@ -95,7 +95,13 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   4. A user can run a stealth-check command against a page and get a per-signal verdict (`navigator.webdriver`, plugins, UA, WebGL vendor, permissions, languages, screen, `window.chrome`, timezone), read from the live page.
   5. With `--raw`, the stealth-check emits a single-line `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`) — no full-page dump.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 26-01-PLAN.md — Config + validation layer: StealthConfig identity fields, 4 override flags, stealth-check registration, consistency validator + UA-anchor derivation in ResolveStealth (FINGERPRINT-01/02, VALIDATE-01/02)
+- [ ] 26-02-PLAN.md — godoll: kill the hardcoded CH `121` in both runtime injectors (UA-derived Sec-Ch-Ua + userAgentData) and derive FromFingerprint timezone (FINGERPRINT-03)
+- [ ] 26-03-PLAN.md — rod-cli runtime wiring: pin the resolved profile as the active stealth.Profile in createPage + UA-derived interceptor Sec-Ch-Ua (FINGERPRINT-01/03)
+- [ ] 26-04-PLAN.md — stealth-check behavior: shared extracted probe, StealthCheck action (live-page reads, raw/json/human), daemon dispatch (VALIDATE-01/02)
+- [ ] 26-05-PLAN.md — Harness gate: flip the CH KNOWN-RED to required-green, add blocking consistency-invariant + pinned-identity + stealth-check subtests (FINGERPRINT-01/02/03, VALIDATE-01/02)
 
 ### Phase 27: Canvas/WebGL/WebRTC Hardening
 
@@ -148,7 +154,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
 | 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 3/3 | Complete   | 2026-06-24 |
-| 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
+| 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/5 | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |
 | 29. Best-Effort Live Validation | v1.6 | 0/TBD | Not started | - |
