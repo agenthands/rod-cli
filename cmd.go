@@ -13,16 +13,40 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// daemonRunning reports whether the per-session daemon is already up by pinging
+// it. A nil error from the ping means the daemon answered.
+func daemonRunning(session string) bool {
+	_, err := daemon.ClientExecute(session, daemon.Request{Command: "ping"})
+	return err == nil
+}
+
 func runClientCommand(c *cli.Context, req daemon.Request) error {
 	session := c.String("session")
-	
+
 	// Format generic daemon-spawn flags from global cli args
 	flags := []string{}
 	if c.String("config") != "" { flags = append(flags, "--config", c.String("config")) }
 	if c.String("cdp-endpoint") != "" { flags = append(flags, "--cdp-endpoint", c.String("cdp-endpoint")) }
 	if c.Bool("headless") { flags = append(flags, "--headless") }
 	if c.Bool("vision") { flags = append(flags, "--vision") }
-	
+
+	// Stealth flags are forwarded verbatim into the daemon spawn args. This is the
+	// persistence linchpin: a stealth flag only "sticks" for the session if it is
+	// present at spawn time (EnsureDaemon appends flags into the daemon argv).
+	if c.String("proxy") != "" { flags = append(flags, "--proxy", c.String("proxy")) }
+	if c.String("proxy-auth") != "" { flags = append(flags, "--proxy-auth", c.String("proxy-auth")) }
+	if c.String("profile") != "" { flags = append(flags, "--profile", c.String("profile")) }
+
+	// Stealth config is resolved once at daemon spawn. If the daemon is already
+	// running, a stealth flag cannot retroactively apply — warn to STDERR (never
+	// stdout, so --raw/piped callers are unaffected) and proceed with the existing
+	// config. No silent ignore, no surprise auto-restart. The proxy-auth value is
+	// never echoed.
+	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != ""
+	if stealthRequested && daemonRunning(session) {
+		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
+	}
+
 	err := daemon.EnsureDaemon(session, os.Args[0], flags)
 	if err != nil {
 		return fmt.Errorf("failed to ensure daemon: %v", err)
@@ -60,6 +84,9 @@ func getApp() *cli.App {
 			&cli.BoolFlag{Name: "raw", Usage: "output raw results"},
 			&cli.BoolFlag{Name: "json", Usage: "output structured json"},
 			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
+			&cli.StringFlag{Name: "proxy", Usage: "route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port)"},
+			&cli.StringFlag{Name: "proxy-auth", Usage: "proxy credentials as user:pass (handled via CDP, never URL-embedded)"},
+			&cli.StringFlag{Name: "profile", Usage: "named stealth profile (name or path to a JSON profile file)"},
 		},
 		Commands: []*cli.Command{
 			{

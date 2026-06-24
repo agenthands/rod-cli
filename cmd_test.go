@@ -111,11 +111,111 @@ func captureStdout(t *testing.T, fn func()) string {
 	return <-done
 }
 
+// captureStderr runs fn while capturing everything written to os.Stderr and
+// returns the captured text.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+
+	done := make(chan string)
+	go func() {
+		b, _ := io.ReadAll(r)
+		done <- string(b)
+	}()
+
+	fn()
+
+	w.Close()
+	os.Stderr = old
+	return <-done
+}
+
 // runApp builds a fresh app and runs it with the given args (rod-cli prepended).
 func runApp(args ...string) error {
 	app := getApp()
 	full := append([]string{"rod-cli"}, args...)
 	return app.Run(full)
+}
+
+// TestStealthFlagsInHelp verifies the three stealth flags are registered as
+// global flags and surface in --help.
+func TestStealthFlagsInHelp(t *testing.T) {
+	out := captureStdout(t, func() {
+		if err := runApp("--no-banner"); err != nil {
+			t.Errorf("help failed: %v", err)
+		}
+	})
+	for _, flag := range []string{"--proxy", "--proxy-auth", "--profile"} {
+		if !strings.Contains(out, flag) {
+			t.Fatalf("expected %s in help output, got: %s", flag, out)
+		}
+	}
+}
+
+// TestStealthFlagAlreadyRunningWarns verifies that supplying a stealth flag
+// against an already-running session emits exactly one warning to STDERR (not
+// stdout), still succeeds, and never echoes the proxy-auth credential.
+func TestStealthFlagAlreadyRunningWarns(t *testing.T) {
+	clearPortFiles(t)
+	srv, session := startFakeDaemon(t)
+	defer srv.Close()
+	defer os.Remove(portFilePathForSession(session))
+
+	var stdout string
+	stderr := captureStderr(t, func() {
+		stdout = captureStdout(t, func() {
+			err := runApp("--session", session, "--proxy", "http://127.0.0.1:9", "--proxy-auth", "joe:s3cret", "snapshot")
+			if err != nil {
+				t.Errorf("expected success despite warning, got %v", err)
+			}
+		})
+	})
+
+	if !strings.Contains(stderr, "already running") || !strings.Contains(stderr, session) {
+		t.Fatalf("expected already-running warning on stderr, got: %q", stderr)
+	}
+	if strings.Count(stderr, "already running") != 1 {
+		t.Fatalf("expected exactly one warning, got: %q", stderr)
+	}
+	// The proxy-auth credential must never be echoed to stdout or stderr.
+	if strings.Contains(stderr, "s3cret") || strings.Contains(stdout, "s3cret") {
+		t.Fatalf("proxy-auth credential leaked: stderr=%q stdout=%q", stderr, stdout)
+	}
+	// stdout still carries the normal command result, unpolluted by the warning.
+	if strings.Contains(stdout, "already running") {
+		t.Fatalf("warning leaked to stdout: %q", stdout)
+	}
+	if !strings.Contains(stdout, "fake-result") {
+		t.Fatalf("expected fake-result on stdout, got: %q", stdout)
+	}
+}
+
+// TestStealthFlagNotRunningNoWarn verifies no warning is emitted when a stealth
+// flag is supplied and the daemon is freshly spawned (not already running).
+// We use a fake daemon but supply NO stealth flag to confirm the warning is
+// gated on stealthRequested; conversely a stealth flag with a running daemon
+// warns (covered above). Here the daemon is running but no stealth flag is set.
+func TestNoStealthFlagNoWarn(t *testing.T) {
+	clearPortFiles(t)
+	srv, session := startFakeDaemon(t)
+	defer srv.Close()
+	defer os.Remove(portFilePathForSession(session))
+
+	stderr := captureStderr(t, func() {
+		_ = captureStdout(t, func() {
+			if err := runApp("--session", session, "snapshot"); err != nil {
+				t.Errorf("snapshot failed: %v", err)
+			}
+		})
+	})
+	if strings.Contains(stderr, "already running") {
+		t.Fatalf("did not expect warning without stealth flag, got: %q", stderr)
+	}
 }
 
 // --- Missing-argument negative cases (no daemon/browser needed) ---
