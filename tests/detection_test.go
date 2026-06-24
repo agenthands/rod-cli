@@ -553,6 +553,70 @@ func TestDetectionHarness(t *testing.T) {
 		}
 	})
 
+	// stealth_check — VALIDATE-01 (per-signal verdict read from the LIVE page) +
+	// VALIDATE-02 (token-efficient single-line --raw with only failing signals, no
+	// page dump). Drives the stealth-check command three ways against the offline
+	// fixture (zero egress): default human table, --raw single line, --json object.
+	t.Run("stealth_check", func(t *testing.T) {
+		// Ensure we are on the default detect fixture (prior pinned subtest restored
+		// the default daemon via defer; re-goto is a cheap idempotent guard).
+		if _, err := runCli("goto", ds.URL()); err != nil {
+			t.Fatalf("stealth_check: goto fixture failed: %v", err)
+		}
+		waitForDetectReady(t)
+
+		// (1) Default human mode: must name multiple per-signal verdicts.
+		human, err := runCli("stealth-check")
+		if err != nil {
+			t.Fatalf("stealth-check (human) failed: %v\nOutput: %s", err, human)
+		}
+		for _, label := range []string{"webdriver", "webglVendor"} {
+			if !strings.Contains(human, label) {
+				t.Errorf("stealth-check human output missing per-signal label %q; got:\n%s", label, human)
+			}
+		}
+
+		// (2) --raw: a SINGLE trimmed line starting with PASS or FAIL. If FAIL it
+		// lists only name=FAIL(reason) failing tokens — never a full-signal/page
+		// dump (e.g. it must not embed the full UA string).
+		rawOut, err := runCli("--raw", "stealth-check")
+		if err != nil {
+			t.Fatalf("stealth-check --raw failed: %v\nOutput: %s", err, rawOut)
+		}
+		raw := strings.TrimSpace(rawOut)
+		if strings.Contains(raw, "\n") {
+			t.Errorf("--raw stealth-check is NOT a single line:\n%q", raw)
+		}
+		if !(strings.HasPrefix(raw, "PASS") || strings.HasPrefix(raw, "FAIL")) {
+			t.Errorf("--raw stealth-check must start with PASS or FAIL, got: %q", raw)
+		}
+		if strings.Contains(raw, "Mozilla/5.0") || strings.Contains(raw, "AppleWebKit") {
+			t.Errorf("--raw stealth-check leaked a full-signal/page dump (UA string): %q", raw)
+		}
+		if strings.HasPrefix(raw, "FAIL") {
+			// Failing form carries only name=FAIL(reason) tokens — assert the shape.
+			if !strings.Contains(raw, "=FAIL(") {
+				t.Errorf("--raw FAIL line missing name=FAIL(reason) tokens: %q", raw)
+			}
+		}
+
+		// (3) --json: must parse as a JSON object.
+		jsonOut, err := runCli("--json", "stealth-check")
+		if err != nil {
+			t.Fatalf("stealth-check --json failed: %v\nOutput: %s", err, jsonOut)
+		}
+		js := strings.TrimSpace(jsonOut)
+		start := strings.Index(js, "{")
+		end := strings.LastIndex(js, "}")
+		if start < 0 || end < start {
+			t.Fatalf("stealth-check --json is not a JSON object: %s", js)
+		}
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(js[start:end+1]), &parsed); err != nil {
+			t.Errorf("stealth-check --json did not parse as JSON: %v\nOutput: %s", err, js)
+		}
+	})
+
 	// --- Headful matrix row (CONTEXT.md:20) -----------------------------------
 	// Headless is the blocking CI gate (the run above). Headful needs xvfb in CI
 	// and is slow/flaky, so it is an OPT-IN local row gated by ROD_HEADFUL=1,
