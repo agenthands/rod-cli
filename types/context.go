@@ -94,10 +94,15 @@ func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) 
 	return cfg, nil
 }
 
-func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
+// launchBrowser returns the browser plus a proxyCleanup func. proxyCleanup is
+// non-nil only when an authenticated proxy spun up a local godoll relay; the
+// caller MUST invoke it on session close to stop that relay (T-25-07). It is nil
+// for the no-proxy and no-auth-proxy paths.
+func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error) {
 
 	if cfg.CDPEndpoint != "" {
-		return controlBrowser(ctx, cfg.CDPEndpoint)
+		b, err := controlBrowser(ctx, cfg.CDPEndpoint)
+		return b, nil, err
 	}
 
 	if cfg.BrowserTempDir == "" {
@@ -129,12 +134,25 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 		if browserPath, has := launcherLookPath(); has {
 			browserLauncher.Bin(browserPath)
 		} else {
-			return nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
+			return nil, nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
 		}
 	}
 
-	if cfg.Proxy != "" {
-		browserLauncher.Proxy(cfg.Proxy)
+	// Per-session proxy via godoll's proxy API (replaces the bare
+	// launcher.Proxy). cfg.Stealth.Proxy is the authoritative source. For the
+	// no-auth case ApplyToLauncher just sets --proxy-server; for the auth case it
+	// starts a local CONNECT relay (handling the SOCKS5/HTTP-auth gap) and returns
+	// a cleanup that stops it. Credentials never reach --proxy-server.
+	proxyCfg, err := parseProxyConfig(cfg.Stealth.Proxy, cfg.Stealth.ProxyAuth)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "invalid proxy configuration")
+	}
+	var proxyCleanup func()
+	if proxyCfg != nil {
+		proxyCleanup, err = proxyCfg.ApplyToLauncher(browserLauncher)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "apply proxy to launcher")
+		}
 	}
 
 	// Create godoll options and apply stealth preset
@@ -144,10 +162,20 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, error) {
 
 	browserInstance, err := browser.NewBrowserE(ctx, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "launch local browser failed via godoll")
+		if proxyCleanup != nil {
+			proxyCleanup() // don't leak the relay if the browser fails to start
+		}
+		return nil, nil, errors.Wrap(err, "launch local browser failed via godoll")
 	}
 
-	return browserInstance, nil
+	// Register the persistent CDP auth handler BEFORE any Page()/Navigate() so an
+	// authenticated proxy is answered programmatically — no 407 / hanging native
+	// auth dialog (T-25-06). SetupBrowserAuth is a no-op unless HasAuth().
+	if proxyCfg != nil && proxyCfg.HasAuth() {
+		proxyCfg.SetupBrowserAuth(browserInstance)
+	}
+
+	return browserInstance, proxyCleanup, nil
 }
 
 func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error) {
@@ -185,6 +213,11 @@ type Context struct {
 	fingerprint *rodfingerprint.Fingerprint
 	pluginEngine *plugin.PluginEngine
 	loadedPlugins []string
+	// proxyCleanup stops the per-session authenticated-proxy relay (godoll
+	// StartProxyRelay). Non-nil only when an authenticated proxy is in use; it is
+	// invoked exactly once on browser close and nil'd to guard against double-call
+	// (T-25-07).
+	proxyCleanup func()
 }
 
 func NewContext(ctx context.Context, cfg Config) *Context {
@@ -218,10 +251,12 @@ func (ctx *Context) initial() error {
 
 	var err error
 	if ctx.browser == nil {
-		ctx.browser, err = launchBrowser(ctx.stdContext, ctx.config)
+		var proxyCleanup func()
+		ctx.browser, proxyCleanup, err = launchBrowser(ctx.stdContext, ctx.config)
 		if err != nil {
 			return err
 		}
+		ctx.proxyCleanup = proxyCleanup
 		ctx.page, err = ctx.createPage()
 		if err != nil {
 			return err
@@ -326,6 +361,13 @@ func (ctx *Context) closePage() error {
 	return err
 }
 func (ctx *Context) closeBrowser() error {
+	// Stop the per-session proxy relay (if any) regardless of page/browser state,
+	// so the local listener is never leaked. Guard against double-call by nil'ing.
+	if ctx.proxyCleanup != nil {
+		ctx.proxyCleanup()
+		ctx.proxyCleanup = nil
+	}
+
 	err := ctx.closePage()
 	if err != nil {
 		return err

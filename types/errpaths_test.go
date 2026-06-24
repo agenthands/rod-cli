@@ -254,7 +254,7 @@ func TestLaunchBrowser_NoChrome(t *testing.T) {
 	launcherLookPath = func() (string, bool) { return "", false }
 	defer func() { launcherLookPath = origLP }()
 
-	_, err := launchBrowser(context.Background(), Config{BrowserTempDir: t.TempDir()})
+	_, _, err := launchBrowser(context.Background(), Config{BrowserTempDir: t.TempDir()})
 	if err == nil {
 		t.Fatal("expected error when no Chrome is installed")
 	}
@@ -263,16 +263,37 @@ func TestLaunchBrowser_NoChrome(t *testing.T) {
 	}
 }
 
-// launchBrowser with a Proxy set + bad bin path: exercises the Proxy branch and
-// then the godoll launch-failure wrap (does not require a real browser).
+// launchBrowser with a Proxy set + bad bin path: exercises the godoll proxy
+// branch (ApplyToLauncher, no-auth path) and then the godoll launch-failure wrap
+// (does not require a real browser). The proxy now rides cfg.Stealth.Proxy.
 func TestLaunchBrowser_ProxyAndBadBin(t *testing.T) {
 	cfg := Config{
 		BrowserBinPath: "/nonexistent/chrome-binary-xyz",
-		Proxy:          "http://127.0.0.1:9",
+		Stealth:        StealthConfig{Proxy: "http://127.0.0.1:9"},
 		BrowserTempDir: t.TempDir(),
 	}
-	if _, err := launchBrowser(context.Background(), cfg); err == nil {
+	if _, _, err := launchBrowser(context.Background(), cfg); err == nil {
 		t.Fatal("expected launch failure with bogus binary")
+	}
+}
+
+// launchBrowser with an unparseable proxy URL fails loudly before any launch
+// attempt (parseProxyConfig error path through launchBrowser).
+func TestLaunchBrowser_BadProxyURL(t *testing.T) {
+	origLP := launcherLookPath
+	launcherLookPath = func() (string, bool) { return "/some/chrome", true }
+	defer func() { launcherLookPath = origLP }()
+
+	cfg := Config{
+		Stealth:        StealthConfig{Proxy: "127.0.0.1:8080"}, // missing scheme
+		BrowserTempDir: t.TempDir(),
+	}
+	_, _, err := launchBrowser(context.Background(), cfg)
+	if err == nil {
+		t.Fatal("expected error for proxy url without a scheme")
+	}
+	if !strings.Contains(err.Error(), "proxy") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
