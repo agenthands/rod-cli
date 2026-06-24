@@ -89,18 +89,28 @@ func ListSessions() ([]string, error) {
 	return active, nil
 }
 
-func EnsureDaemon(session string, exePath string, flags []string) error {
+// EnsureDaemon spawns the per-session daemon if it is not already running.
+// Non-secret config is forwarded as CLI flags (visible in the daemon argv);
+// secrets MUST be passed via extraEnv ("KEY=value" entries) instead, since argv
+// is world-readable through /proc/<pid>/cmdline and `ps`. extraEnv is appended
+// to the inherited environment for the spawned daemon only.
+func EnsureDaemon(session string, exePath string, flags []string, extraEnv []string) error {
 	_, err := ClientExecute(session, Request{Command: "ping"})
 	if err == nil {
 		return nil
 	}
-	
+
 	args := []string{"--session", session}
 	args = append(args, flags...)
 	args = append(args, "daemon")
-	
+
 	cmd := exec.Command(exePath, args...)
-	logFile, _ := os.OpenFile(filepath.Join(os.TempDir(), "rod-cli-daemon.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
+	// 0600: the daemon log may capture proxy/CONNECT diagnostics from the godoll
+	// relay — keep it owner-only, never world-readable.
+	logFile, _ := os.OpenFile(filepath.Join(os.TempDir(), "rod-cli-daemon.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {

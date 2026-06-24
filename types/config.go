@@ -41,9 +41,10 @@ type StealthConfig struct {
 	Proxy string `yaml:"proxy" json:"proxy"`
 
 	// ProxyAuth holds proxy credentials as "user:pass". Handled via CDP, never
-	// URL-embedded. Credential-sensitive: never logged or persisted to state/port
-	// files.
-	ProxyAuth string `yaml:"proxyAuth" json:"proxyAuth"`
+	// URL-embedded. Credential-sensitive: it is set only at runtime from the
+	// out-of-band ROD_CLI_PROXY_AUTH env var and is NEVER serialized — the
+	// `yaml:"-" json:"-"` tags keep it out of any config/state file on disk.
+	ProxyAuth string `yaml:"-" json:"-"`
 
 	// ProfilePath is the resolved path to the stealth.Profile JSON file selected
 	// via --profile. Empty when no profile was requested.

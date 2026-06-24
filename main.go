@@ -35,8 +35,11 @@ func runDaemonServer(c *cli.Context) error {
 	// identity. Credentials are never logged here (they would otherwise reach the
 	// daemon log file).
 	stealthFlags := types.StealthFlags{
-		Proxy:     c.String("proxy"),
-		ProxyAuth: c.String("proxy-auth"),
+		Proxy: c.String("proxy"),
+		// proxy-auth is passed out-of-band via the environment (never the daemon
+		// argv) so the credential is not exposed in /proc/<pid>/cmdline or `ps`.
+		// The client sets ROD_CLI_PROXY_AUTH on the spawned daemon (see cmd.go).
+		ProxyAuth: os.Getenv("ROD_CLI_PROXY_AUTH"),
 		Profile:   c.String("profile"),
 	}
 	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {

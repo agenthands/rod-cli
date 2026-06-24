@@ -30,12 +30,20 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	if c.Bool("headless") { flags = append(flags, "--headless") }
 	if c.Bool("vision") { flags = append(flags, "--vision") }
 
-	// Stealth flags are forwarded verbatim into the daemon spawn args. This is the
-	// persistence linchpin: a stealth flag only "sticks" for the session if it is
-	// present at spawn time (EnsureDaemon appends flags into the daemon argv).
+	// Non-secret stealth flags are forwarded verbatim into the daemon spawn args.
+	// This is the persistence linchpin: a stealth flag only "sticks" for the
+	// session if it is present at spawn time (EnsureDaemon appends flags into the
+	// daemon argv). The proxy URL and profile path are not secrets.
 	if c.String("proxy") != "" { flags = append(flags, "--proxy", c.String("proxy")) }
-	if c.String("proxy-auth") != "" { flags = append(flags, "--proxy-auth", c.String("proxy-auth")) }
 	if c.String("profile") != "" { flags = append(flags, "--profile", c.String("profile")) }
+
+	// proxy-auth is a CREDENTIAL — it must NEVER enter the daemon argv (argv is
+	// world-readable via /proc/<pid>/cmdline and `ps`). Pass it out-of-band through
+	// the daemon's environment instead; runDaemonServer reads ROD_CLI_PROXY_AUTH.
+	var extraEnv []string
+	if c.String("proxy-auth") != "" {
+		extraEnv = append(extraEnv, "ROD_CLI_PROXY_AUTH="+c.String("proxy-auth"))
+	}
 
 	// Stealth config is resolved once at daemon spawn. If the daemon is already
 	// running, a stealth flag cannot retroactively apply — warn to STDERR (never
@@ -47,7 +55,7 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
 
-	err := daemon.EnsureDaemon(session, os.Args[0], flags)
+	err := daemon.EnsureDaemon(session, os.Args[0], flags, extraEnv)
 	if err != nil {
 		return fmt.Errorf("failed to ensure daemon: %v", err)
 	}

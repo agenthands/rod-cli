@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agenthands/godoll/stealth"
@@ -123,14 +124,29 @@ func TestLoadConfig_StealthBlockRoundTrips(t *testing.T) {
 	}
 	f.Close()
 
+	// ProxyAuth is credential-sensitive and tagged `yaml:"-"` — it must NEVER be
+	// serialized to (or read back from) a config file. The encoded YAML must not
+	// contain the credential at all.
+	encoded, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("read encoded config: %v", err)
+	}
+	if strings.Contains(string(encoded), "u:p") || strings.Contains(string(encoded), "proxyAuth") {
+		t.Fatalf("ProxyAuth was serialized to the config file (credential leak): %s", encoded)
+	}
+
 	cfg, err := LoadConfig(p)
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
+	// Non-secret stealth fields round-trip; ProxyAuth deliberately does NOT (it is
+	// supplied at runtime via ROD_CLI_PROXY_AUTH, never persisted).
 	if cfg.Stealth.Proxy != "http://localhost:9090" ||
-		cfg.Stealth.ProxyAuth != "u:p" ||
 		cfg.Stealth.ProfilePath != "/tmp/euro.json" {
 		t.Fatalf("stealth block did not round-trip: %+v", cfg.Stealth)
+	}
+	if cfg.Stealth.ProxyAuth != "" {
+		t.Fatalf("ProxyAuth must not be persisted/loaded from config, got %q", cfg.Stealth.ProxyAuth)
 	}
 }
 

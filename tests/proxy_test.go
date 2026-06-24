@@ -29,6 +29,7 @@ package tests
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -297,4 +298,35 @@ func TestProxyCredentialsNotLeaked(t *testing.T) {
 	}
 	// If the daemon already exited (err != nil), the file is gone — also a
 	// non-leak; nothing to assert.
+
+	// CR-01 regression guard: the credential must NEVER reach the daemon process
+	// argv. argv is world-readable via /proc/<pid>/cmdline (and `ps`), so a leak
+	// here is a real disclosure. The secret is passed out-of-band via the
+	// ROD_CLI_PROXY_AUTH env var instead. (Linux-only check — /proc is Linux.)
+	if runtime.GOOS == "linux" {
+		cmdlines, _ := filepath.Glob("/proc/[0-9]*/cmdline")
+		for _, cl := range cmdlines {
+			raw, rerr := os.ReadFile(cl)
+			if rerr != nil {
+				continue // process may have exited between glob and read
+			}
+			// cmdline is NUL-separated argv; only inspect rod-cli daemons.
+			args := string(raw)
+			if !strings.Contains(args, "rod-cli") {
+				continue
+			}
+			if strings.Contains(args, user) || strings.Contains(args, pass) {
+				t.Errorf("proxy credential leaked into a daemon process argv (%s) — must be passed via env, not argv", cl)
+			}
+		}
+	}
+
+	// The daemon log must not capture the credential either.
+	logData, lerr := os.ReadFile(filepath.Join(os.TempDir(), "rod-cli-daemon.log"))
+	if lerr == nil {
+		logStr := string(logData)
+		if strings.Contains(logStr, user) || strings.Contains(logStr, pass) {
+			t.Errorf("proxy credential leaked into the daemon log file")
+		}
+	}
 }

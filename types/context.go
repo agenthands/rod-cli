@@ -61,6 +61,13 @@ func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) 
 	if u.Host == "" {
 		return nil, errors.Errorf("proxy url %q is missing a host:port", proxyURL)
 	}
+	// Reject URL-embedded credentials loudly rather than silently dropping them
+	// (which would surface as a confusing unauthenticated 407). Credentials must
+	// be supplied via --proxy-auth so they are handled via CDP and never reach
+	// Chrome's --proxy-server.
+	if u.User != nil {
+		return nil, errors.Errorf("embedded proxy credentials in the URL are not supported; pass them via --proxy-auth")
+	}
 
 	var protocol string
 	switch strings.ToLower(u.Scheme) {
