@@ -4,17 +4,17 @@ milestone: v1.6
 milestone_name: Proven & Configurable Stealth
 current_phase: 26
 current_phase_name: Configurable Fingerprint & Consistency Validator
-status: executing
+status: verifying
 stopped_at: Completed Phase 25 (config surface + per-session proxy) — verified 4/4; code review fixed CR-01 proxy-auth argv leak + credential-safety warnings
-last_updated: "2026-06-24T08:12:22.024Z"
+last_updated: "2026-06-24T08:32:23.711Z"
 last_activity: 2026-06-24
 last_activity_desc: Phase 26 execution started
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
-  percent: 33
+  completed_plans: 12
+  percent: 50
 ---
 
 # STATE.md — rod-cli
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 
 Phase: 26 (Configurable Fingerprint & Consistency Validator) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-24 — Phase 26 execution started
 
 Progress: [██░░░░░░░░] 17% (1 of 6 phases)
@@ -71,6 +71,7 @@ All 17 v1 requirements mapped, 100% coverage.
 - [Phase ?]: Plan 26-03: config-pinned cfg.Stealth is the active stealth.Profile (SetProfile in createPage); interceptor Sec-Ch-Ua UA-derived via parseChromeMajor (no 121 literal)
 - [Phase ?]: stealth-check probe is a single shared //go:embed probe.js used by both the command and the detect.js harness
 - [Phase ?]: stealth-check --json passes through structured daemon results (isJSONValue) instead of double-wrapping
+- [Phase ?]: Phase 26 gate: Client-Hints spoofing is OFF by default (SpoofClientHints=false, no CLI flag); the coherence subtests activate it via --profile and the default-off gap is reported as a Plan-03 regression (breaks TestNetworkEvasionHeaders) for the verifier.
 
 ### Pending Todos
 
@@ -90,7 +91,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T08:11:59.019Z
+Last session: 2026-06-24T08:32:06.767Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -116,3 +117,4 @@ Resume file: None
 | Phase 26 P02 | 9min | 4 tasks | 5 files |
 | Phase 26 P03 | 10m | 2 tasks | 1 files |
 | Phase 26 P04 | 9min | 3 tasks | 5 files |
+| Phase 26 P05 | 16m | 4 tasks | 1 files |
