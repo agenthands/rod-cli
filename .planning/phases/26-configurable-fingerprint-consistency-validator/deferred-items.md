@@ -1,58 +1,40 @@
 # Phase 26 — Deferred / Out-of-Scope Items
 
-Items discovered during Plan 26-05 execution that are outside this plan's declared
-scope (`tests/detection_test.go` only). Logged per the executor scope-boundary rule;
-NOT fixed here.
-
-## BLOCKING coherence gap (Plan 03 regression) — Client-Hints OFF by default
+## RESOLVED in-phase: Client-Hints-off-by-default coherence gap (Plan 03 regression)
 
 **Discovered:** Plan 26-05, Task 4 (full-suite regression run).
+**Resolved:** post-Plan-05 orchestrator regression fix, before phase verification.
 
-**Symptom:** `tests/network_evasion_test.go::TestNetworkEvasionHeaders` FAILS — the
-default identity (no `--profile`, no flags) navigates and the response request
-headers contain **no `Sec-Ch-Ua`** (only User-Agent / Accept-Language). The test
-expects `Sec-Ch-Ua` to be present.
+**Was:** `stealth.DefaultProfile()` ships `SpoofClientHints: false`, and Plan 03's
+`updateInterceptorRules` gates the entire `Sec-Ch-Ua` / `navigator.userAgentData`
+injection behind `if prof.SpoofClientHints`. Because Plan 03 switched `createPage`'s
+active-profile source from the old `stealth.FromFingerprint(fp)` path (which set
+`SpoofClientHints = UserAgentData != nil`, i.e. on) to `profileFromStealth` based on
+`DefaultProfile()` (off), the **default** identity stopped emitting Client-Hints —
+empty `Sec-Ch-Ua` + empty `userAgentData.brands` (itself a detection tell), and a
+regression of the pre-v1.6 behavior. This broke the pre-existing v1.3
+`tests/network_evasion_test.go::TestNetworkEvasionHeaders`.
 
-**Root cause:** `stealth.DefaultProfile()` ships `SpoofClientHints: false`
-(`../godoll/stealth/profile.go:79`). Plan 03's `updateInterceptorRules`
-(`types/context.go:576`) gates the entire `Sec-Ch-Ua` / `Sec-Ch-Ua-Mobile` /
-`Sec-Ch-Ua-Platform` injection behind `if prof.SpoofClientHints`. So on the
-default identity the header is never emitted. On the default identity godoll's
-`navigator.userAgentData.brands` is also empty (`[]`) for the same reason. Both
-Client-Hints surfaces are therefore EMPTY (not coherent) unless the user opts in.
+**Fix:** `profileFromStealth` (`types/context.go`) now sets `p.SpoofClientHints = true`
+on the resolved active profile, so rod-cli emits coherent, UA-derived Client-Hints by
+default. `Sec-Ch-Ua` major == UA Chrome major == `navigator.userAgentData` brand version
+== platform OS story — the FINGERPRINT-02 triple-agreement now holds on the DEFAULT
+identity, not only when a profile opts in. Verified live (fresh `go build -o rod-cli .`):
+- `tests/network_evasion_test.go::TestNetworkEvasionHeaders` → PASS (Sec-Ch-Ua present).
+- `tests/detection_test.go::TestDetectionHarness` → PASS (all 11 subtests, incl.
+  `client_hints_ua_derived`, `consistency_invariant`, `pinned_identity_macos`,
+  `stealth_check`), zero network egress.
 
-There is also **no `--spoof-client-hints` CLI flag**; the field is only settable
-via a `--profile` JSON or config file (`types/config.go:93`, `:203`). So a user who
-pins `--user-agent ...Chrome/130...` gets a UA that is NOT backed by matching
-Client-Hints unless they ALSO supply a profile enabling `spoofClientHints`.
+**Genuine follow-up (NOT a phase-26 gap):** there is no `--no-client-hints` flag to
+*disable* CH. Intentionally omitted — shipping an incoherent CH-off identity contradicts
+the phase's coherence goal, and no requirement asks for it. A disable knob (via profile
+JSON `spoofClientHints:false` honored as an explicit override) is a possible future
+enhancement, not outstanding work for this phase.
 
-**Why this is the phase's coherence gap:** The Phase-26 intent (26-CONTEXT.md) is
-"the hardcoded Client-Hints `121` literal is eliminated ... so `Sec-CH-UA`,
-`navigator.userAgentData`, and the UA all tell one OS+version story." The wiring
-WORKS when activated (proven live in Plan 05's `consistency_invariant` /
-`pinned_identity_macos` subtests, which enable it via a profile), but it is
-**opt-in, not the default**, and the `--user-agent` anchor does not auto-derive it.
+## Pre-existing / unrelated (not introduced by Phase 26)
 
-**Plan 05 handling (per Task 4 "report it, do not paper over it"):** The new
-blocking subtests ACTIVATE Client-Hints (temp `--profile` with
-`spoofClientHints:true`) so they prove real cross-surface coherence rather than
-passing vacuously on empty CH. The default-off gap is reported here and in the
-26-05 SUMMARY for the phase verifier.
-
-**Suggested fix (out of Plan 05 scope — touches production code, not
-`detection_test.go`):** Either (a) default `SpoofClientHints` to `true` in the
-resolved active profile / `DefaultProfile()`, or (b) auto-enable
-`SpoofClientHints` whenever a UA is pinned (the CONTEXT "derive-when-unset"
-policy), plus add a `--spoof-client-hints` (or `--no-client-hints`) flag. This is
-a `types/context.go` / godoll change and should be a follow-up plan or a Phase-26
-verifier remediation.
-
-## Pre-existing / unrelated
-
-- `daemon/daemon_more_test.go::TestStartServerWithPpid` — FAILED ("server with
-  ppid did not become ready") under the heavily-loaded full `go test ./...` run
-  (~217s in the tests package alone). This is a daemon-readiness/ppid test with no
-  relation to stealth/fingerprint or to `detection_test.go`. The file also carried
-  an UNCOMMITTED pre-session signature edit (adding a 4th `nil` arg to
-  `EnsureDaemon`) that is not part of Plan 05. Treated as pre-existing/flaky and
-  left untouched.
+- `daemon/daemon_more_test.go::TestStartServerWithPpid` — intermittently FAILS
+  ("server with ppid did not become ready") under a heavily-loaded full
+  `go test ./...` run. Daemon-readiness/ppid test, no relation to stealth/fingerprint.
+  The file also carries an UNCOMMITTED pre-session signature edit (a 4th `nil` arg to
+  `EnsureDaemon`) present at session start, unrelated to Phase 26. Left untouched.

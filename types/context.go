@@ -414,6 +414,14 @@ const defaultChromeMajor = "121"
 // no-pin path is byte-for-byte the prior default behavior (no regression).
 func profileFromStealth(s StealthConfig) stealth.Profile {
 	p := stealth.DefaultProfile()
+	// rod-cli emits coherent, UA-derived Client-Hints by default so Sec-Ch-Ua,
+	// navigator.userAgentData, and the UA all tell one version story (FINGERPRINT-02/03).
+	// DefaultProfile() ships SpoofClientHints=false; without this the default identity
+	// would send no Sec-Ch-Ua and an empty userAgentData.brands — itself a detection tell,
+	// and a regression vs the pre-v1.6 FromFingerprint path which had it on. The overlay
+	// below still lets an explicit profile keep it on; there is intentionally no way to
+	// ship an incoherent CH-off identity from the resolved active profile.
+	p.SpoofClientHints = true
 	if s.UserAgent != "" {
 		p.UserAgent = s.UserAgent
 	}
