@@ -37,7 +37,7 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
 **Milestone Goal:** Turn rod-cli's already-wired godoll stealth from "compiles and runs" into "provably evades detection and is configurable per session" — validated against a deterministic offline detection harness (reading from the live page, never from source), exposed through an agent-friendly session-persistent config surface, and extended with the evasion wiring that matters (WebRTC leak prevention, stable canvas noise, fingerprint consistency). Brownfield: this milestone **proves, configures, and wires** existing godoll capability — it does not rebuild it.
 
 - [x] **Phase 24: Detection Harness & CI Backbone** — Offline, deterministic detection test server + first test CI job, baselined against the current binary so existing leaks surface (completed 2026-06-24)
-- [ ] **Phase 25: Stealth Config Surface & Per-Session Proxy** — Session-persistent stealth config (flags + named profile file, precedence-resolved at daemon spawn) plus per-session HTTP/SOCKS5 proxy with CDP auth
+- [x] **Phase 25: Stealth Config Surface & Per-Session Proxy** — Session-persistent stealth config (flags + named profile file, precedence-resolved at daemon spawn) plus per-session HTTP/SOCKS5 proxy with CDP auth (completed 2026-06-24)
 - [ ] **Phase 26: Configurable Fingerprint & Consistency Validator** — Pinnable coherent fingerprint from a single source of truth, consistency invariant gate, the CH-121 fix, and a user-facing per-signal stealth-check verdict
 - [ ] **Phase 27: Canvas/WebGL/WebRTC Hardening** — Wire the two genuine godoll gaps: WebRTC IP-leak prevention and stable-per-session canvas/WebGL/audio noise, both harness-asserted
 - [ ] **Phase 28: Human-Behavior Tuning** — Thread godoll humanize options (typing speed, typo rate, delay jitter, mouse path, scroll) through actions as flags/profile fields
@@ -76,11 +76,11 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   3. A user can route a named session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound to that session, and a second session with a different `--proxy` reports its own egress identity (no shared-daemon bleed).
   4. Proxy authentication succeeds against an authenticated proxy via CDP (`Fetch.continueWithAuth`) using `--proxy-auth`, with no URL-embedded credentials and no 407/dialog hang; credentials never appear in default output.
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 - [x] 25-01-PLAN.md — StealthConfig substrate: sub-struct, --proxy/--proxy-auth/--profile flags, daemon-boundary forwarding, precedence resolver, already-running warning (PROFILE-01/02)
 - [x] 25-02-PLAN.md — Per-session proxy wiring: parse into godoll ProxyConfig, ApplyToLauncher + CDP SetupBrowserAuth replacing bare launcher.Proxy, relay cleanup on Close (PROXY-01/02)
-- [ ] 25-03-PLAN.md — Session-isolation/auth/profile-roundtrip/credential-leak e2e tests + offline proxy fixture (PROFILE-01/02, PROXY-01/02)
+- [x] 25-03-PLAN.md — Session-isolation/auth/profile-roundtrip/credential-leak e2e tests + offline proxy fixture (PROFILE-01/02, PROXY-01/02)
 
 ### Phase 26: Configurable Fingerprint & Consistency Validator
 
@@ -147,7 +147,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 22. Example Plugins | v1.5 | 5/5 | Complete | 2026-06-23 |
 | 23. Authoring Guide & Docs Index | v1.5 | 2/2 | Complete | 2026-06-23 |
 | 24. Detection Harness & CI Backbone | v1.6 | 4/4 | Complete   | 2026-06-24 |
-| 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 2/3 | In Progress|  |
+| 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 3/3 | Complete   | 2026-06-24 |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 0/TBD | Not started | - |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 0/TBD | Not started | - |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |

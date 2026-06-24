@@ -6,15 +6,15 @@ current_phase: 25
 current_phase_name: Stealth Config Surface & Per-Session Proxy
 status: executing
 stopped_at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
-last_updated: "2026-06-24T06:07:30.151Z"
+last_updated: "2026-06-24T06:18:27.025Z"
 last_activity: 2026-06-24
-last_activity_desc: "25-02 complete: per-session HTTP/SOCKS5 proxy wired through godoll ProxyConfig.ApplyToLauncher (replacing bare launcher.Proxy), CDP SetupBrowserAuth for auth, embedded-cred strip, relay cleanup stopped on session close (PROXY-01/02)"
+last_activity_desc: "25-02 complete: per-session HTTP/SOCKS5 proxy via godoll ProxyConfig.ApplyToLauncher (replaced bare launcher.Proxy), CDP SetupBrowserAuth, embedded-cred strip, relay stopped on session close"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 17
+  completed_plans: 7
+  percent: 33
 ---
 
 # STATE.md — rod-cli
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 25 of 29 (Stealth Config Surface & Per-Session Proxy) — second of 6 v1.6 phases (24–29)
-Plan: 2 of 3 complete (25-01 + 25-02 done; 25-03 e2e egress/isolation/auth tests remain)
+Plan: 3 of 3 complete (25-01 + 25-02 done; 25-03 e2e egress/isolation/auth tests remain)
 Status: Plan 25-02 executed — per-session proxy wired through godoll, CDP auth, relay cleanup (PROXY-01/02)
 Last activity: 2026-06-24 — 25-02 complete: per-session HTTP/SOCKS5 proxy via godoll ProxyConfig.ApplyToLauncher (replaced bare launcher.Proxy), CDP SetupBrowserAuth, embedded-cred strip, relay stopped on session close
 
@@ -65,6 +65,7 @@ All 17 v1 requirements mapped, 100% coverage.
 - [Phase ?]: Phase 24-01: webrtcIce + cdpTell are informational/non-blocking KNOWN-RED signals — harness records current truth; HARDEN-01 (Phase 27) fixes WebRTC leak.
 - [Phase ?]: VALIDATE-03: swallowed evasion errors now write warning: to stderr (log-and-continue, no daemon abort)
 - [Phase ?]: 24-03: e2e detection harness reads window.__detect via eval (validate-live-not-source); WebRTC + Client-Hints kept as KNOWN-RED executing assertions, never skipped
+- [Phase ?]: Phase 25 proxy/profile proven e2e via offline self-serving proxy fixture: auth by CONNECT/407 counters, isolation by live-page egress id, profile by JSON round-trip + session inheritance (identity overlay deferred to Phase 26).
 
 ### Pending Todos
 
@@ -83,7 +84,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-24T06:07:25.199Z
+Last session: 2026-06-24T06:18:11.627Z
 Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
@@ -104,3 +105,4 @@ Resume file: None
 | Phase 24 P03 | 6min | 1 tasks | 1 files |
 | Phase 25 P01 | 20min | 3 tasks | 6 files |
 | Phase 25 P02 | 15min | 2 tasks | 2 files |
+| Phase 25 P03 | 25min | 2 tasks | 2 files |
