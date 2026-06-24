@@ -20,6 +20,18 @@ func daemonRunning(session string) bool {
 	return err == nil
 }
 
+// isJSONValue reports whether msg is an already-structured JSON object or array.
+// Used by the --json output path to pass a daemon-produced structured result
+// (e.g. stealth-check) through verbatim instead of re-wrapping it as a string.
+// Plain human-message results never start with { or [, so they stay wrapped.
+func isJSONValue(msg string) bool {
+	t := strings.TrimSpace(msg)
+	if len(t) == 0 || (t[0] != '{' && t[0] != '[') {
+		return false
+	}
+	return json.Valid([]byte(t))
+}
+
 func runClientCommand(c *cli.Context, req daemon.Request) error {
 	session := c.String("session")
 
@@ -74,8 +86,16 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	}
 
 	if c.Bool("json") {
-		out, _ := json.Marshal(map[string]string{"result": msg})
-		fmt.Println(string(out))
+		// If the daemon already produced a structured JSON object/array (e.g.
+		// stealth-check's per-signal verdicts), pass it through verbatim so it is
+		// not double-wrapped into {"result":"<escaped json string>"}. Plain string
+		// results (every other command) are wrapped as before.
+		if isJSONValue(msg) {
+			fmt.Println(msg)
+		} else {
+			out, _ := json.Marshal(map[string]string{"result": msg})
+			fmt.Println(string(out))
+		}
 	} else if c.Bool("raw") {
 		fmt.Println(msg)
 	} else {
