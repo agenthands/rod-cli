@@ -76,7 +76,11 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
   3. A user can route a named session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound to that session, and a second session with a different `--proxy` reports its own egress identity (no shared-daemon bleed).
   4. Proxy authentication succeeds against an authenticated proxy via CDP (`Fetch.continueWithAuth`) using `--proxy-auth`, with no URL-embedded credentials and no 407/dialog hang; credentials never appear in default output.
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 25-01-PLAN.md — StealthConfig substrate: sub-struct, --proxy/--proxy-auth/--profile flags, daemon-boundary forwarding, precedence resolver, already-running warning (PROFILE-01/02)
+- [ ] 25-02-PLAN.md — Per-session proxy wiring: parse into godoll ProxyConfig, ApplyToLauncher + CDP SetupBrowserAuth replacing bare launcher.Proxy, relay cleanup on Close (PROXY-01/02)
+- [ ] 25-03-PLAN.md — Session-isolation/auth/profile-roundtrip/credential-leak e2e tests + offline proxy fixture (PROFILE-01/02, PROXY-01/02)
 
 ### Phase 26: Configurable Fingerprint & Consistency Validator
 
