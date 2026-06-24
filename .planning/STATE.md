@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Proven & Configurable Stealth
-current_phase: 25
-current_phase_name: Stealth Config Surface & Per-Session Proxy
-status: executing
-stopped_at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
-last_updated: "2026-06-24T06:18:27.025Z"
+current_phase: 26
+current_phase_name: Configurable Fingerprint & Consistency Validator
+status: planning
+stopped_at: Completed Phase 25 (config surface + per-session proxy) — verified 4/4; code review fixed CR-01 proxy-auth argv leak + credential-safety warnings
+last_updated: "2026-06-24T01:35:00.000Z"
 last_activity: 2026-06-24
-last_activity_desc: "25-02 complete: per-session HTTP/SOCKS5 proxy via godoll ProxyConfig.ApplyToLauncher (replaced bare launcher.Proxy), CDP SetupBrowserAuth, embedded-cred strip, relay stopped on session close"
+last_activity_desc: "Phase 25 complete: StealthConfig substrate + per-session HTTP/SOCKS5 proxy (CDP auth); proxy-auth now env-passed (not argv), ProxyAuth never serialized, leak test scans argv+log"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -73,7 +73,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 25/26] Daemon-shared per-session config is architectural: proxy is launch-time, fingerprint is per-page; a shared `*rod.Browser` means per-session config likely needs per-BrowserContext isolation or documented "applies at session spawn" semantics. Flag for discuss-phase; add a concurrent `-s` session-isolation test. (Research Pitfall 8.)
+- ✅ RESOLVED (Phase 25): Daemon-shared per-session config concern does NOT apply — rod-cli is one-daemon-per-named-session (separate `rod-cli-<session>.port` + process + browser + Config). Per-session isolation is process isolation; NO per-BrowserContext work needed. Proven by the concurrent `-s` session-isolation test (`tests/proxy_test.go`).
+- [Phase 26+] WR-02 follow-up: authenticated SOCKS5 proxy (`socks5://` + `--proxy-auth`) is currently accepted but godoll's auth relay speaks HTTP CONNECT to the SOCKS upstream — may mishandle it. Root cause is in godoll. Either reject the combo loudly or fix the relay; revisit when SOCKS-auth is actually needed.
 - [Phase 24] CDP transport is detectable regardless of JS spoofing. Treat "hide CDP" as a small spike with an explicit YES/NO and a documented ceiling, not a guaranteed deliverable; add CDP-tell probes to the harness. (Research Pitfall 3.)
 
 ## Deferred Items
