@@ -41,6 +41,11 @@ func runDaemonServer(c *cli.Context) error {
 		// The client sets ROD_CLI_PROXY_AUTH on the spawned daemon (see cmd.go).
 		ProxyAuth: os.Getenv("ROD_CLI_PROXY_AUTH"),
 		Profile:   c.String("profile"),
+		// The 4 curated fingerprint pins arrive verbatim on the daemon argv.
+		UserAgent: c.String("user-agent"),
+		Locale:    c.String("locale"),
+		Timezone:  c.String("timezone"),
+		Platform:  c.String("platform"),
 	}
 	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
 		return err

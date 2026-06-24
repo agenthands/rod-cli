@@ -17,14 +17,13 @@ const ConfigName = "rod-cli.yaml"
 // and frozen into the per-session daemon's Config at NewContext, so it is both
 // session-persistent and session-isolated (one daemon process per named session).
 //
-// This phase (25) populates only the proxy + profile-selection fields. The
-// fingerprint pins that Phases 26–28 will add live here too — they are reserved
-// below but intentionally NOT declared yet, so the struct's intent is clear
-// without committing to field shapes those phases will design:
+// Phase 25 populated the proxy + profile-selection fields; Phase 26 implements
+// the configurable-fingerprint identity pins (UserAgent/Locale/Timezone/Platform/
+// Screen/AcceptLanguage/Languages/HardwareConcurrency/DeviceMemory/Vendor/
+// SpoofClientHints) declared below. They overlay onto the same precedence
+// resolver, so the flag → forward → Config.Stealth → NewContext path is reused.
+// Phases 27–28 still reserve their fields:
 //
-//	Reserved for Phase 26 (configurable fingerprint / consistency validator):
-//	  UserAgent, Locale, Timezone, Platform, Screen, AcceptLanguage, Languages,
-//	  HardwareConcurrency, DeviceMemory, Vendor, SpoofClientHints.
 //	Reserved for Phase 27 (canvas/WebGL/WebRTC hardening):
 //	  WebRTC (leak-protection toggle), CanvasNoise.
 //	Reserved for Phase 28 (human-behavior tuning):
@@ -49,6 +48,52 @@ type StealthConfig struct {
 	// ProfilePath is the resolved path to the stealth.Profile JSON file selected
 	// via --profile. Empty when no profile was requested.
 	ProfilePath string `yaml:"profilePath" json:"profilePath"`
+
+	// --- Phase 26: configurable fingerprint identity pins ---
+	// These overlay onto cfg.Stealth in ResolveStealth (profile at Tier 2, the
+	// curated --user-agent/--locale/--timezone/--platform flags at Tier 1) and
+	// are validated for coherence by deriveAndValidateFingerprint before launch.
+
+	// UserAgent is the navigator.userAgent / HTTP UA string. It is the single
+	// derivation anchor: the Chrome major version drives Client-Hints + the
+	// userAgentData brand version, and the OS token drives Platform + the
+	// Sec-Ch-Ua-Platform value when those are unset.
+	UserAgent string `yaml:"userAgent" json:"userAgent"`
+
+	// Locale is the BCP-47 locale (e.g. "en-US"). Derived from Languages[0] when unset.
+	Locale string `yaml:"locale" json:"locale"`
+
+	// Timezone is the IANA timezone ID (e.g. "America/New_York").
+	Timezone string `yaml:"timezone" json:"timezone"`
+
+	// Platform is navigator.platform (e.g. "Win32", "MacIntel", "Linux").
+	// Auto-derived from the UA OS token when unset.
+	Platform string `yaml:"platform" json:"platform"`
+
+	// AcceptLanguage is the HTTP Accept-Language header value.
+	AcceptLanguage string `yaml:"acceptLanguage" json:"acceptLanguage"`
+
+	// Languages is navigator.languages (e.g. ["en-US", "en"]).
+	Languages []string `yaml:"languages" json:"languages"`
+
+	// HardwareConcurrency is navigator.hardwareConcurrency (CPU cores).
+	HardwareConcurrency int `yaml:"hardwareConcurrency" json:"hardwareConcurrency"`
+
+	// DeviceMemory is navigator.deviceMemory (GB).
+	DeviceMemory int `yaml:"deviceMemory" json:"deviceMemory"`
+
+	// Vendor is navigator.vendor (e.g. "Google Inc.").
+	Vendor string `yaml:"vendor" json:"vendor"`
+
+	// SpoofClientHints enables injection of Sec-Ch-Ua headers + navigator.userAgentData.
+	SpoofClientHints bool `yaml:"spoofClientHints" json:"spoofClientHints"`
+
+	// Screen holds the spoofed screen geometry.
+	Screen struct {
+		Width             int     `yaml:"width" json:"width"`
+		Height            int     `yaml:"height" json:"height"`
+		DeviceScaleFactor float64 `yaml:"deviceScaleFactor" json:"deviceScaleFactor"`
+	} `yaml:"screen" json:"screen"`
 }
 
 type Config struct {
@@ -78,6 +123,14 @@ type StealthFlags struct {
 	ProxyAuth string
 	// Profile is the --profile value (a bare name or a path to a JSON profile).
 	Profile string
+	// UserAgent is the --user-agent value (the fingerprint derivation anchor).
+	UserAgent string
+	// Locale is the --locale value (BCP-47, e.g. "en-US").
+	Locale string
+	// Timezone is the --timezone value (IANA ID, e.g. "America/New_York").
+	Timezone string
+	// Platform is the --platform value (navigator.platform, e.g. "Win32").
+	Platform string
 }
 
 // resolveProfilePath maps a --profile value to a concrete file path. An empty

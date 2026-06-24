@@ -36,6 +36,13 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// daemon argv). The proxy URL and profile path are not secrets.
 	if c.String("proxy") != "" { flags = append(flags, "--proxy", c.String("proxy")) }
 	if c.String("profile") != "" { flags = append(flags, "--profile", c.String("profile")) }
+	// The 4 curated fingerprint pins are non-secret (UA is PII-ish but not a
+	// credential), so verbatim argv forwarding is correct — they must be present
+	// at spawn to "stick" for the session.
+	if c.String("user-agent") != "" { flags = append(flags, "--user-agent", c.String("user-agent")) }
+	if c.String("locale") != "" { flags = append(flags, "--locale", c.String("locale")) }
+	if c.String("timezone") != "" { flags = append(flags, "--timezone", c.String("timezone")) }
+	if c.String("platform") != "" { flags = append(flags, "--platform", c.String("platform")) }
 
 	// proxy-auth is a CREDENTIAL — it must NEVER enter the daemon argv (argv is
 	// world-readable via /proc/<pid>/cmdline and `ps`). Pass it out-of-band through
@@ -50,7 +57,8 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// stdout, so --raw/piped callers are unaffected) and proceed with the existing
 	// config. No silent ignore, no surprise auto-restart. The proxy-auth value is
 	// never echoed.
-	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != ""
+	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != "" ||
+		c.String("user-agent") != "" || c.String("locale") != "" || c.String("timezone") != "" || c.String("platform") != ""
 	if stealthRequested && daemonRunning(session) {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
@@ -95,6 +103,10 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "proxy", Usage: "route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port)"},
 			&cli.StringFlag{Name: "proxy-auth", Usage: "proxy credentials as user:pass (handled via CDP, never URL-embedded)"},
 			&cli.StringFlag{Name: "profile", Usage: "named stealth profile (name or path to a JSON profile file)"},
+			&cli.StringFlag{Name: "user-agent", Usage: "pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor)"},
+			&cli.StringFlag{Name: "locale", Usage: "pin the BCP-47 locale (e.g. en-US); derived from languages when unset"},
+			&cli.StringFlag{Name: "timezone", Usage: "pin the IANA timezone (e.g. America/New_York)"},
+			&cli.StringFlag{Name: "platform", Usage: "pin navigator.platform (e.g. Win32, MacIntel, Linux); auto-derived from the UA OS token when unset"},
 		},
 		Commands: []*cli.Command{
 			{
