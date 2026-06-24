@@ -4,16 +4,16 @@ milestone: v1.6
 milestone_name: Proven & Configurable Stealth
 current_phase: 25
 current_phase_name: Stealth Config Surface & Per-Session Proxy
-status: planning
-stopped_at: Completed Phase 24 (Detection Harness & CI Backbone) — verified passed 6/6, code review 0 critical
-last_updated: "2026-06-24T00:30:00.000Z"
+status: executing
+stopped_at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
+last_updated: "2026-06-24T06:30:00.000Z"
 last_activity: 2026-06-24
-last_activity_desc: "Phase 24 complete: offline detection harness + first test CI + VALIDATE-03 loud-failure; verified passed, 2 review warnings fixed"
+last_activity_desc: 25-01 complete — StealthConfig sub-struct + ResolveStealth precedence resolver + forwarded stealth flags + already-running stderr warning
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 7
+  completed_plans: 5
   percent: 17
 ---
 
@@ -29,9 +29,9 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 ## Current Position
 
 Phase: 25 of 29 (Stealth Config Surface & Per-Session Proxy) — second of 6 v1.6 phases (24–29)
-Plan: not yet planned
-Status: Phase 24 complete; ready to discuss/plan Phase 25
-Last activity: 2026-06-24 — Phase 24 complete (detection harness + test CI + VALIDATE-03), verified passed 6/6
+Plan: 1 of 3 complete (25-01 done; 25-02 proxy wiring + 25-03 e2e tests remain)
+Status: Plan 25-01 executed — stealth config substrate landed (PROFILE-01/02)
+Last activity: 2026-06-24 — 25-01 complete: StealthConfig sub-struct + ResolveStealth precedence resolver + --proxy/--proxy-auth/--profile flags forwarded across the daemon boundary, already-running stderr warning, loud bad-profile failure
 
 Progress: [██░░░░░░░░] 17% (1 of 6 phases)
 
@@ -83,8 +83,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:48:39.230Z
-Stopped at: Created v1.6 ROADMAP.md (Phases 24–29) and mapped all 17 requirements in REQUIREMENTS.md traceability
+Last session: 2026-06-24
+Stopped at: Completed 25-01-PLAN.md (stealth config substrate; PROFILE-01/02)
 Resume file: None
 
 ## Performance Metrics
@@ -102,3 +102,4 @@ Resume file: None
 | Phase 24 P01 | 2min | 2 tasks | 5 files |
 | Phase 24 P02 | 5m | 1 tasks | 1 files |
 | Phase 24 P03 | 6min | 1 tasks | 1 files |
+| Phase 25 P01 | 20min | 3 tasks | 6 files |

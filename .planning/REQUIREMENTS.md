@@ -27,8 +27,8 @@
 
 ### Stealth Profiles & Config Surface
 
-- [ ] **PROFILE-01**: A user can save and load a named stealth profile as a JSON config file (godoll `stealth.Profile` `Save`/`LoadProfile`), set once and inherited by every later command hitting the same daemon session.
-- [ ] **PROFILE-02**: Stealth configuration resolves with deterministic precedence — CLI flag > profile file > built-in default — once at daemon-spawn time, with no per-command stealth state bleeding across named sessions.
+- [x] **PROFILE-01**: A user can save and load a named stealth profile as a JSON config file (godoll `stealth.Profile` `Save`/`LoadProfile`), set once and inherited by every later command hitting the same daemon session.
+- [x] **PROFILE-02**: Stealth configuration resolves with deterministic precedence — CLI flag > profile file > built-in default — once at daemon-spawn time, with no per-command stealth state bleeding across named sessions.
 
 ### Per-Session Proxy
 
@@ -85,8 +85,8 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | HARNESS-02 | Phase 24 | Complete |
 | HARNESS-03 | Phase 24 | Complete |
 | VALIDATE-03 | Phase 24 | Complete |
-| PROFILE-01 | Phase 25 | Pending |
-| PROFILE-02 | Phase 25 | Pending |
+| PROFILE-01 | Phase 25 | Complete |
+| PROFILE-02 | Phase 25 | Complete |
 | PROXY-01 | Phase 25 | Pending |
 | PROXY-02 | Phase 25 | Pending |
 | FINGERPRINT-01 | Phase 26 | Pending |
