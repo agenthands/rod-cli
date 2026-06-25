@@ -74,6 +74,65 @@ var (
 	ioReadAll            = io.ReadAll
 )
 
+// --- Phase 28: humanize tuning option builders (HUMANIZE-01) ---
+//
+// Each builder translates the session's resolved StealthConfig humanize knobs
+// (pointer-typed; nil = unset) into godoll option slices. The load-bearing
+// invariant: an option is emitted ONLY when its value(s) are non-nil, and a
+// min/max-pair option ONLY when BOTH ends are set. When every knob is nil the
+// returned slice is empty ⇒ the variadic call applies godoll's own defaults ⇒
+// behavior is byte-for-byte the current default (zero regression).
+
+// typingOpts builds the []humanize.TypingOption for TypeWithHumanize from the
+// resolved tuning. WithTypingSpeed needs BOTH ends; the spread between them IS
+// the "delay jitter" (godoll has no separate jitter option).
+func typingOpts(s types.StealthConfig) []humanize.TypingOption {
+	var opts []humanize.TypingOption
+	if s.TypingSpeedMin != nil && s.TypingSpeedMax != nil {
+		opts = append(opts, humanize.WithTypingSpeed(*s.TypingSpeedMin, *s.TypingSpeedMax))
+	}
+	if s.TypoRate != nil {
+		opts = append(opts, humanize.WithTypoRate(*s.TypoRate))
+	}
+	return opts
+}
+
+// mouseOpts builds the []humanize.MouseOption for ClickWithMouse from the
+// resolved tuning. WithMouseSpeed needs BOTH ends.
+func mouseOpts(s types.StealthConfig) []humanize.MouseOption {
+	var opts []humanize.MouseOption
+	if s.MouseTremor != nil {
+		opts = append(opts, humanize.WithMouseTremor(*s.MouseTremor))
+	}
+	if s.MouseSteps != nil {
+		opts = append(opts, humanize.WithMouseSteps(*s.MouseSteps))
+	}
+	if s.MouseSpeedMin != nil && s.MouseSpeedMax != nil {
+		opts = append(opts, humanize.WithMouseSpeed(*s.MouseSpeedMin, *s.MouseSpeedMax))
+	}
+	if s.MouseDeviation != nil {
+		opts = append(opts, humanize.WithMouseDeviation(*s.MouseDeviation))
+	}
+	return opts
+}
+
+// scrollOpts builds the []humanize.ScrollOption for ScrollBy from the resolved
+// tuning. NOTE: godoll's WithPhysics() can only ENABLE physics (physics is its
+// own default and there is no disable option), so we emit WithPhysics() only for
+// an explicit true; a false/nil ScrollPhysics emits nothing and godoll's default
+// physics still applies — disabling would need a godoll signature change (out of
+// scope for v1.6).
+func scrollOpts(s types.StealthConfig) []humanize.ScrollOption {
+	var opts []humanize.ScrollOption
+	if s.ScrollDuration != nil {
+		opts = append(opts, humanize.WithDuration(*s.ScrollDuration))
+	}
+	if s.ScrollPhysics != nil && *s.ScrollPhysics {
+		opts = append(opts, humanize.WithPhysics())
+	}
+	return opts
+}
+
 func Navigate(ctx *types.Context, url string) (string, error) {
 	if !utils.IsHttp(url) {
 		return "", errors.New("invalid URL")
@@ -290,7 +349,7 @@ func Click(ctx *types.Context, ref string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := clickWithMouse(page, element); err != nil {
+	if err := clickWithMouse(page, element, mouseOpts(ctx.HumanizeTuning())...); err != nil {
 		return "", errors.Wrap(err, "Failed to click element")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -309,7 +368,7 @@ func Fill(ctx *types.Context, ref string, value string, submit bool) (string, er
 	// Clear input first
 	_ = element.SelectAllText()
 	_ = page.Keyboard.Press(input.Backspace)
-	if err := typeWithHumanize(element, value); err != nil {
+	if err := typeWithHumanize(element, value, typingOpts(ctx.HumanizeTuning())...); err != nil {
 		return "", errors.Wrap(err, "Failed to fill element")
 	}
 	if submit {
@@ -451,7 +510,7 @@ func Type(ctx *types.Context, ref string, text string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := typeWithHumanize(element, text); err != nil {
+	if err := typeWithHumanize(element, text, typingOpts(ctx.HumanizeTuning())...); err != nil {
 		return "", errors.Wrap(err, "Failed to type text")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -488,24 +547,26 @@ func MouseWheel(ctx *types.Context, dx, dy float64) (string, error) {
 		return "", err
 	}
 
+	sOpts := scrollOpts(ctx.HumanizeTuning())
+
 	// Handle Y axis scrolling with godoll physics
 	if dy > 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollDown, int(dy)); err != nil {
+		if err := humanizeScrollBy(page, humanize.ScrollDown, int(dy), sOpts...); err != nil {
 			return "", errors.Wrap(err, "Failed to scroll mouse wheel down")
 		}
 	} else if dy < 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollUp, int(-dy)); err != nil {
+		if err := humanizeScrollBy(page, humanize.ScrollUp, int(-dy), sOpts...); err != nil {
 			return "", errors.Wrap(err, "Failed to scroll mouse wheel up")
 		}
 	}
 
 	// Handle X axis scrolling with godoll physics
 	if dx > 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollRight, int(dx)); err != nil {
+		if err := humanizeScrollBy(page, humanize.ScrollRight, int(dx), sOpts...); err != nil {
 			return "", errors.Wrap(err, "Failed to scroll mouse wheel right")
 		}
 	} else if dx < 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollLeft, int(-dx)); err != nil {
+		if err := humanizeScrollBy(page, humanize.ScrollLeft, int(-dx), sOpts...); err != nil {
 			return "", errors.Wrap(err, "Failed to scroll mouse wheel left")
 		}
 	}

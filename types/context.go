@@ -319,6 +319,18 @@ func (ctx *Context) CurrentMode() Mode {
 	return ctx.mode
 }
 
+// HumanizeTuning returns the session's resolved StealthConfig so the actions
+// package can read the Phase-28 human-behavior tuning knobs (pointer-typed; nil
+// = unset = emit no godoll option). config is unexported and actions is a
+// separate package, so this exported accessor is the seam. Returning the whole
+// StealthConfig (rather than the built option slices) keeps the godoll/humanize
+// import OUT of types — actions, which already imports humanize, builds the
+// option slices itself. The returned struct is a copy (StealthConfig is a value
+// field), so callers cannot mutate the frozen session config.
+func (ctx *Context) HumanizeTuning() StealthConfig {
+	return ctx.config.Stealth
+}
+
 func (ctx *Context) ClosePage() error {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()

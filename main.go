@@ -57,6 +57,49 @@ func runDaemonServer(c *cli.Context) error {
 		v := c.Bool("canvas-noise")
 		stealthFlags.CanvasNoise = &v
 	}
+	// Phase-28 humanize tuning: capture each as a non-nil pointer ONLY when the
+	// flag is set on the daemon argv, so an unset knob stays nil (= emit no godoll
+	// option = byte-for-byte default behavior).
+	if c.IsSet("typing-speed-min") {
+		v := c.Int("typing-speed-min")
+		stealthFlags.TypingSpeedMin = &v
+	}
+	if c.IsSet("typing-speed-max") {
+		v := c.Int("typing-speed-max")
+		stealthFlags.TypingSpeedMax = &v
+	}
+	if c.IsSet("typo-rate") {
+		v := float32(c.Float64("typo-rate"))
+		stealthFlags.TypoRate = &v
+	}
+	if c.IsSet("mouse-tremor") {
+		v := c.Bool("mouse-tremor")
+		stealthFlags.MouseTremor = &v
+	}
+	if c.IsSet("mouse-steps") {
+		v := c.Int("mouse-steps")
+		stealthFlags.MouseSteps = &v
+	}
+	if c.IsSet("mouse-speed-min") {
+		v := c.Int("mouse-speed-min")
+		stealthFlags.MouseSpeedMin = &v
+	}
+	if c.IsSet("mouse-speed-max") {
+		v := c.Int("mouse-speed-max")
+		stealthFlags.MouseSpeedMax = &v
+	}
+	if c.IsSet("mouse-deviation") {
+		v := c.Float64("mouse-deviation")
+		stealthFlags.MouseDeviation = &v
+	}
+	if c.IsSet("scroll-duration") {
+		v := c.Int("scroll-duration")
+		stealthFlags.ScrollDuration = &v
+	}
+	if c.IsSet("scroll-physics") {
+		v := c.Bool("scroll-physics")
+		stealthFlags.ScrollPhysics = &v
+	}
 	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
 		return err
 	}

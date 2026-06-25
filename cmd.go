@@ -59,6 +59,19 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// set them so the daemon's *bool stays nil = keep-default-true otherwise.
 	if c.IsSet("webrtc-protection") { flags = append(flags, fmt.Sprintf("--webrtc-protection=%t", c.Bool("webrtc-protection"))) }
 	if c.IsSet("canvas-noise") { flags = append(flags, fmt.Sprintf("--canvas-noise=%t", c.Bool("canvas-noise"))) }
+	// Phase-28 humanize tuning flags forward ONLY when explicitly set so the
+	// daemon-side pointer stays nil (= keep godoll default) otherwise. Bool flags
+	// use the =%t form (so --mouse-tremor=false survives); int/float pass a value.
+	if c.IsSet("typing-speed-min") { flags = append(flags, "--typing-speed-min", fmt.Sprint(c.Int("typing-speed-min"))) }
+	if c.IsSet("typing-speed-max") { flags = append(flags, "--typing-speed-max", fmt.Sprint(c.Int("typing-speed-max"))) }
+	if c.IsSet("typo-rate") { flags = append(flags, "--typo-rate", fmt.Sprint(c.Float64("typo-rate"))) }
+	if c.IsSet("mouse-tremor") { flags = append(flags, fmt.Sprintf("--mouse-tremor=%t", c.Bool("mouse-tremor"))) }
+	if c.IsSet("mouse-steps") { flags = append(flags, "--mouse-steps", fmt.Sprint(c.Int("mouse-steps"))) }
+	if c.IsSet("mouse-speed-min") { flags = append(flags, "--mouse-speed-min", fmt.Sprint(c.Int("mouse-speed-min"))) }
+	if c.IsSet("mouse-speed-max") { flags = append(flags, "--mouse-speed-max", fmt.Sprint(c.Int("mouse-speed-max"))) }
+	if c.IsSet("mouse-deviation") { flags = append(flags, "--mouse-deviation", fmt.Sprint(c.Float64("mouse-deviation"))) }
+	if c.IsSet("scroll-duration") { flags = append(flags, "--scroll-duration", fmt.Sprint(c.Int("scroll-duration"))) }
+	if c.IsSet("scroll-physics") { flags = append(flags, fmt.Sprintf("--scroll-physics=%t", c.Bool("scroll-physics"))) }
 
 	// proxy-auth is a CREDENTIAL — it must NEVER enter the daemon argv (argv is
 	// world-readable via /proc/<pid>/cmdline and `ps`). Pass it out-of-band through
@@ -75,7 +88,11 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// never echoed.
 	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != "" ||
 		c.String("user-agent") != "" || c.String("locale") != "" || c.String("timezone") != "" || c.String("platform") != "" ||
-		c.IsSet("webrtc-protection") || c.IsSet("canvas-noise")
+		c.IsSet("webrtc-protection") || c.IsSet("canvas-noise") ||
+		c.IsSet("typing-speed-min") || c.IsSet("typing-speed-max") || c.IsSet("typo-rate") ||
+		c.IsSet("mouse-tremor") || c.IsSet("mouse-steps") || c.IsSet("mouse-speed-min") ||
+		c.IsSet("mouse-speed-max") || c.IsSet("mouse-deviation") ||
+		c.IsSet("scroll-duration") || c.IsSet("scroll-physics")
 	if stealthRequested && daemonRunning(session) {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
@@ -134,6 +151,19 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "platform", Usage: "pin navigator.platform (e.g. Win32, MacIntel, Linux); auto-derived from the UA OS token when unset"},
 			&cli.BoolFlag{Name: "webrtc-protection", Usage: "Prevent WebRTC local-IP leaks (default on; --webrtc-protection=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "canvas-noise", Usage: "Apply stable-per-session canvas/WebGL/audio noise (default on; --canvas-noise=false to disable)", Value: true},
+			// Phase-28 human-behavior tuning (HUMANIZE-01). Each is unset by default
+			// (no Value:) so c.IsSet gates forwarding; an unset knob keeps godoll's
+			// own default (zero regression). Resolved once at session spawn.
+			&cli.IntFlag{Name: "typing-speed-min", Usage: "Min per-keystroke delay in ms; set with --typing-speed-max to tune typing speed (the spread IS the delay jitter)"},
+			&cli.IntFlag{Name: "typing-speed-max", Usage: "Max per-keystroke delay in ms; set with --typing-speed-min (wider min/max spread = more delay jitter)"},
+			&cli.Float64Flag{Name: "typo-rate", Usage: "Probability 0.0-1.0 of an injected typo per keystroke"},
+			&cli.BoolFlag{Name: "mouse-tremor", Usage: "Add microscopic tremor to the mouse path (--mouse-tremor=false to disable)"},
+			&cli.IntFlag{Name: "mouse-steps", Usage: "Number of interpolation steps along the mouse path (more = smoother)"},
+			&cli.IntFlag{Name: "mouse-speed-min", Usage: "Min mouse speed in px/s; set with --mouse-speed-max"},
+			&cli.IntFlag{Name: "mouse-speed-max", Usage: "Max mouse speed in px/s; set with --mouse-speed-min"},
+			&cli.Float64Flag{Name: "mouse-deviation", Usage: "Mouse-path randomness factor 0.0-1.0"},
+			&cli.IntFlag{Name: "scroll-duration", Usage: "Base scroll animation duration in ms"},
+			&cli.BoolFlag{Name: "scroll-physics", Usage: "Use physics-based (eased) scrolling (godoll default; cannot be disabled via flag in v1.6)"},
 		},
 		Commands: []*cli.Command{
 			{

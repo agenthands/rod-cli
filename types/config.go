@@ -110,6 +110,63 @@ type StealthConfig struct {
 	// reason as WebRTCLeakProtection (nil = unset = resolve to the default true).
 	CanvasNoise *bool `yaml:"canvasNoise" json:"canvasNoise"`
 
+	// --- Phase 28: human-behavior tuning knobs (HUMANIZE-01) ---
+	//
+	// Every tunable is a POINTER so nil = "unset" is distinguishable from an
+	// explicit value (including an explicit zero/false). nil means NO godoll
+	// option is emitted at the action call site, so godoll's own default applies
+	// and behavior is byte-for-byte the current default (the zero-regression
+	// invariant). A plain value could not carry "unset", and a yaml-persisted
+	// explicit value would be clobbered by a baseline default — the Phase-27 CR-02
+	// lesson, carried forward.
+	//
+	// Speed ranges (TypingSpeed*, MouseSpeed*) are exposed as two fields each; the
+	// corresponding godoll min/max option is emitted ONLY when BOTH ends are set
+	// (otherwise nil → godoll default). Note: "delay jitter" has no dedicated
+	// godoll option — it IS the variance produced by the TypingSpeed min/max
+	// spread, so there is deliberately no separate jitter field.
+
+	// TypingSpeedMin / TypingSpeedMax are the per-keystroke delay range in
+	// milliseconds (humanize.WithTypingSpeed(min, max)). Both must be set to emit
+	// the option. A wider spread = more "delay jitter".
+	TypingSpeedMin *int `yaml:"typingSpeedMin" json:"typingSpeedMin"`
+	TypingSpeedMax *int `yaml:"typingSpeedMax" json:"typingSpeedMax"`
+
+	// TypoRate is the probability (0.0-1.0) of an injected typo per keystroke
+	// (humanize.WithTypoRate).
+	TypoRate *float32 `yaml:"typoRate" json:"typoRate"`
+
+	// MouseTremor enables/disables microscopic tremor on the mouse path
+	// (humanize.WithMouseTremor). A *bool so an explicit false (disable tremor)
+	// is honored distinctly from unset (godoll default).
+	MouseTremor *bool `yaml:"mouseTremor" json:"mouseTremor"`
+
+	// MouseSteps is the number of interpolation steps along the mouse path
+	// (humanize.WithMouseSteps); more steps = smoother/slower motion.
+	MouseSteps *int `yaml:"mouseSteps" json:"mouseSteps"`
+
+	// MouseSpeedMin / MouseSpeedMax are the mouse speed range in pixels/second
+	// (humanize.WithMouseSpeed(min, max)). Both must be set to emit the option.
+	MouseSpeedMin *int `yaml:"mouseSpeedMin" json:"mouseSpeedMin"`
+	MouseSpeedMax *int `yaml:"mouseSpeedMax" json:"mouseSpeedMax"`
+
+	// MouseDeviation is the mouse-path randomness factor 0.0-1.0
+	// (humanize.WithMouseDeviation).
+	MouseDeviation *float64 `yaml:"mouseDeviation" json:"mouseDeviation"`
+
+	// ScrollDuration is the base scroll animation duration in milliseconds
+	// (humanize.WithDuration).
+	ScrollDuration *int `yaml:"scrollDuration" json:"scrollDuration"`
+
+	// ScrollPhysics requests physics-based (cubic-bezier-eased) scrolling
+	// (humanize.WithPhysics). NOTE: godoll's WithPhysics() can only ENABLE
+	// physics — godoll has no option to disable it and physics is godoll's own
+	// default — so a true value emits WithPhysics() and a false/nil value emits
+	// nothing (godoll's default physics still applies). Disabling physics would
+	// require a godoll signature change (out of scope for v1.6). A *bool is kept
+	// for round-trip symmetry and forward-compat.
+	ScrollPhysics *bool `yaml:"scrollPhysics" json:"scrollPhysics"`
+
 	// Screen holds the spoofed screen geometry.
 	Screen struct {
 		Width             int     `yaml:"width" json:"width"`
@@ -160,6 +217,21 @@ type StealthFlags struct {
 	// CanvasNoise is the --canvas-noise value; nil when unset (default-on). A
 	// *bool so "unset" is distinguishable from an explicit "--canvas-noise=false".
 	CanvasNoise *bool
+
+	// --- Phase 28: human-behavior tuning flags (HUMANIZE-01) ---
+	// Each is a pointer captured only when the corresponding flag IsSet, so an
+	// unset flag stays nil and ResolveStealth leaves cfg.Stealth's value alone
+	// (no zero-override). Mirror of the StealthConfig humanize fields above.
+	TypingSpeedMin *int
+	TypingSpeedMax *int
+	TypoRate       *float32
+	MouseTremor    *bool
+	MouseSteps     *int
+	MouseSpeedMin  *int
+	MouseSpeedMax  *int
+	MouseDeviation *float64
+	ScrollDuration *int
+	ScrollPhysics  *bool
 }
 
 // resolveProfilePath maps a --profile value to a concrete file path. An empty
@@ -246,6 +318,45 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.CanvasNoise = flags.CanvasNoise
 	} else if cfg.Stealth.CanvasNoise == nil {
 		cfg.Stealth.CanvasNoise = boolPtr(true)
+	}
+
+	// Phase-28 humanize tuning, resolved precedence:
+	//   explicit --flag (non-nil StealthFlags pointer) > yaml-loaded cfg value
+	//   (non-nil) > unset (nil, LEFT nil).
+	// Unlike the Phase-27 toggles there is NO default-true baseline: nil is the
+	// load-bearing "emit no godoll option ⇒ godoll's own default applies ⇒
+	// byte-for-byte current behavior" signal (the zero-regression invariant).
+	// We only OVERRIDE when the flag is set; a nil flag preserves whatever the
+	// yaml/profile already put on cfg.Stealth (which is also nil when omitted).
+	if flags.TypingSpeedMin != nil {
+		cfg.Stealth.TypingSpeedMin = flags.TypingSpeedMin
+	}
+	if flags.TypingSpeedMax != nil {
+		cfg.Stealth.TypingSpeedMax = flags.TypingSpeedMax
+	}
+	if flags.TypoRate != nil {
+		cfg.Stealth.TypoRate = flags.TypoRate
+	}
+	if flags.MouseTremor != nil {
+		cfg.Stealth.MouseTremor = flags.MouseTremor
+	}
+	if flags.MouseSteps != nil {
+		cfg.Stealth.MouseSteps = flags.MouseSteps
+	}
+	if flags.MouseSpeedMin != nil {
+		cfg.Stealth.MouseSpeedMin = flags.MouseSpeedMin
+	}
+	if flags.MouseSpeedMax != nil {
+		cfg.Stealth.MouseSpeedMax = flags.MouseSpeedMax
+	}
+	if flags.MouseDeviation != nil {
+		cfg.Stealth.MouseDeviation = flags.MouseDeviation
+	}
+	if flags.ScrollDuration != nil {
+		cfg.Stealth.ScrollDuration = flags.ScrollDuration
+	}
+	if flags.ScrollPhysics != nil {
+		cfg.Stealth.ScrollPhysics = flags.ScrollPhysics
 	}
 
 	// Tier 1: CLI flags win over the profile and the defaults.
