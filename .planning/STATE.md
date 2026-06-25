@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Proven & Configurable Stealth
 status: executing
-stopped_at: Phase 27 complete — transitioned to Phase 28
-last_updated: "2026-06-24T14:34:58.854Z"
-last_activity: 2026-06-24
+stopped_at: Phase 28 complete — transitioned to Phase 29
+last_updated: "2026-06-25T09:54:27.836Z"
+last_activity: 2026-06-25
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 67
+  completed_phases: 5
+  total_plans: 18
+  completed_plans: 18
+  percent: 83
 ---
 
 # STATE.md — rod-cli
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-24)
 
 ## Current Position
 
-Phase: 28 of 4 (human behavior tuning)
+Phase: 29 of 4 (best effort live validation)
 Plan: Not started
 Status: Executing Phase 27
-Last activity: 2026-06-24
+Last activity: 2026-06-25
 
-Progress: [███████░░░] 67% (1 of 6 phases)
+Progress: [████████░░] 83% (1 of 6 phases)
 
 ## Roadmap Summary
 
@@ -89,7 +89,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-06-24T13:00:00.000Z
-Stopped at: Phase 27 complete — transitioned to Phase 28
+Stopped at: Phase 28 complete — transitioned to Phase 29
 Resume options: (a) set up the anvil in-project manifest(s) so the close-gate resolves, then `anvil-cc phase complete 27` and continue `/anvil-autonomous --from 28`; or (b) manually mark ROADMAP [x] + advance STATE + set HARDEN-01/02 validated, then continue. Same gate will block phases 28/29 and milestone-complete.
 Resume file: None
 

@@ -1,13 +1,13 @@
 ---
 author: substrate
 responsible: architect
-emitted_at: 2026-06-24
-phase: 27
+emitted_at: 2026-06-25
+phase: 28
 artifact_kind: analysis
 status: draft
 ---
 
-# signal SIG-DV-27-89867bb8 (debt_velocity — phase 27)
+# signal SIG-DV-28-82a4588d (debt_velocity — phase 28)
 
 ## Records
 
@@ -15,9 +15,9 @@ status: draft
 signal:
   record_author: substrate
   accountable_owner: architect
-  id: SIG-DV-27-89867bb8
+  id: SIG-DV-28-82a4588d
   emitter: substrate
-  about: phase-27
+  about: phase-28
   statement: per-component debt accumulation/discharge rates at phase close (§12.8)
   kind: debt_velocity
   severity: informational

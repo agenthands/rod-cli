@@ -40,7 +40,7 @@ Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
 - [x] **Phase 25: Stealth Config Surface & Per-Session Proxy** — Session-persistent stealth config (flags + named profile file, precedence-resolved at daemon spawn) plus per-session HTTP/SOCKS5 proxy with CDP auth (completed 2026-06-24)
 - [x] **Phase 26: Configurable Fingerprint & Consistency Validator** — Pinnable coherent fingerprint from a single source of truth, consistency invariant gate, the CH-121 fix, and a user-facing per-signal stealth-check verdict (completed 2026-06-24)
 - [x] **Phase 27: Canvas/WebGL/WebRTC Hardening** — Wire the two genuine godoll gaps: WebRTC IP-leak prevention and stable-per-session canvas/WebGL/audio noise, both harness-asserted (completed 2026-06-24)
-- [ ] **Phase 28: Human-Behavior Tuning** — Thread godoll humanize options (typing speed, typo rate, delay jitter, mouse path, scroll) through actions as flags/profile fields
+- [x] **Phase 28: Human-Behavior Tuning** — Thread godoll humanize options (typing speed, typo rate, delay jitter, mouse path, scroll) through actions as flags/profile fields (completed 2026-06-25)
 - [ ] **Phase 29: Best-Effort Live Validation** — Opt-in, non-blocking, build-tagged live smoke check (Cloudflare/DataDome/CreepJS) kept out of the CI gate
 
 ## Phase Details
@@ -163,7 +163,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 25. Stealth Config Surface & Per-Session Proxy | v1.6 | 3/3 | Complete   | 2026-06-24 |
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 5/5 | Complete    | 2026-06-24 |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 4/4 | Complete    | 2026-06-24 |
-| 28. Human-Behavior Tuning | v1.6 | 0/TBD | Not started | - |
+| 28. Human-Behavior Tuning | v1.6 | 0/TBD | Complete    | 2026-06-25 |
 | 29. Best-Effort Live Validation | v1.6 | 0/TBD | Not started | - |
 </content>
 </invoke>

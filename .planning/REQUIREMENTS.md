@@ -42,7 +42,7 @@
 
 ### Human-Behavior Tuning
 
-- [ ] **HUMANIZE-01**: A user can tune human-like interaction (typing speed, typo rate, delay jitter, mouse-path realism, scroll behavior) via flags/profile, threading godoll `humanize` options that `actions.go` currently calls with defaults only.
+- [x] **HUMANIZE-01**: A user can tune human-like interaction (typing speed, typo rate, delay jitter, mouse-path realism, scroll behavior) via flags/profile, threading godoll `humanize` options that `actions.go` currently calls with defaults only.
 
 ### Best-Effort Live Validation
 
@@ -96,7 +96,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | VALIDATE-02 | Phase 26 | Complete |
 | HARDEN-01 | Phase 27 | Complete |
 | HARDEN-02 | Phase 27 | Complete |
-| HUMANIZE-01 | Phase 28 | Pending |
+| HUMANIZE-01 | Phase 28 | Complete |
 | LIVEWAF-01 | Phase 29 | Pending |
 
 **Coverage:**
