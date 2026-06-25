@@ -65,7 +65,12 @@ func gotoLiveOrSkip(t *testing.T, url string) {
 	t.Helper()
 	out, err := runCli("goto", url)
 	if err != nil {
-		t.Skipf("live target %s unreachable (no network egress / target down) — "+
+		// runCli execs the prebuilt ../rod-cli, so this error can mean the target
+		// is unreachable (no egress / target down) OR the binary was not built
+		// (forgot `go build -o rod-cli .`). Either way it is a best-effort SKIP,
+		// never a failure — but don't assert a cause we didn't establish.
+		t.Skipf("live target %s unreachable (no network egress / target down) or "+
+			"rod-cli binary not built (run `go build -o rod-cli .` first) — "+
 			"best-effort skip, not a failure: %v\noutput: %s", url, err, out)
 	}
 	// Even on a nil error the page may be a "can't reach" interstitial; the
@@ -87,7 +92,10 @@ func TestLiveDetection(t *testing.T) {
 		if !ok {
 			t.Skipf("cloudflare: could not read page state (best-effort skip): %s", title)
 		}
-		body, _ := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		body, bodyOK := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		if !bodyOK {
+			body = "" // never let eval error text feed the content heuristic
+		}
 		lc := strings.ToLower(title + " " + body)
 		// Heuristic, informational only: Cloudflare's interstitial mentions these.
 		challenged := strings.Contains(lc, "just a moment") ||
@@ -108,7 +116,10 @@ func TestLiveDetection(t *testing.T) {
 		if !ok {
 			t.Skipf("datadome: could not read page state (best-effort skip): %s", title)
 		}
-		body, _ := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		body, bodyOK := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		if !bodyOK {
+			body = "" // never let eval error text feed the content heuristic
+		}
 		lc := strings.ToLower(title + " " + body)
 		challenged := strings.Contains(lc, "datadome") ||
 			strings.Contains(lc, "blocked") ||
