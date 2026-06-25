@@ -7,8 +7,21 @@ noSandbox: false
 proxy: ""
 stealth:
     proxy: ""
-    proxyAuth: ""
     profilePath: ""
+    userAgent: ""
+    locale: ""
+    timezone: ""
+    platform: ""
+    acceptLanguage: ""
+    languages: []
+    hardwareConcurrency: 0
+    deviceMemory: 0
+    vendor: ""
+    spoofClientHints: false
+    screen:
+        width: 0
+        height: 0
+        deviceScaleFactor: 0
 loggerConfig:
     loggerLevel: info
     loggerFileName: ./log/server.log

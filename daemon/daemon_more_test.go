@@ -188,7 +188,7 @@ func TestEnsureDaemonFails(t *testing.T) {
 	session := uniqueSession("ensurefail")
 	_ = os.Remove(portFilePath(session))
 
-	err := EnsureDaemon(session, "/nonexistent/rod-cli-binary-xyz", nil)
+	err := EnsureDaemon(session, "/nonexistent/rod-cli-binary-xyz", nil, nil)
 	if err == nil {
 		t.Fatal("expected EnsureDaemon to fail with a bad exe path")
 	}
@@ -214,7 +214,7 @@ func TestEnsureDaemonSpawnAndClose(t *testing.T) {
 	_ = os.Remove(portFilePath(session))
 
 	// Spawn a real headless daemon and wait for it to become reachable.
-	err := EnsureDaemon(session, tmpBin, []string{"--headless"})
+	err := EnsureDaemon(session, tmpBin, []string{"--headless"}, nil)
 	if err != nil {
 		t.Fatalf("EnsureDaemon spawn failed: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestEnsureDaemonSpawnAndClose(t *testing.T) {
 	}
 
 	// A second EnsureDaemon should short-circuit (already running).
-	if err := EnsureDaemon(session, tmpBin, []string{"--headless"}); err != nil {
+	if err := EnsureDaemon(session, tmpBin, []string{"--headless"}, nil); err != nil {
 		t.Fatalf("second EnsureDaemon should succeed: %v", err)
 	}
 }
@@ -308,7 +308,7 @@ func TestInProcessDaemonPingAndActions(t *testing.T) {
 	}
 
 	// EnsureDaemon should be a no-op when the daemon is already running.
-	if err := EnsureDaemon(session, "/nonexistent", nil); err != nil {
+	if err := EnsureDaemon(session, "/nonexistent", nil, nil); err != nil {
 		t.Fatalf("EnsureDaemon should succeed when daemon already up: %v", err)
 	}
 
