@@ -325,8 +325,10 @@ func (ctx *Context) CurrentMode() Mode {
 // separate package, so this exported accessor is the seam. Returning the whole
 // StealthConfig (rather than the built option slices) keeps the godoll/humanize
 // import OUT of types — actions, which already imports humanize, builds the
-// option slices itself. The returned struct is a copy (StealthConfig is a value
-// field), so callers cannot mutate the frozen session config.
+// option slices itself. The returned struct is a SHALLOW copy: its value fields
+// are copied, but its pointer knobs (*int, *bool, …) still alias the frozen
+// session config, so they are read-only by convention (the actions builders only
+// deref them, never assign through them).
 func (ctx *Context) HumanizeTuning() StealthConfig {
 	return ctx.config.Stealth
 }

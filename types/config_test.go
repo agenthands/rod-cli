@@ -374,3 +374,142 @@ func TestLoadConfig_MalformedYAML(t *testing.T) {
 		t.Fatal("expected nil config on decode error")
 	}
 }
+
+// intPtr / f32Ptr / f64Ptr are local pointer constructors for the Phase-28
+// humanize tuning tests (the production code uses inline &v captures).
+func intPtr(i int) *int         { return &i }
+func f32Ptr(f float32) *float32 { return &f }
+func f64Ptr(f float64) *float64 { return &f }
+
+// TestResolveStealth_HumanizeTuningValidation locks the Phase-28 fail-fast that
+// keeps out-of-range/inverted/incomplete tuning from reaching godoll's rand,
+// which PANICS on negative or min>max input (../godoll/internal/rand/rand.go).
+func TestResolveStealth_HumanizeTuningValidation(t *testing.T) {
+	bad := []struct {
+		name  string
+		flags StealthFlags
+	}{
+		{"typing_min_gt_max", StealthFlags{TypingSpeedMin: intPtr(200), TypingSpeedMax: intPtr(100)}},
+		{"typing_negative", StealthFlags{TypingSpeedMin: intPtr(-5), TypingSpeedMax: intPtr(50)}},
+		{"typing_incomplete_min_only", StealthFlags{TypingSpeedMin: intPtr(50)}},
+		{"typing_incomplete_max_only", StealthFlags{TypingSpeedMax: intPtr(50)}},
+		{"mouse_speed_min_gt_max", StealthFlags{MouseSpeedMin: intPtr(300), MouseSpeedMax: intPtr(100)}},
+		{"mouse_speed_incomplete", StealthFlags{MouseSpeedMin: intPtr(100)}},
+		{"typo_rate_over_one", StealthFlags{TypoRate: f32Ptr(1.5)}},
+		{"typo_rate_negative", StealthFlags{TypoRate: f32Ptr(-0.1)}},
+		{"mouse_deviation_over_one", StealthFlags{MouseDeviation: f64Ptr(2.0)}},
+		{"mouse_steps_zero", StealthFlags{MouseSteps: intPtr(0)}},
+		{"mouse_steps_negative", StealthFlags{MouseSteps: intPtr(-3)}},
+		{"scroll_duration_zero", StealthFlags{ScrollDuration: intPtr(0)}},
+	}
+	for _, tc := range bad {
+		t.Run("rejects_"+tc.name, func(t *testing.T) {
+			cfg := DefaultConfig
+			f := tc.flags
+			if err := ResolveStealth(&cfg, &f); err == nil {
+				t.Errorf("expected loud error for %s, got nil", tc.name)
+			}
+		})
+	}
+
+	// Valid tuning resolves cleanly and lands on cfg.Stealth.
+	t.Run("accepts_valid", func(t *testing.T) {
+		cfg := DefaultConfig
+		f := StealthFlags{
+			TypingSpeedMin: intPtr(50), TypingSpeedMax: intPtr(150),
+			TypoRate:    f32Ptr(0),
+			MouseTremor: boolPtr(false),
+			MouseSteps:  intPtr(20),
+			MouseSpeedMin: intPtr(100), MouseSpeedMax: intPtr(300),
+			MouseDeviation: f64Ptr(0.2),
+			ScrollDuration: intPtr(500),
+			ScrollPhysics:  boolPtr(true),
+		}
+		if err := ResolveStealth(&cfg, &f); err != nil {
+			t.Fatalf("ResolveStealth(valid): %v", err)
+		}
+		if cfg.Stealth.TypingSpeedMin == nil || *cfg.Stealth.TypingSpeedMin != 50 {
+			t.Errorf("TypingSpeedMin not applied: %v", cfg.Stealth.TypingSpeedMin)
+		}
+		if cfg.Stealth.MouseTremor == nil || *cfg.Stealth.MouseTremor {
+			t.Errorf("MouseTremor(false) not applied: %v", cfg.Stealth.MouseTremor)
+		}
+	})
+
+	// Unset tuning stays nil (the zero-regression signal) and validates fine.
+	t.Run("unset_stays_nil", func(t *testing.T) {
+		cfg := DefaultConfig
+		if err := ResolveStealth(&cfg, &StealthFlags{}); err != nil {
+			t.Fatalf("ResolveStealth(empty): %v", err)
+		}
+		if cfg.Stealth.TypingSpeedMin != nil || cfg.Stealth.TypoRate != nil ||
+			cfg.Stealth.MouseSteps != nil || cfg.Stealth.ScrollDuration != nil {
+			t.Errorf("unset humanize knobs should remain nil, got %+v", cfg.Stealth)
+		}
+	})
+}
+
+// TestStealthConfig_HumanizeKnobsRoundTrip proves the Phase-28 humanize knobs
+// persist and reload through the StealthConfig (de)serialization used by the
+// named JSON profile and the yaml config (must-have truth 3).
+func TestStealthConfig_HumanizeKnobsRoundTrip(t *testing.T) {
+	src := StealthConfig{
+		TypingSpeedMin: intPtr(40), TypingSpeedMax: intPtr(160),
+		TypoRate:    f32Ptr(0.05),
+		MouseTremor: boolPtr(false),
+		MouseSteps:  intPtr(30),
+		MouseSpeedMin: intPtr(120), MouseSpeedMax: intPtr(280),
+		MouseDeviation: f64Ptr(0.25),
+		ScrollDuration: intPtr(600),
+		ScrollPhysics:  boolPtr(true),
+	}
+
+	// JSON (the named profile path).
+	jb, err := json.Marshal(src)
+	if err != nil {
+		t.Fatalf("json marshal: %v", err)
+	}
+	var jOut StealthConfig
+	if err := json.Unmarshal(jb, &jOut); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	assertHumanizeEqual(t, "json", src, jOut)
+
+	// YAML (the config file path).
+	yb, err := yaml.Marshal(src)
+	if err != nil {
+		t.Fatalf("yaml marshal: %v", err)
+	}
+	var yOut StealthConfig
+	if err := yaml.Unmarshal(yb, &yOut); err != nil {
+		t.Fatalf("yaml unmarshal: %v", err)
+	}
+	assertHumanizeEqual(t, "yaml", src, yOut)
+}
+
+func assertHumanizeEqual(t *testing.T, tag string, want, got StealthConfig) {
+	t.Helper()
+	eqI := func(name string, a, b *int) {
+		if (a == nil) != (b == nil) || (a != nil && *a != *b) {
+			t.Errorf("%s: %s mismatch want %v got %v", tag, name, a, b)
+		}
+	}
+	eqI("TypingSpeedMin", want.TypingSpeedMin, got.TypingSpeedMin)
+	eqI("TypingSpeedMax", want.TypingSpeedMax, got.TypingSpeedMax)
+	eqI("MouseSteps", want.MouseSteps, got.MouseSteps)
+	eqI("MouseSpeedMin", want.MouseSpeedMin, got.MouseSpeedMin)
+	eqI("MouseSpeedMax", want.MouseSpeedMax, got.MouseSpeedMax)
+	eqI("ScrollDuration", want.ScrollDuration, got.ScrollDuration)
+	if (want.TypoRate == nil) != (got.TypoRate == nil) || (want.TypoRate != nil && *want.TypoRate != *got.TypoRate) {
+		t.Errorf("%s: TypoRate mismatch want %v got %v", tag, want.TypoRate, got.TypoRate)
+	}
+	if (want.MouseDeviation == nil) != (got.MouseDeviation == nil) || (want.MouseDeviation != nil && *want.MouseDeviation != *got.MouseDeviation) {
+		t.Errorf("%s: MouseDeviation mismatch want %v got %v", tag, want.MouseDeviation, got.MouseDeviation)
+	}
+	if (want.MouseTremor == nil) != (got.MouseTremor == nil) || (want.MouseTremor != nil && *want.MouseTremor != *got.MouseTremor) {
+		t.Errorf("%s: MouseTremor mismatch want %v got %v", tag, want.MouseTremor, got.MouseTremor)
+	}
+	if (want.ScrollPhysics == nil) != (got.ScrollPhysics == nil) || (want.ScrollPhysics != nil && *want.ScrollPhysics != *got.ScrollPhysics) {
+		t.Errorf("%s: ScrollPhysics mismatch want %v got %v", tag, want.ScrollPhysics, got.ScrollPhysics)
+	}
+}

@@ -59,28 +59,39 @@ func TestHumanizeTuning(t *testing.T) {
 		return time.Since(start)
 	}
 
-	// Default path: no humanize flags ⇒ godoll's own default typing speed
+	// Both comparison paths pin --typo-rate 0 to REMOVE the high-variance term:
+	// godoll's typo-correction sleeps are hardcoded constants (up to +400ms each,
+	// independent of the speed config) firing at the default 0.02 rate on every
+	// path. Left in, a default run that happens to inject a couple of typos while
+	// the slow run injects none could erode the slow-vs-default gap toward the
+	// margin — an intermittent false-fail. With typos disabled, the base-delay
+	// difference is the ONLY signal, making the comparison deterministic.
+
+	// Default-speed path (typos off): godoll's own default typing speed
 	// (30-120ms/key). Asserts the pre-existing >=300ms humanize bound still holds,
-	// i.e. the tuning surface did not regress the default path (criterion 3).
-	defaultElapsed := typeOnce(t, nil)
+	// i.e. the tuning surface did not regress the default-speed path (criterion 3).
+	// With typos off the deterministic floor is 11 keys × 30ms = 330ms (plus a
+	// space bonus), comfortably above the 300ms bound.
+	defaultElapsed := typeOnce(t, []string{"--typo-rate", "0"})
 	if defaultElapsed < 300*time.Millisecond {
-		t.Errorf("zero-regression: default-path typing took %v, expected >= 300ms (existing humanize bound)", defaultElapsed)
+		t.Errorf("zero-regression: default-speed typing took %v, expected >= 300ms (existing humanize bound)", defaultElapsed)
 	}
 
-	// Slow path: pin a slow per-keystroke delay. Bounded (150-200ms) so the test
-	// stays fast (~11 keys ⇒ ~2s) while being unambiguously slower than the
-	// default. If the knob were silently ignored, this would clock the same as the
-	// default and the assertion below would fail.
-	slowElapsed := typeOnce(t, []string{"--typing-speed-min", "150", "--typing-speed-max", "200"})
+	// Slow path: pin a slow per-keystroke delay (typos off). Bounded (300-400ms)
+	// so the test stays fast (~11 keys ⇒ ~4s) while being unambiguously slower:
+	// the slow base delay (11×~350ms ≈ 3.8s) vs default (11×~75ms ≈ 0.8s) gap is
+	// ~3s, far above the required margin. A silently-ignored knob would clock the
+	// same as default and fail.
+	slowElapsed := typeOnce(t, []string{"--typing-speed-min", "300", "--typing-speed-max", "400", "--typo-rate", "0"})
 
 	if slowElapsed <= defaultElapsed {
 		t.Errorf("tunability: slow --typing-speed (%v) was not measurably longer than default (%v) — the knob appears to be ignored",
 			slowElapsed, defaultElapsed)
 	}
-	// Require a clear margin so timing noise on the default path cannot produce a
-	// false pass: slow must exceed default by at least 500ms.
-	if slowElapsed < defaultElapsed+500*time.Millisecond {
-		t.Errorf("tunability: slow typing (%v) did not exceed default (%v) by a clear margin (>=500ms) — tuning effect too small to be the knob",
+	// Require a clear margin so residual timing noise cannot produce a false pass:
+	// with typos off and a 300-400ms pin, the real gap is ~3s, so >=1s is safe.
+	if slowElapsed < defaultElapsed+1*time.Second {
+		t.Errorf("tunability: slow typing (%v) did not exceed default (%v) by a clear margin (>=1s) — tuning effect too small to be the knob",
 			slowElapsed, defaultElapsed)
 	}
 

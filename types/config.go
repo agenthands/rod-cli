@@ -359,6 +359,16 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.ScrollPhysics = flags.ScrollPhysics
 	}
 
+	// Fail fast on out-of-range / inverted / incomplete humanize tuning BEFORE the
+	// browser launches. godoll's rand.RandomDuration/RandomInt PANIC on negative or
+	// min>max input (../godoll/internal/rand/rand.go), and that panic would fire
+	// per-keystroke deep inside a frozen daemon session — an opaque, unrecoverable
+	// break of every type/fill/mouse action. Rejecting here (the same spawn-time
+	// seam as deriveAndValidateFingerprint) turns it into a clear refusal to spawn.
+	if err := validateHumanizeTuning(&cfg.Stealth); err != nil {
+		return err
+	}
+
 	// Tier 1: CLI flags win over the profile and the defaults.
 	if flags.Proxy != "" {
 		cfg.Stealth.Proxy = flags.Proxy
@@ -606,6 +616,62 @@ func validateHardwareAndScreen(s *StealthConfig) error {
 	}
 	if s.DeviceMemory != 0 && (s.DeviceMemory < 1 || s.DeviceMemory > 64) {
 		return errors.Errorf("implausible deviceMemory %d — must be between 1 and 64 (GB)", s.DeviceMemory)
+	}
+	return nil
+}
+
+// validateHumanizeTuning rejects out-of-range, inverted, or incomplete Phase-28
+// humanize tuning BEFORE it can reach a godoll option at an action call site.
+// This is fail-fast at config-resolution time (the daemon-spawn seam): a bad
+// value caught here returns an error main.go surfaces on stderr and aborts the
+// daemon, rather than panicking per-keystroke inside a frozen session (godoll's
+// rand.RandomDuration/RandomInt panic on negative or min>max input). nil fields
+// are "unset" and skipped — only explicitly-set values are checked.
+func validateHumanizeTuning(s *StealthConfig) error {
+	// Typing speed: a min/max pair feeding godoll's WithTypingSpeed →
+	// rand.RandomDuration(min,max). Both ends or neither (a lone end is silently
+	// inert at the builder, which is a confusing no-op — reject it explicitly).
+	// Require 0 <= min <= max.
+	if err := validateSpeedPair("--typing-speed", s.TypingSpeedMin, s.TypingSpeedMax); err != nil {
+		return err
+	}
+	// Mouse speed: same pair shape, feeds WithMouseSpeed.
+	if err := validateSpeedPair("--mouse-speed", s.MouseSpeedMin, s.MouseSpeedMax); err != nil {
+		return err
+	}
+
+	if s.TypoRate != nil && (*s.TypoRate < 0 || *s.TypoRate > 1) {
+		return errors.Errorf("typo-rate %v out of range — must be between 0.0 and 1.0", *s.TypoRate)
+	}
+	if s.MouseDeviation != nil && (*s.MouseDeviation < 0 || *s.MouseDeviation > 1) {
+		return errors.Errorf("mouse-deviation %v out of range — must be between 0.0 and 1.0", *s.MouseDeviation)
+	}
+	if s.MouseSteps != nil && *s.MouseSteps < 1 {
+		return errors.Errorf("mouse-steps %d invalid — must be a positive integer", *s.MouseSteps)
+	}
+	if s.ScrollDuration != nil && *s.ScrollDuration < 1 {
+		return errors.Errorf("scroll-duration %d invalid — must be a positive integer (milliseconds)", *s.ScrollDuration)
+	}
+	return nil
+}
+
+// validateSpeedPair enforces that a min/max humanize speed range is either fully
+// unset or fully set with 0 <= min <= max. An incomplete pair is rejected (the
+// builders pair-gate it to a silent no-op, which is a confusing half-honored
+// input); an inverted or negative pair would panic godoll's rand at the call
+// site, so it is rejected here at spawn time.
+func validateSpeedPair(name string, min, max *int) error {
+	if (min == nil) != (max == nil) {
+		return errors.Errorf("incomplete %s range — set both %s-min and %s-max or neither", name, name, name)
+	}
+	if min == nil { // both nil → unset
+		return nil
+	}
+	if *min < 0 || *max < 0 {
+		return errors.Errorf("%s range %d..%d invalid — both ends must be non-negative", name, *min, *max)
+	}
+	if *min > *max {
+		return errors.Errorf("%s range %d..%d invalid — min must be <= max", name, *min, *max)
 	}
 	return nil
 }
