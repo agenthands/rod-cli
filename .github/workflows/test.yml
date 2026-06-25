@@ -29,5 +29,14 @@ jobs:
 
       # Headless is the blocking gate. The detection harness is fully offline
       # (internal/detect fixture on 127.0.0.1) — no external-network step here.
+      #
+      # DELIBERATE EXCLUSION (LIVEWAF-01): the opt-in Tier-2 live smoke check in
+      # tests/detection_live_test.go is guarded by `//go:build detection_live`,
+      # so this plain `go test ./...` (NO -tags) never compiles or runs it. That
+      # is intentional and load-bearing: the live suite hits real third-party WAFs
+      # (Cloudflare/DataDome/CreepJS) and is flaky by nature, so it must NOT gate
+      # CI. Do NOT add `-tags detection_live` here. Run it manually instead:
+      #   go test -tags detection_live ./tests/ -run TestLiveDetection -v
+      # See docs/stealth-validation.md for the Tier-1 vs Tier-2 rationale.
       - name: Run tests (headless)
         run: go test ./... -count=1

@@ -1,0 +1,138 @@
+//go:build detection_live
+
+// Tier-2 best-effort LIVE detection smoke check (LIVEWAF-01).
+//
+// This file is the OPT-IN, NON-BLOCKING sibling of the Tier-1 offline harness
+// (tests/detection_test.go). It is excluded from the default build/test and from
+// the CI gate BY CONSTRUCTION: the `//go:build detection_live` constraint on the
+// first line means a plain `go build ./...` / `go test ./...` (and .github/
+// workflows/test.yml, which runs `go test ./... -count=1` with NO -tags) never
+// compiles or runs it. Run it deliberately:
+//
+//	go build -o rod-cli .   # the suite execs the prebuilt ../rod-cli
+//	go test -tags detection_live ./tests/ -run TestLiveDetection -v
+//
+// Non-blocking in BOTH senses (the honesty invariant of this phase):
+//   1. Excluded from CI by the build tag.
+//   2. Informational WITHIN the suite — every outcome is reported with t.Logf,
+//      and an unreachable target / no-egress environment is t.Skip'd. This suite
+//      NEVER calls t.Fatal/t.Errorf on a live detection or a network error: a
+//      flaky third-party challenge must not produce a red build. A live "green"
+//      is NOT the bar — the bar is exclusion + honest, informational reporting.
+//      See docs/stealth-validation.md for the ceiling (TLS/JA3/IP/CDP layers a
+//      JS-injecting CLI cannot control).
+
+package tests
+
+import (
+	"strings"
+	"testing"
+)
+
+// Live third-party targets. THESE ARE BEST-EFFORT: they are third-party URLs that
+// may change behavior, move, rate-limit, or disappear at any time, and reaching
+// them requires real network egress that the verify environment may not have.
+// Treat every one as "may be unreachable" — never as a guaranteed signal.
+const (
+	// cloudflareLiveURL is a Cloudflare-challenge-protected page.
+	cloudflareLiveURL = "https://nopecha.com/demo/cloudflare"
+	// dataDomeLiveURL is a DataDome-protected demo endpoint.
+	dataDomeLiveURL = "https://antoinevastel.com/bots/datadome"
+	// creepJSLiveURL exposes a fingerprint trust score in the DOM.
+	creepJSLiveURL = "https://abrahamjuliot.github.io/creepjs/"
+)
+
+// liveEvalBestEffort runs an eval against the live page and returns (value, ok).
+// ok is false on any error — the caller decides whether that means "skip"
+// (unreachable) or "log a degraded verdict". It NEVER fails the test itself.
+func liveEvalBestEffort(t *testing.T, expr string) (string, bool) {
+	t.Helper()
+	out, err := runCli("eval", expr)
+	if err != nil {
+		return out, false
+	}
+	val := out
+	if i := strings.Index(out, evalResultPrefix); i >= 0 {
+		val = out[i+len(evalResultPrefix):]
+	}
+	return strings.TrimSpace(val), true
+}
+
+// gotoLiveOrSkip navigates the real binary to a live target. A navigation error
+// (no egress, DNS failure, target down) is treated as "unreachable" and SKIPS the
+// subtest — it is explicitly NOT a failure, per the non-blocking discipline.
+func gotoLiveOrSkip(t *testing.T, url string) {
+	t.Helper()
+	out, err := runCli("goto", url)
+	if err != nil {
+		t.Skipf("live target %s unreachable (no network egress / target down) — "+
+			"best-effort skip, not a failure: %v\noutput: %s", url, err, out)
+	}
+	// Even on a nil error the page may be a "can't reach" interstitial; the
+	// per-target verdict logic below interprets the loaded DOM informationally.
+}
+
+// TestLiveDetection is the opt-in Tier-2 smoke check. Each target is an
+// independently-skippable subtest that navigates the REAL binary to a live WAF /
+// fingerprint page and reports the observed verdict INFORMATIONALLY. No subtest
+// asserts a pass: a live green is flaky by nature and is not the bar.
+func TestLiveDetection(t *testing.T) {
+	// Deterministic daemon state, mirroring every other binary-driving test.
+	runCli("close")
+	defer runCli("close")
+
+	t.Run("cloudflare", func(t *testing.T) {
+		gotoLiveOrSkip(t, cloudflareLiveURL)
+		title, ok := liveEvalBestEffort(t, "String(document.title)")
+		if !ok {
+			t.Skipf("cloudflare: could not read page state (best-effort skip): %s", title)
+		}
+		body, _ := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		lc := strings.ToLower(title + " " + body)
+		// Heuristic, informational only: Cloudflare's interstitial mentions these.
+		challenged := strings.Contains(lc, "just a moment") ||
+			strings.Contains(lc, "checking your browser") ||
+			strings.Contains(lc, "cf-challenge") ||
+			strings.Contains(lc, "attention required") ||
+			strings.Contains(lc, "verify you are human")
+		if challenged {
+			t.Logf("cloudflare: CHALLENGE/BLOCK observed (informational) — title=%q", title)
+		} else {
+			t.Logf("cloudflare: no challenge interstitial observed (informational, NOT a guarantee of passing — TLS/IP layers are not exercised here) — title=%q", title)
+		}
+	})
+
+	t.Run("datadome", func(t *testing.T) {
+		gotoLiveOrSkip(t, dataDomeLiveURL)
+		title, ok := liveEvalBestEffort(t, "String(document.title)")
+		if !ok {
+			t.Skipf("datadome: could not read page state (best-effort skip): %s", title)
+		}
+		body, _ := liveEvalBestEffort(t, "String(document.body ? document.body.innerText.slice(0,400) : '')")
+		lc := strings.ToLower(title + " " + body)
+		challenged := strings.Contains(lc, "datadome") ||
+			strings.Contains(lc, "blocked") ||
+			strings.Contains(lc, "captcha") ||
+			strings.Contains(lc, "are you a robot") ||
+			strings.Contains(lc, "access denied")
+		if challenged {
+			t.Logf("datadome: CHALLENGE/BLOCK observed (informational) — title=%q", title)
+		} else {
+			t.Logf("datadome: no block page observed (informational, NOT a guarantee — IP-reputation/TLS layers not exercised) — title=%q", title)
+		}
+	})
+
+	t.Run("creepjs", func(t *testing.T) {
+		gotoLiveOrSkip(t, creepJSLiveURL)
+		// CreepJS computes asynchronously; read the trust-score element best-effort.
+		// We do NOT poll-with-fatal — a missing element is just an informational
+		// "could not read", never a failure.
+		score, ok := liveEvalBestEffort(t,
+			`String((document.querySelector('.unblurred')||document.querySelector('#fingerprint-data')||{}).textContent||'').slice(0,200)`)
+		if !ok || strings.TrimSpace(score) == "" {
+			t.Logf("creepjs: trust score not readable yet (async render / DOM changed) — best-effort, informational; not a failure")
+			return
+		}
+		t.Logf("creepjs: fingerprint readout (informational, best-effort): %s", score)
+	})
+}
