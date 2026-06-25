@@ -1,34 +1,52 @@
 # Structure
 
 **Mapped:** 2026-06-18
+**Refreshed:** 2026-06-25 (milestone v1.6 close)
+
+> The original layout (`tools/`, `server.go`, `runner.go`) was stale; HEAD uses
+> `actions/`, `daemon/`, and `internal/`.
 
 ## Directory Layout
 
-- `/` (Root)
-  - `main.go`, `cmd.go`: Application entry point and CLI flag parsing.
-  - `server.go`, `runner.go`: MCP server initialization, lifecycle management, and tool registration.
-  - `go.mod`, `go.sum`: Go dependency definitions.
-  - `package.json`: Contains Node.js scripts for JS minification (`terser`).
-- `/tools/`
-  - Implementation of individual MCP tools.
-  - `common.go`: Shared utilities for tool execution.
-  - `snapshot.go`: Logic for capturing page state and formatting it for LLMs.
-  - `tools.go`: Defines the registry of available tools.
+- `/` (root)
+  - `main.go`: `runDaemonServer` (daemon entry — loads config, resolves stealth,
+    serves) + `main()`.
+  - `cmd.go`: the `urfave/cli/v2` app — global flags (incl. the v1.6 stealth
+    surface) and all subcommands; `runClientCommand` (client → daemon spawn +
+    request forwarding).
+  - `go.mod`/`go.sum`: deps; note `replace github.com/agenthands/godoll => ../godoll`.
+- `/actions/`
+  - `actions.go`: browser command implementations + the humanize option builders
+    (`typingOpts`/`mouseOpts`/`scrollOpts`).
+  - `stealth_check.go`: the `stealth-check` command (per-signal verdicts).
+  - `plugin.go`: plugin command surface.
+- `/daemon/`
+  - `daemon.go`: per-session daemon protocol — `EnsureDaemon`, `ClientExecute`,
+    `StartServer`.
 - `/types/`
-  - `context.go`: Wrapper around `go-rod`'s browser context.
-  - `config.go`: Configuration structures.
-  - `logger.go`: Logging initialization.
-  - `snapshot.go`: Data models for page snapshots.
-  - `/js/`: Contains client-side JavaScript (`snapshotter_raw.js` and minified `snapshotter.js`) injected into the browser.
-- `/utils/`
-  - Generic helper functions (e.g., file system ops, formatting).
-- `/banner/`
-  - CLI startup banner logic.
-- `/assets/`, `/resources/`
-  - Static files and templates if any.
+  - `config.go`: `Config`, `StealthConfig`, `StealthFlags`, `ResolveStealth`, the
+    fingerprint + humanize validators, `DefaultConfig`, `LoadConfig`.
+  - `context.go`: browser/page lifecycle, `profileFromStealth`, `createPage`,
+    `parseProxyConfig`, the network interceptor, console/request logging.
+  - `snapshot.go`, `logger.go`; `/js/`: injected client-side JS (`*_raw.js` +
+    minified `*.js`).
+- `/internal/detect/`
+  - Offline detection fixture: `detect.html`, `detect.js`, `probe.js`,
+    `server.go`, `embed.go`.
+- `/internal/plugin/`
+  - JS plugin engine: `engine.go`, `lifecycle.go`, `api.go`, `scanner/`.
+- `/utils/`, `/banner/`: helpers and the CLI startup banner.
+- `/tests/`: end-to-end + integration tests (drive the built binary), incl.
+  `detection_test.go` (offline Tier 1) and `detection_live_test.go` (`//go:build
+  detection_live`, Tier 2).
+- `/.github/workflows/`: `test.yml` (the blocking gate), `release*.yml`.
 
 ## Key Locations
 
-- **Tool Registration**: `server.go` (`registerTools` method) and `tools/tools.go`.
-- **Browser Context**: `types/context.go` controls the `rod.Browser` lifecycle.
-- **Snapshot Logic**: Client-side extraction is in `types/js/snapshotter_raw.js`, while server-side handling is in `tools/snapshot.go`.
+- **Stealth resolution (single funnel):** `types/config.go` `ResolveStealth`.
+- **Active identity build:** `types/context.go` `profileFromStealth` → `createPage`.
+- **Daemon spawn / protocol:** `daemon/daemon.go`.
+- **Detection harness + shared probe:** `internal/detect/` (`probe.js` =
+  `detect.Probe`, shared with `actions/stealth_check.go`).
+- **Snapshot logic:** client-side in `types/js/snapshotter_raw.js`, server-side
+  in `types/snapshot.go` / `actions`.

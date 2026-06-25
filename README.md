@@ -16,6 +16,7 @@ Designed explicitly as a "Skill" for LLMs (Claude, Gemini, and custom autonomous
 
 - **[Installation](INSTALL.md)**: Instructions for installing `rod-cli` and its dependencies.
 - **[Architecture](ARCHITECTURE.md)**: Overview of the persistent daemon and stealth engine.
+- **[Stealth Configuration](docs/stealth-config.md)**: The configurable stealth surface — fingerprint pins, per-session proxy, hardening toggles, and humanize tuning, with their honest constraints.
 - **[Stealth Validation](docs/stealth-validation.md)**: What the offline harness deterministically proves vs the best-effort live ceiling — and the TLS/IP/CDP layers rod-cli cannot control (no "undetectable" guarantee).
 - **[Usage Guide](USAGE.md)**: Comprehensive CLI reference and examples.
 - **[Agent Skill Definition](skills/rod-cli/SKILL.md)**: The prompt context to supply to your LLM agent so it knows how to use the CLI.

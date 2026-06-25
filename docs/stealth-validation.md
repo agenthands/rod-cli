@@ -105,4 +105,6 @@ best-effort data point — not proof you are invisible.
 
 - [CDP Footprint](cdp-footprint.md) — why the CDP transport tell cannot be closed in
   the JS layer (one of the uncontrollable layers above).
+- [Stealth Configuration](stealth-config.md) — the config surface, fingerprint pins,
+  proxy, hardening toggles, and humanize tuning that the harness validates.
 - [Architecture](../ARCHITECTURE.md) — the daemon + stealth engine overview.
