@@ -46,7 +46,7 @@
 
 ### Best-Effort Live Validation
 
-- [ ] **LIVEWAF-01**: An opt-in, non-blocking live smoke check (Cloudflare/DataDome/CreepJS) behind a `//go:build detection_live` tag, documented as best-effort and manual — explicitly kept out of the blocking CI gate.
+- [x] **LIVEWAF-01**: An opt-in, non-blocking live smoke check (Cloudflare/DataDome/CreepJS) behind a `//go:build detection_live` tag, documented as best-effort and manual — explicitly kept out of the blocking CI gate.
 
 ## v2 Requirements
 
@@ -97,7 +97,7 @@ Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
 | HARDEN-01 | Phase 27 | Complete |
 | HARDEN-02 | Phase 27 | Complete |
 | HUMANIZE-01 | Phase 28 | Complete |
-| LIVEWAF-01 | Phase 29 | Pending |
+| LIVEWAF-01 | Phase 29 | Complete |
 
 **Coverage:**
 
