@@ -1,120 +1,89 @@
-# Requirements: rod-cli — v1.6 Proven & Configurable Stealth
+# Requirements: rod-cli — v1.7 Complete Evasion Stack
 
-**Defined:** 2026-06-24
+**Defined:** 2026-06-26
 **Core Value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
 
-> **Milestone framing:** godoll already implements nearly every stealth capability below — v1.6 is **expose + validate + wire**, not build-from-scratch. The genuine new engineering is the deterministic detection harness, the session-persistent config surface, fingerprint *consistency* (single source of truth), and the two unwired godoll gaps (`EvadeWebRTC`, the `ApplyCanvasNoise` stub). The harness gates everything: each requirement below is "done" only when the harness asserts it against the live binary.
+> **Milestone framing:** v1.6 proved and configured JS-layer stealth. v1.7 extends to the full stack — reducing CDP signals at the protocol layer, spoofing TLS fingerprints at the network layer, providing curated device profiles out of the box, and expanding hardening surfaces. This is the most architecturally significant milestone since the original godoll migration.
 
 ## v1 Requirements
 
-### Detection Harness
+### CDP Footprint Reduction
 
-- [x] **HARNESS-01**: A self-contained, offline detection test page (sannysoft-style assertions + a curated CreepJS-style subset) is bundled via `go:embed` and served from a local `127.0.0.1:0` fixture server, mirroring the existing `internal/plugin/scanner/testserver` pattern.
-- [x] **HARNESS-02**: An end-to-end test drives the real `rod-cli` binary against the harness, navigates, and asserts each table-stakes signal by reading it back from the live page (not from source) — running with zero network egress so it is deterministic green-or-red.
-- [x] **HARNESS-03**: A test CI job runs the harness on every push (no test CI exists today), baselined against the current binary so existing leaks are surfaced rather than hidden.
+- [ ] **CDP-01**: The `Runtime.enable` signal is reduced or obfuscated — measured against detection harness and documented with an honest ceiling for what remains detectable.
+- [ ] **CDP-02**: All CDP commands sent by rod-cli are inventoried; each has a documented mitigation or accepted visibility.
+- [ ] **CDP-03**: CDP footprint reduction is measured against live detection targets; the harness asserts the reduction baseline.
 
-### Stealth Validation
+### Network-Layer Identity (TLS)
 
-- [x] **VALIDATE-01**: A user can run a stealth-check command against a page and get a per-signal verdict (`navigator.webdriver`, `navigator.plugins`, UA-without-`HeadlessChrome`, WebGL vendor ≠ SwiftShader/llvmpipe, `navigator.permissions`, `navigator.languages`, screen dims, `window.chrome`/`chrome.runtime`, timezone).
-- [x] **VALIDATE-02**: With `--raw`, the stealth-check emits a single-line machine-readable `PASS`/`FAIL` plus only the failing signals (e.g. `webdriver=ok webgl=FAIL(SwiftShader)`), token-efficient for LLM callers — no full-page dump.
-- [x] **VALIDATE-03**: A silent no-op in the evasion path fails loudly — fingerprint generation / `EvasionManager.Apply()` errors surface instead of being swallowed (today `_ = em.Apply()` discards them).
-
-### Configurable Fingerprint
-
-- [x] **FINGERPRINT-01**: A user can pin a coherent fingerprint per session — browser/OS/locale tuple (UA, platform, locale, timezone, screen, hardwareConcurrency, deviceMemory, vendor) — via CLI flags mapped onto godoll `stealth.Profile`, deriving dependent fields rather than setting raw contradictory values.
-- [x] **FINGERPRINT-02**: A consistency validator rejects or auto-derives incoherent combinations per the invariants (UA ↔ Client-Hints ↔ platform, locale ↔ languages ↔ Accept-Language, timezone ↔ proxy-IP geo, plausible screen geometry / hardware) and fails loudly on contradiction.
-- [x] **FINGERPRINT-03**: Client-Hints are derived from the active UA/OS instead of the current hardcoded version `121`, eliminating the UA↔UA-CH mismatch tell.
-
-### Stealth Profiles & Config Surface
-
-- [x] **PROFILE-01**: A user can save and load a named stealth profile as a JSON config file (godoll `stealth.Profile` `Save`/`LoadProfile`), set once and inherited by every later command hitting the same daemon session.
-- [x] **PROFILE-02**: Stealth configuration resolves with deterministic precedence — CLI flag > profile file > built-in default — once at daemon-spawn time, with no per-command stealth state bleeding across named sessions.
-
-### Per-Session Proxy
-
-- [x] **PROXY-01**: A user can route a session through an HTTP **or** SOCKS5 proxy via `--proxy`, bound per named session (not a single global IP), using godoll's proxy API rather than the current bare `launcher.Proxy()`.
-- [x] **PROXY-02**: Proxy authentication is handled via CDP (`Fetch.continueWithAuth`), not URL-embedded credentials (which Chrome removed), with `--proxy-auth` for credentials.
-
-### Anti-Fingerprint Hardening
-
-- [x] **HARDEN-01**: WebRTC local-IP leak prevention is wired (godoll `EvadeWebRTC` + `WithWebRTCLeakProtection`, which `Apply()` does not currently call) and asserted by the harness so a real local IP cannot leak past a proxy.
-- [x] **HARDEN-02**: Canvas/WebGL/Audio noise is exposed as profile toggles with the noise **stable within a session** (re-reads return an identical hash), filling godoll's no-op `ApplyCanvasNoise` stub; the harness asserts hash stability.
-
-### Human-Behavior Tuning
-
-- [x] **HUMANIZE-01**: A user can tune human-like interaction (typing speed, typo rate, delay jitter, mouse-path realism, scroll behavior) via flags/profile, threading godoll `humanize` options that `actions.go` currently calls with defaults only.
-
-### Best-Effort Live Validation
-
-- [x] **LIVEWAF-01**: An opt-in, non-blocking live smoke check (Cloudflare/DataDome/CreepJS) behind a `//go:build detection_live` tag, documented as best-effort and manual — explicitly kept out of the blocking CI gate.
-
-## v2 Requirements
-
-### CDP Footprint
-
-- **CDP-01**: Reduce or document the detectable CDP/`Runtime.enable` footprint (spike with a documented ceiling; rod-cli relies on Runtime/Network events for console/request logging).
-
-### Network-Layer Identity
-
-- **TLS-01**: TLS/JA3-JA4 fingerprint alignment (uTLS-style) — structurally outside a JS-injection CLI; would need a network-layer rewrite.
+- [ ] **TLS-01**: TLS/JA3-JA4 fingerprint matches the declared User-Agent/platform profile — the network-layer identity is coherent with the JS-layer identity.
+- [ ] **TLS-02**: A TLS fingerprinting library (uTLS or equivalent) is integrated; HTTP/HTTPS requests from the browser carry spoofed TLS signatures.
+- [ ] **TLS-03**: Proxy-aware TLS spoofing works correctly — TLS fingerprints do not leak through HTTP or SOCKS5 proxies.
+- [ ] **TLS-04**: The TLS spoofing layer is configurable per session (enabled by default, can be disabled for debugging).
 
 ### Profile Library
 
-- **PROFILE-LIB-01**: A library of many vetted, coherent device profiles beyond a curated desktop set.
+- [ ] **PROF-01**: A built-in library of 5-10 vetted, coherent device profiles is shipped with the binary.
+- [ ] **PROF-02**: Each profile is tested against the detection harness; profiles that fail key signals are not shipped.
+- [ ] **PROF-03**: Users can list built-in profiles (`--profile=list`) and select by name without providing a path.
+- [ ] **PROF-04**: Custom profiles (user-provided JSON files) continue to work alongside built-in profiles; CLI flags override both.
+
+### Advanced Evasion
+
+- [ ] **EVAD-01**: Additional fingerprint hardening surfaces are identified and prioritized based on detection harness results.
+- [ ] **EVAD-02**: At least two new hardening surfaces (beyond v1.6 canvas/WebGL/WebRTC) are implemented and asserted by the harness.
+- [ ] **EVAD-03**: Any new hardening toggles follow the v1.6 precedence chain (CLI > profile > default) and are documented in the stealth-config guide.
+
+## v2 Requirements (Deferred)
+
+### CDP Deepening
+
+- **CDP-DEEP-01**: Full CDP protocol obfuscation — may require browser patching or MITM proxy.
+
+### Extended Profile Ecosystem
+
+- **PROF-ECO-01**: Remote profile update mechanism — fetch profiles from a curated repository.
+- **PROF-ECO-02**: Profile versioning and deprecation — profiles older than N months warn on use.
+
+### Mobile Fingerprints
+
+- **MOB-01**: Mobile device profiles (smartphone/tablet) — currently out of scope for v1.7; requires separate investigation.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| "Bypasses Cloudflare/DataDome" guarantee or blocking CI gate against live WAFs | They score TLS (JA3/JA4) + IP reputation + behavior — layers a JS-injecting CLI cannot control. Non-deterministic → flaky CI. rod-cli hardens the browser/JS layer only; TLS+IP are the operator's job. |
-| URL-embedded proxy credentials (`http://user:pass@host`) | Chrome removed them; SOCKS5 auth unsupported by `--proxy-server`. Use CDP `Fetch.continueWithAuth` instead. |
-| Random-everything-per-request fingerprints | Breaking consistency *lowers* detector trust (mismatched lies) and breaks session state. Pin a coherent profile per session instead. |
-| Over-noised / per-call-varying canvas/audio | Unstable hash across reads is itself a tell. Use subtle, stable-per-session noise. |
+| "Bypasses Cloudflare/DataDome" guarantee or blocking CI gate against live WAFs | They score TLS (JA3/JA4) + IP reputation + behavior — layers this milestone addresses, but non-deterministic → flaky CI. rod-cli hardens the browser/JS + TLS layer; IP reputation is the operator's job. |
+| CAPTCHA solving | Scope creep, ToS/legal exposure, external paid deps; breaks the zero-dependency single-binary constraint. |
 | Mobile fingerprints from desktop headless | Desktop reporting mobile signals is exactly the inconsistency detectors flag. Ship vetted desktop profiles only. |
-| Bundled CAPTCHA solving | Scope creep, ToS/legal exposure, external paid deps; breaks the zero-dependency single-binary constraint. |
-| Live CreepJS/sannysoft as a blocking CI dependency | Remote, evolving, network-dependent → non-deterministic. Vendor a curated offline subset for CI; keep live as best-effort. |
-| TLS/JA3-JA4 alignment in v1.6 | Out of the JS-injection layer; deferred to v2 (TLS-01). |
+| Remote profile repository | Deferred to v2 (PROF-ECO-01) — built-in profiles are the v1.7 scope. |
 
 ## Traceability
 
-Phase mapping assigned by the roadmapper (v1.6 = Phases 24–29).
+Phase mapping will be assigned by the roadmapper (v1.7 = Phases 30–33).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HARNESS-01 | Phase 24 | Complete |
-| HARNESS-02 | Phase 24 | Complete |
-| HARNESS-03 | Phase 24 | Complete |
-| VALIDATE-03 | Phase 24 | Complete |
-| PROFILE-01 | Phase 25 | Complete |
-| PROFILE-02 | Phase 25 | Complete |
-| PROXY-01 | Phase 25 | Complete |
-| PROXY-02 | Phase 25 | Complete |
-| FINGERPRINT-01 | Phase 26 | Complete |
-| FINGERPRINT-02 | Phase 26 | Complete |
-| FINGERPRINT-03 | Phase 26 | Complete |
-| VALIDATE-01 | Phase 26 | Complete |
-| VALIDATE-02 | Phase 26 | Complete |
-| HARDEN-01 | Phase 27 | Complete |
-| HARDEN-02 | Phase 27 | Complete |
-| HUMANIZE-01 | Phase 28 | Complete |
-| LIVEWAF-01 | Phase 29 | Complete |
+| CDP-01 | Phase 30 | Pending |
+| CDP-02 | Phase 30 | Pending |
+| CDP-03 | Phase 30 | Pending |
+| TLS-01 | Phase 31 | Pending |
+| TLS-02 | Phase 31 | Pending |
+| TLS-03 | Phase 31 | Pending |
+| TLS-04 | Phase 31 | Pending |
+| PROF-01 | Phase 32 | Pending |
+| PROF-02 | Phase 32 | Pending |
+| PROF-03 | Phase 32 | Pending |
+| PROF-04 | Phase 32 | Pending |
+| EVAD-01 | Phase 33 | Pending |
+| EVAD-02 | Phase 33 | Pending |
+| EVAD-03 | Phase 33 | Pending |
 
 **Coverage:**
 
-- v1 requirements: 17 total
-- Mapped to phases: 17 ✓ (100% — every requirement maps to exactly one phase)
+- v1 requirements: 13 total
+- Mapped to phases: 13 ✓ (100% — every requirement maps to exactly one phase)
 - Unmapped: 0
 
-**Phase → Requirement summary:**
-
-- Phase 24 (Detection Harness & CI Backbone): HARNESS-01, HARNESS-02, HARNESS-03, VALIDATE-03
-- Phase 25 (Stealth Config Surface & Per-Session Proxy): PROFILE-01, PROFILE-02, PROXY-01, PROXY-02
-- Phase 26 (Configurable Fingerprint & Consistency Validator): FINGERPRINT-01, FINGERPRINT-02, FINGERPRINT-03, VALIDATE-01, VALIDATE-02
-- Phase 27 (Canvas/WebGL/WebRTC Hardening): HARDEN-01, HARDEN-02
-- Phase 28 (Human-Behavior Tuning): HUMANIZE-01
-- Phase 29 (Best-Effort Live Validation): LIVEWAF-01
-
 ---
-*Requirements defined: 2026-06-24*
-*Last updated: 2026-06-24 after roadmap creation (Phases 24–29 mapped)*
-</content>
+*Requirements defined: 2026-06-26*
+*Last updated: 2026-06-26 at milestone start*
