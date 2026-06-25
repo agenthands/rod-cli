@@ -8,7 +8,8 @@
 - ✅ **v1.3 Godoll Migration** — shipped ([archive](milestones/v1.3-ROADMAP.md))
 - ✅ **v1.4 Plugin Architecture** — shipped ([archive](milestones/v1.4-ROADMAP.md))
 - ✅ **v1.5 Plugin Ecosystem Documentation** — Phases 21–23 (shipped 2026-06-23) ([archive](milestones/v1.5-ROADMAP.md))
-- 🚧 **v1.6 Proven & Configurable Stealth** — Phases 24–29 (in progress)
+- ✅ **v1.6 Proven & Configurable Stealth** — Phases 24–29 (shipped 2026-06-25) ([archive](milestones/v1.6-ROADMAP.md))
+- 🚧 **v1.7 Complete Evasion Stack** — Phases 30–33 (in progress)
 
 Full per-phase detail for each shipped milestone lives under `.planning/milestones/`.
 
@@ -32,7 +33,7 @@ Delivered a complete `docs/plugins/` tree — lifecycle-hooks, state-api, and cl
 
 Earlier milestones (v1.0–v1.4) are archived under `.planning/milestones/`.
 
-### 🚧 v1.6 Proven & Configurable Stealth (In Progress)
+### ✅ v1.6 Proven & Configurable Stealth (Shipped 2026-06-25)
 
 **Milestone Goal:** Turn rod-cli's already-wired godoll stealth from "compiles and runs" into "provably evades detection and is configurable per session" — validated against a deterministic offline detection harness (reading from the live page, never from source), exposed through an agent-friendly session-persistent config surface, and extended with the evasion wiring that matters (WebRTC leak prevention, stable canvas noise, fingerprint consistency). Brownfield: this milestone **proves, configures, and wires** existing godoll capability — it does not rebuild it.
 
@@ -164,6 +165,70 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 | 26. Configurable Fingerprint & Consistency Validator | v1.6 | 5/5 | Complete    | 2026-06-24 |
 | 27. Canvas/WebGL/WebRTC Hardening | v1.6 | 4/4 | Complete    | 2026-06-24 |
 | 28. Human-Behavior Tuning | v1.6 | 0/TBD | Complete    | 2026-06-25 |
-| 29. Best-Effort Live Validation | v1.6 | 0/TBD | Complete    | 2026-06-25 |
+| 29. Best-Effort Live Validation | v1.6 | 2/2 | Complete    | 2026-06-25 |
+
+### 🚧 v1.7 Complete Evasion Stack (In Progress)
+
+**Milestone Goal:** Extend rod-cli's stealth from JS-layer fingerprinting to a full-stack evasion solution — reducing CDP signals, spoofing TLS fingerprints, providing curated device profiles, and expanding fingerprint hardening surfaces.
+
+- [ ] **Phase 30: CDP Footprint Reduction** — Reduce or obfuscate Runtime.enable and other CDP signals; measure impact against detection targets; document the honest ceiling for what remains detectable.
+- [ ] **Phase 31: Network-Layer Identity (TLS)** — TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity; proxy-aware TLS.
+- [ ] **Phase 32: Profile Library** — Ship 5-10 vetted device profiles with the binary; test against harness; users list and select by name.
+- [ ] **Phase 33: Advanced Evasion** — Expand fingerprint hardening surfaces beyond v1.6; implement 2+ new hardening toggles; assert via harness.
+
+### Phase 30: CDP Footprint Reduction
+
+**Goal**: Reduce or obfuscate Runtime.enable and other CDP signals; measure impact against detection targets; document the honest ceiling for what remains detectable.
+**Depends on**: Phase 29 (v1.6)
+**Requirements**: CDP-01, CDP-02, CDP-03
+**Success Criteria** (what must be TRUE):
+
+  1. A detection-harness test asserts reduced CDP visibility (e.g., Runtime.enable signal count or detection score) compared to the v1.6 baseline.
+  2. All CDP commands sent by rod-cli are inventoried in `docs/cdp-footprint.md` with mitigation status for each (reduced, obfuscated, accepted-visible).
+  3. The honest ceiling (what remains detectable despite reduction) is documented and measured against live detection targets (Cloudflare/DataDome/CreepJS).
+
+**Plans**: TBD
+
+### Phase 31: Network-Layer Identity (TLS)
+
+**Goal**: TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity; proxy-aware TLS.
+**Depends on**: Phase 30
+**Requirements**: TLS-01, TLS-02, TLS-03, TLS-04
+**Success Criteria** (what must be TRUE):
+
+  1. TLS/JA3 fingerprint matches the declared User-Agent/platform profile — asserted by a harness test that reads the TLS signature via an external probe.
+  2. HTTP and SOCKS5 proxies preserve TLS spoofing (no leak of real TLS fingerprint through proxy connections).
+  3. A new `--tls-spoof` flag controls TLS fingerprinting per session (default ON; can be disabled for debugging).
+  4. The TLS layer is documented in `docs/stealth-config.md` with configuration guidance.
+
+**Plans**: TBD
+
+### Phase 32: Profile Library
+
+**Goal**: Ship 5-10 vetted device profiles with the binary; test against harness; users list and select by name.
+**Depends on**: Phase 31
+**Requirements**: PROF-01, PROF-02, PROF-03, PROF-04
+**Success Criteria** (what must be TRUE):
+
+  1. A `profiles/` directory (or embedded `//go:embed`) contains 5-10 coherent device profiles, each validated against the detection harness with documented fingerprint characteristics.
+  2. `--profile=list` prints available built-in profiles; `--profile=<name>` selects by name without requiring a file path.
+  3. Custom profiles (user-provided JSON files) continue to work; CLI flags override both built-in and custom profiles (v1.6 precedence chain honored).
+  4. Each profile passes the v1.6 consistency validator (UA ↔ Client-Hints ↔ platform; timezone ↔ locale; plausible screen/hardware).
+
+**Plans**: TBD
+
+### Phase 33: Advanced Evasion
+
+**Goal**: Expand fingerprint hardening surfaces beyond v1.6 canvas/WebGL/WebRTC; implement 2+ new hardening toggles; assert via harness.
+**Depends on**: Phase 32
+**Requirements**: EVAD-01, EVAD-02, EVAD-03
+**Success Criteria** (what must be TRUE):
+
+  1. Detection harness identifies at least two fingerprint vectors not covered by v1.6 (e.g., audio context, font enumeration, screen orientation, media codecs).
+  2. New hardening toggles (e.g., `--audio-noise`, `--font-spoof`) follow the v1.6 precedence chain (CLI > profile > default) and are asserted by harness tests.
+  3. All new toggles are documented in `docs/stealth-config.md` with on/off guidance and performance notes.
+  4. New hardening surfaces are stable within a session (consistent hash on re-read, matching v1.6 canvas behavior).
+
+**Plans**: TBD
 </content>
 </invoke>

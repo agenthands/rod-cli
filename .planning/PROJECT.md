@@ -20,21 +20,17 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 rod-cli has completed its v1.5 Plugin Ecosystem Documentation milestone. The v1.4 plugin engine — script sandbox, browser lifecycle hooks (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`), state/context sharing, and `plugin load/list/run` — is now fully documented in a `docs/plugins/` tree: reference pages, a flagship XSS-scanner worked example, per-hook recipes, a copyable starter, and an authoring tutorial, all linked from the README. v1.5 also landed three small engine fixes surfaced while documenting — `api.GetLocalStorage()`, a now-functional `plugin run` (invokes a named plugin function and returns its result), and CDP DOM-domain enablement so the `onDOMNodeInserted` hook fires — and removed the always-on startup banner for token-efficiency.
 
-## Current Milestone: v1.6 Proven & Configurable Stealth
+## Current Milestone: v1.7 Complete Evasion Stack
 
-**Goal:** Turn rod-cli's already-wired godoll stealth from "compiles and runs" into "provably evades detection and is configurable per session" — validated against real detection, expanded with the evasion features that matter, and exposed through an agent-friendly config surface.
+**Goal:** Extend rod-cli's stealth from JS-layer fingerprinting to a full-stack evasion solution — reducing CDP signals, spoofing TLS fingerprints, providing curated device profiles, and expanding fingerprint hardening surfaces.
 
 **Target features:**
-- Repeatable, bundled detection test harness (CI-able) — the deterministic backbone for stealth validation.
-- Validation against fingerprint suites (CreepJS, bot.sannysoft, fingerprintjs) and elimination of classic headless tells (`navigator.webdriver`, plugins, `HeadlessChrome` UA, WebGL vendor, permissions).
-- Best-effort validation against real WAF/anti-bot challenges (Cloudflare/DataDome) — kept out of blocking CI.
-- Per-session proxy support (HTTP/SOCKS with auth, `--proxy`).
-- Configurable fingerprints — pin UA / locale / timezone / screen / platform per session (not random-only).
-- Canvas/WebGL/WebRTC hardening — fingerprint noise + WebRTC IP-leak prevention.
-- Human-like behavior tuning — configurable typing speed, mouse-path realism, delays, scroll.
-- Stealth config surface: session-persistent CLI flags (daemon model) plus a named-profile stealth config file, flag-overridable.
+- **CDP Footprint Reduction** — Deep implementation to reduce detectable `Runtime.enable` / CDP signals; measure impact against detection targets; document honest ceiling.
+- **Network-Layer Identity (TLS)** — Full TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity.
+- **Profile Library** — 5-10 vetted, coherent device profiles shipped with the binary; tested against detection harness; users can still provide custom profiles.
+- **Advanced Evasion** — Expand fingerprint hardening surfaces beyond v1.6 canvas/WebGL/WebRTC; address remaining detection vectors.
 
-**Note:** The godoll wiring already exists (`types/context.go`, `actions/actions.go`); this milestone proves and extends it rather than rebuilding it.
+**Note:** This is a major architectural milestone — TLS spoofing requires network-layer changes structurally outside the JS-injection layer. CDP reduction was deferred from v1.6 tech debt; this milestone implements it properly.
 
 <details>
 <summary>Archived: v1.5 Plugin Ecosystem Documentation</summary>
@@ -152,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-24 — v1.6 in progress; Phase 26 (Configurable Fingerprint & Consistency Validator) complete — pinnable coherent fingerprint, consistency validator, UA-derived Client-Hints (no hardcoded 121), and `stealth-check` verdict shipped.*
+*Last updated: 2026-06-26 — v1.7 milestone started (Complete Evasion Stack). v1.6 complete and archived.*

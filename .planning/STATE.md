@@ -1,74 +1,59 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Proven & Configurable Stealth
-status: executing
-stopped_at: Phase 29 complete — milestone-ready
-last_updated: "2026-06-25T12:02:12.224Z"
-last_activity: 2026-06-25
+milestone: v1.7
+milestone_name: Complete Evasion Stack
+status: planning
+stopped_at: Milestone v1.7 initialized — defining requirements
+last_updated: "2026-06-26T00:00:00.000Z"
+last_activity: 2026-06-26
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE.md — rod-cli
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-24)
+See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** Phase 27 — Canvas/WebGL/WebRTC Hardening
+**Current focus:** v1.7 — Complete Evasion Stack
 
 ## Current Position
 
-Phase: 29 of 4 (best effort live validation)
-Plan: Not started
-Status: Executing Phase 27
-Last activity: 2026-06-25
+Phase: Not started (defining requirements)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-06-26 — Milestone v1.7 started
 
-Progress: [██████████] 100% (1 of 6 phases)
+Progress: [ ] 0% (milestone initialized)
 
 ## Roadmap Summary
 
-Brownfield "prove + configure + wire" stealth milestone. godoll already implements the capabilities; v1.6 proves them against a deterministic offline harness (read from the live page, never source), exposes a session-persistent config surface, and wires the two genuine godoll gaps. Harness-first ordering — every later phase is "done" only when the harness asserts it.
+Brownfield "full-stack evasion" milestone — extends JS-layer stealth (v1.6) to network-layer identity (TLS/JA3), reduces CDP footprint, provides curated device profiles, and expands hardening surfaces.
 
-- Phase 24 — Detection Harness & CI Backbone: offline `go:embed` detection server + first test CI job, baselined against the current binary; loud-failure on `Apply()`/fingerprint errors (HARNESS-01/02/03, VALIDATE-03).
-- Phase 25 — Stealth Config Surface & Per-Session Proxy: flags + named JSON profile, precedence resolved at daemon spawn, no cross-session bleed; per-session HTTP/SOCKS5 proxy with CDP auth (PROFILE-01/02, PROXY-01/02).
-- Phase 26 — Configurable Fingerprint & Consistency Validator: single source of truth for UA/CH/platform/WebGL, consistency invariant gate, CH-121 fix, user-facing stealth-check verdict + `--raw` (FINGERPRINT-01/02/03, VALIDATE-01/02).
-- Phase 27 — Canvas/WebGL/WebRTC Hardening: wire `EvadeWebRTC`/`WithWebRTCLeakProtection`, replace the `ApplyCanvasNoise` no-op stub with stable-per-session noise (HARDEN-01/02).
-- Phase 28 — Human-Behavior Tuning: thread godoll `humanize.With*` options (typing/typo/jitter/mouse/scroll) through actions (HUMANIZE-01).
-- Phase 29 — Best-Effort Live Validation: opt-in `//go:build detection_live` smoke check, non-blocking, honest ceiling (LIVEWAF-01).
-
-All 17 v1 requirements mapped, 100% coverage.
+- Phase 30 — CDP Footprint Reduction: deep implementation of Runtime.enable signal reduction, measure impact, document ceiling
+- Phase 31 — Network-Layer Identity: TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing, network-layer rewrite
+- Phase 32 — Profile Library: 5-10 vetted profiles shipped with binary, tested against harness
+- Phase 33 — Advanced Evasion: expand fingerprint hardening, address remaining vectors
 
 ## Operator Next Steps
 
-- Plan the first phase with `/gsd-plan-phase 24`
+1. Confirm requirements in REQUIREMENTS.md
+2. Run `/anvil-plan-phase 30` to begin CDP Footprint Reduction
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.6 roadmap: harness-first ordering — the offline deterministic detection harness (Phase 24) gates and regression-nets every later phase; baseline against the *current* binary so existing leaks (e.g. unwired WebRTC) surface up front.
-- Config substrate (Phase 25) lands early, paired with proxy (smallest already-half-wired feature) to validate the whole flag→config→godoll daemon-boundary path quickly.
-- Consistency before hardening: the single source of truth + consistency invariant (Phase 26) must precede canvas/WebGL/WebRTC noise (Phase 27) so hardening has a coherent stable base rather than *creating* lies.
-- Every stealth assertion reads back via `page.Eval` from the live (daemon-reused) browser, never from a Go config field — carried forward from the v1.5 `onDOMNodeInserted` wired-but-silent lesson.
-- VALIDATE-01/02 (user-facing stealth-check verdict) placed in Phase 26 alongside the consistency validator since both surface per-signal reads of the pinned identity.
-- [Phase ?]: Phase 24-01: detection page self-authored (no bot.sannysoft); offline //go:embed probe page writes per-signal verdicts into window.__detect, ready-gated.
-- [Phase ?]: Phase 24-01: webrtcIce + cdpTell are informational/non-blocking KNOWN-RED signals — harness records current truth; HARDEN-01 (Phase 27) fixes WebRTC leak.
-- [Phase ?]: VALIDATE-03: swallowed evasion errors now write warning: to stderr (log-and-continue, no daemon abort)
-- [Phase ?]: 24-03: e2e detection harness reads window.__detect via eval (validate-live-not-source); WebRTC + Client-Hints kept as KNOWN-RED executing assertions, never skipped
-- [Phase ?]: Phase 25 proxy/profile proven e2e via offline self-serving proxy fixture: auth by CONNECT/407 counters, isolation by live-page egress id, profile by JSON round-trip + session inheritance (identity overlay deferred to Phase 26).
-- [Phase ?]: 26-02: killed hardcoded CH-121 in godoll injectors (evasion.go Sec-Ch-Ua + js.go userAgentData); both derive the Chrome major from em.profile.UserAgent via chromeMajorFromUA so header CH == JS userAgentData == UA major (FINGERPRINT-03/02). godoll edits uncommitted in its working tree, consumed via replace.
-- [Phase ?]: 26-02: FromFingerprint timezone locale-derived (localeToTimezone map, America/New_York fallback) instead of hardcoded; locale is the only timezone signal available, keeps offline-determinism.
-- [Phase ?]: Plan 26-03: config-pinned cfg.Stealth is the active stealth.Profile (SetProfile in createPage); interceptor Sec-Ch-Ua UA-derived via parseChromeMajor (no 121 literal)
-- [Phase ?]: stealth-check probe is a single shared //go:embed probe.js used by both the command and the detect.js harness
-- [Phase ?]: stealth-check --json passes through structured daemon results (isJSONValue) instead of double-wrapping
-- [Phase ?]: Phase 26 gate: Client-Hints spoofing is OFF by default (SpoofClientHints=false, no CLI flag); the coherence subtests activate it via --profile and the default-off gap is reported as a Plan-03 regression (breaks TestNetworkEvasionHeaders) for the verifier.
+- v1.7 scope: all four areas (CDP, TLS, Profiles, Evasion) together in one milestone
+- Profile library: built-in 5-10 curated profiles, not remote update mechanism
+- CDP: deep implementation (not just spike), measure impact
+- TLS: full uTLS-style spoofing (major architectural change)
 
 ### Pending Todos
 
@@ -76,43 +61,22 @@ None yet.
 
 ### Blockers/Concerns
 
-- ✅ RESOLVED (Phase 25): Daemon-shared per-session config concern does NOT apply — rod-cli is one-daemon-per-named-session (separate `rod-cli-<session>.port` + process + browser + Config). Per-session isolation is process isolation; NO per-BrowserContext work needed. Proven by the concurrent `-s` session-isolation test (`tests/proxy_test.go`).
-- [Phase 26+] WR-02 follow-up: authenticated SOCKS5 proxy (`socks5://` + `--proxy-auth`) is currently accepted but godoll's auth relay speaks HTTP CONNECT to the SOCKS upstream — may mishandle it. Root cause is in godoll. Either reject the combo loudly or fix the relay; revisit when SOCKS-auth is actually needed.
-- [Phase 24] CDP transport is detectable regardless of JS spoofing. Treat "hide CDP" as a small spike with an explicit YES/NO and a documented ceiling, not a guaranteed deliverable; add CDP-tell probes to the harness. (Research Pitfall 3.)
-
-## Deferred Items
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+- TLS spoofing requires network-layer changes structurally outside JS-injection — this is the most complex architectural change in the project's history
+- CDP reduction was deferred from v1.6 as "small spike with documented ceiling" — now implementing properly
+- Profile library extends v1.6 config surface (already works), this adds curated content
 
 ## Session Continuity
 
-Last session: 2026-06-24T13:00:00.000Z
-Stopped at: Phase 29 complete — milestone-ready
-Resume options: (a) set up the anvil in-project manifest(s) so the close-gate resolves, then `anvil-cc phase complete 27` and continue `/anvil-autonomous --from 28`; or (b) manually mark ROADMAP [x] + advance STATE + set HARDEN-01/02 validated, then continue. Same gate will block phases 28/29 and milestone-complete.
+Last session: 2026-06-26T00:00:00.000Z
+Stopped at: Milestone v1.7 initialized
+Resume options: Continue with `/anvil-autonomous` to drive all phases, or `/anvil-discuss-phase 30` to gather context first.
+
 Resume file: None
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5 (v1.6)
+- Total plans completed: 0 (v1.7)
 - Average duration: —
 - Total execution time: —
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-</content>
-| Phase 24 P01 | 2min | 2 tasks | 5 files |
-| Phase 24 P02 | 5m | 1 tasks | 1 files |
-| Phase 24 P03 | 6min | 1 tasks | 1 files |
-| Phase 25 P01 | 20min | 3 tasks | 6 files |
-| Phase 25 P02 | 15min | 2 tasks | 2 files |
-| Phase 25 P03 | 25min | 2 tasks | 2 files |
-| Phase 26 P01 | 3m47s | 3 tasks | 3 files |
-| Phase 26 P02 | 9min | 4 tasks | 5 files |
-| Phase 26 P03 | 10m | 2 tasks | 1 files |
-| Phase 26 P04 | 9min | 3 tasks | 5 files |
-| Phase 26 P05 | 16m | 4 tasks | 1 files |
