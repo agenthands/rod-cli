@@ -4,7 +4,7 @@ milestone: v1.6
 milestone_name: Proven & Configurable Stealth
 status: executing
 stopped_at: Phase 29 complete — milestone-ready
-last_updated: "2026-06-25T11:40:20.590Z"
+last_updated: "2026-06-25T12:02:12.224Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 6

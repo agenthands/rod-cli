@@ -1,5 +1,20 @@
 # Milestones
 
+## v1.6 v1.6 (Shipped: 2026-06-25)
+
+**Phases completed:** 6 phases, 20 plans, 38 tasks
+
+**Key accomplishments:**
+
+- Offline `127.0.0.1:0` detection fixture server (`internal/detect`) serving a self-authored, `//go:embed`-bundled sannysoft-style probe page that writes table-stakes + informational WebRTC/CDP verdicts into `window.__detect`.
+- A deterministic, offline e2e test (`tests/detection_test.go`) drives the live `../rod-cli` binary against the `internal/detect` fixture and asserts every extended table-stakes stealth signal by reading `window.__detect.<signal>` back from the live page — green against the documented baseline with WebRTC + Client-Hints KNOWN-RED markers kept as executing assertions.
+- A cohesive `StealthConfig` substrate with a CLI > profile > default precedence resolver, three forwarded global flags, and a loud-failure profile load — established as the single place every later v1.6 stealth feature plugs into.
+- The bare `launcher.Proxy(cfg.Proxy)` is replaced with godoll's `ProxyConfig.ApplyToLauncher` path — `cfg.Stealth.Proxy`/`ProxyAuth` parse into a credential-safe `browser.ProxyConfig`, authenticated proxies get a CDP `SetupBrowserAuth` handler before first navigation and a local relay whose cleanup is stored on `Context` and stopped on session close.
+- An offline loopback HTTP forward-proxy fixture plus four live-binary e2e tests that prove per-session proxy isolation (no bleed), CDP `--proxy-auth` is answered for correct creds and 407-enforced for wrong, a `stealth.Profile` JSON round-trips and is inherited across commands on a session, and `--proxy-auth` secrets never reach stdout/stderr or the `.port` file.
+- `stealth-check [url]` now reads 11 table-stakes signals back from the LIVE page via a shared embedded probe and emits a human per-signal table, a single-line `--raw` PASS/FAIL-with-only-failing-signals, or a clean structured `--json` object.
+
+---
+
 ## v1.5 Plugin Ecosystem Documentation (Shipped: 2026-06-23)
 
 **Phases completed:** 3 phases, 11 plans, 7 tasks
