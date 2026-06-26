@@ -88,11 +88,16 @@ makes **no claim** to control them — which is exactly why even a clean live ru
 - **IP reputation.** Datacenter / proxy / known-bad ASNs are scored at the network
   layer, independent of any browser signal. rod-cli does not launder your egress IP;
   a flagged IP is detected regardless of a perfect fingerprint.
-- **CDP transport footprint.** The daemon relies on the Chrome DevTools Protocol
-  (`Runtime.enable` / `Network.enable`) for console and request logging, and that
-  domain-enablement is observable independently of JS-property spoofing. See
-  [CDP Footprint](cdp-footprint.md) for the full analysis — reducing this footprint
-  is deferred to v2 (CDP-01), not attempted in v1.6.
+- **CDP transport footprint.** rod-cli drives Chrome over the DevTools Protocol, and
+  the CDP transport is observable independently of JS-property spoofing. As of v1.7
+  the always-on footprint is **reduced**: a plain session enables **none** of
+  `Runtime` / `Network` / `Fetch` — console/request logging are opt-in flags, the
+  mock interceptor is lazy, and HTTP identity coherence moved to the zero-enable
+  `Emulation` domain. The offline harness asserts this baseline deterministically
+  (Tier 1). What remains is the irreducible `Page`/`Target` enablement needed to
+  drive any CDP browser; fully obfuscating the transport (browser-patching / MITM /
+  alternate transport) is deferred to v2 (CDP-DEEP-01). See
+  [CDP Footprint](cdp-footprint.md) for the per-domain inventory and mitigation status.
 
 **No "undetectable" guarantee.** rod-cli validates and hardens the JS/fingerprint
 layer and is transparent about the TLS, IP, and CDP layers it does not. Use it with
@@ -103,8 +108,9 @@ best-effort data point — not proof you are invisible.
 
 ## See also
 
-- [CDP Footprint](cdp-footprint.md) — why the CDP transport tell cannot be closed in
-  the JS layer (one of the uncontrollable layers above).
+- [CDP Footprint](cdp-footprint.md) — the per-domain CDP inventory + mitigation
+  status: how the baseline Runtime/Network/Fetch footprint was reduced (v1.7) and the
+  honest ceiling deferred to v2 (CDP-DEEP-01).
 - [Stealth Configuration](stealth-config.md) — the config surface, fingerprint pins,
   proxy, hardening toggles, and humanize tuning that the harness validates.
 - [Architecture](../ARCHITECTURE.md) — the daemon + stealth engine overview.

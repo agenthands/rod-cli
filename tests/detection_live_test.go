@@ -40,7 +40,22 @@ const (
 	dataDomeLiveURL = "https://antoinevastel.com/bots/datadome"
 	// creepJSLiveURL exposes a fingerprint trust score in the DOM.
 	creepJSLiveURL = "https://abrahamjuliot.github.io/creepjs/"
+	// cdpProbeLiveURL is a benign, stable page used only to run the self-contained
+	// CDP-tell heuristic against a REAL remote page (Phase 30 CDP-03 live leg). Any
+	// loaded page works for the heuristic; example.com is the canonical stable URL.
+	cdpProbeLiveURL = "https://example.com/"
 )
+
+// cdpTellExpr is the self-contained CDP-presence heuristic, identical to the
+// offline harness's window.__detect.cdpTell (internal/detect/detect.js): serializing
+// an Error triggers the .stack getter, which a CDP remote-object preview (tied to an
+// enabled Runtime domain) may observe. HEURISTIC ONLY — "no-signal" is a possible
+// false negative; it measures exposure, it does not prove absence. With the Phase-30
+// reduction a plain session does not enable Runtime, so the expected plain-path
+// verdict is "no-signal".
+const cdpTellExpr = `(function(){var fired=false;var e=new Error();` +
+	`Object.defineProperty(e,'stack',{configurable:true,get:function(){fired=true;return '';}});` +
+	`try{console.debug(e);}catch(_){}return fired?'stack-getter-fired':'no-signal';})()`
 
 // liveEvalBestEffort runs an eval against the live page and returns (value, ok).
 // ok is false on any error — the caller decides whether that means "skip"
@@ -130,6 +145,24 @@ func TestLiveDetection(t *testing.T) {
 			t.Logf("datadome: CHALLENGE/BLOCK observed (informational) — title=%q", title)
 		} else {
 			t.Logf("datadome: no block page observed (informational, NOT a guarantee — IP-reputation/TLS layers not exercised) — title=%q", title)
+		}
+	})
+
+	t.Run("cdp-footprint", func(t *testing.T) {
+		// Phase 30 CDP-03 live leg (D-06): observe the CDP footprint against a REAL
+		// remote page on the PLAIN session path (no --console-capture / --request-capture,
+		// no routes). Informational only — t.Logf/t.Skip, never Fatal/Errorf. The
+		// deterministic gate is the offline ledger assertion (types/cdp_footprint_test.go);
+		// this is the best-effort realism signal. See docs/cdp-footprint.md.
+		gotoLiveOrSkip(t, cdpProbeLiveURL)
+		verdict, ok := liveEvalBestEffort(t, cdpTellExpr)
+		if !ok {
+			t.Skipf("cdp-footprint: could not read CDP-tell verdict (best-effort skip): %s", verdict)
+		}
+		if verdict == "no-signal" {
+			t.Logf("cdp-footprint: cdpTell=%q on the plain session — consistent with the reduced baseline (Runtime not enabled). Informational, NOT a proof of absence (heuristic; CDP transport still uses Page/Target).", verdict)
+		} else {
+			t.Logf("cdp-footprint: cdpTell=%q observed (informational) — a CDP stack-getter tell fired; see docs/cdp-footprint.md honest ceiling.", verdict)
 		}
 	})
 

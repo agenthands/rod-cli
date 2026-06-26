@@ -118,7 +118,8 @@
   // object preview may observe. This is a HEURISTIC — `console.debug` is not
   // guaranteed to invoke accessor getters, so "no-signal" is a possible false
   // negative even under CDP. It measures exposure, it does not prove its absence;
-  // see docs/cdp-footprint.md for the honest ceiling (fix deferred to v2 CDP-01).
+  // see docs/cdp-footprint.md for the honest ceiling. Phase 30 reduced the baseline
+  // footprint (CDP-01); full transport obfuscation is deferred to v2 (CDP-DEEP-01).
   probe("cdpTell", function () {
     var fired = false;
     var e = new Error();
