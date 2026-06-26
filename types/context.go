@@ -182,6 +182,9 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		if cfg.Stealth.CDPJitterMs != nil {
 			jitterMs = *cfg.Stealth.CDPJitterMs
 		}
+		if jitterMs > 1000 {
+			fmt.Fprintf(os.Stderr, "warning: --cdp-jitter-ms=%d is very high; navigation may be extremely slow\n", jitterMs)
+		}
 		opts = opts.WithCDPWrapper(func(inner cdp.WebSocketable) cdp.WebSocketable {
 			cdpProxyInstance = cdpproxy.New(inner, 1024, jitterMs)
 			return cdpProxyInstance

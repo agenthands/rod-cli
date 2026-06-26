@@ -513,7 +513,7 @@ func getApp() *cli.App {
 			},
 			{
 				Name:  "cdp-traffic",
-				Usage: "Print logged CDP protocol traffic from the proxy (requires --cdp-proxy)",
+				Usage: "Print logged CDP protocol traffic from the proxy (requires --cdp-proxy). WARNING: output may contain sensitive CDP payload data (URLs, cookies, page content).",
 				Action: func(c *cli.Context) error {
 					return runClientCommand(c, daemon.Request{Command: "cdp-traffic", Args: map[string]string{
 						"json": fmt.Sprint(c.Bool("json")),
