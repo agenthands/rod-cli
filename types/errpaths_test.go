@@ -254,7 +254,7 @@ func TestLaunchBrowser_NoChrome(t *testing.T) {
 	launcherLookPath = func() (string, bool) { return "", false }
 	defer func() { launcherLookPath = origLP }()
 
-	_, _, err := launchBrowser(context.Background(), Config{BrowserTempDir: t.TempDir()})
+	_, _, _, err := launchBrowser(Config{BrowserTempDir: t.TempDir()})
 	if err == nil {
 		t.Fatal("expected error when no Chrome is installed")
 	}
@@ -272,7 +272,7 @@ func TestLaunchBrowser_ProxyAndBadBin(t *testing.T) {
 		Stealth:        StealthConfig{Proxy: "http://127.0.0.1:9"},
 		BrowserTempDir: t.TempDir(),
 	}
-	if _, _, err := launchBrowser(context.Background(), cfg); err == nil {
+	if _, _, _, err := launchBrowser(cfg); err == nil {
 		t.Fatal("expected launch failure with bogus binary")
 	}
 }
@@ -288,7 +288,7 @@ func TestLaunchBrowser_BadProxyURL(t *testing.T) {
 		Stealth:        StealthConfig{Proxy: "127.0.0.1:8080"}, // missing scheme
 		BrowserTempDir: t.TempDir(),
 	}
-	_, _, err := launchBrowser(context.Background(), cfg)
+	_, _, _, err := launchBrowser(cfg)
 	if err == nil {
 		t.Fatal("expected error for proxy url without a scheme")
 	}

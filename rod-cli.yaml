@@ -18,6 +18,25 @@ stealth:
     deviceMemory: 0
     vendor: ""
     spoofClientHints: false
+    webRTCLeakProtection: true
+    canvasNoise: true
+    fontSpoof: true
+    cdpProxy: null
+    mediaDevicesSpoof: true
+    batterySpoof: true
+    codecSpoof: true
+    consoleCapture: null
+    requestCapture: null
+    typingSpeedMin: null
+    typingSpeedMax: null
+    typoRate: null
+    mouseTremor: null
+    mouseSteps: null
+    mouseSpeedMin: null
+    mouseSpeedMax: null
+    mouseDeviation: null
+    scrollDuration: null
+    scrollPhysics: null
     screen:
         width: 0
         height: 0

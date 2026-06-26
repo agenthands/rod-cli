@@ -1,45 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: godoll Hygiene & CDP-DEEP-01 Research
-status: complete
-stopped_at: Milestone close — v1.9 complete
-last_updated: "2026-06-26T22:10:00.000Z"
+milestone: v2.0
+milestone_name: CDP-DEEP-01 Build — MITM WebSocket Proxy
+status: building
+stopped_at: v2.0 started
+last_updated: "2026-06-26T22:15:00.000Z"
 last_activity: 2026-06-26
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE.md — rod-cli
 
-## Project Reference
-
-See: .planning/PROJECT.md
-
-**Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** ✅ v1.9 complete — next: CDP-DEEP-01 build (MITM proxy).
-
 ## Current Position
 
-Phase: ✅ v1.9 complete (2/2 phases)
-Plan: ✅ All plans executed
-Status: Complete
-Last activity: 2026-06-26 — Milestone v1.9 closed
+Phase: Phase 40 (Core Proxy)
+Status: Building
+Last activity: 2026-06-26 — Milestone v2.0 started
 
-## v1.9 Delivered
+## v2.0 Phases (from .planning/phases/39/CDP-DEEP-01-PLAN.md)
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 38 | Godoll Hygiene (F2/F4) | ✅ |
-| 39 | CDP-DEEP-01 Research & Design | ✅ |
-
-## Next milestone candidate
-
-**CDP-DEEP-01 Build** — execute the 3-phase MITM WebSocket proxy plan from `.planning/phases/39/CDP-DEEP-01-PLAN.md`:
-1. Core proxy (pass-through, logging)
-2. Runtime domain normalization
-3. Timing jitter + `cdp-traffic` diagnostic command
+| Phase | Name |
+|-------|------|
+| 40 | Core Proxy (pass-through, logging) |
+| 41 | Runtime Domain Normalization |
+| 42 | Timing Jitter + cdp-traffic Command |
