@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: 32 — Profile Library ✅ COMPLETE (qa PASSED). Next: Phase 33 (final).
-Plan: 30 ✅, 32 ✅ verified; Phase 31 CANCELLED
-Status: Phases 30 + 32 shipped; autonomous run continuing to Phase 33 (Advanced Evasion)
-Last activity: 2026-06-26 — Phase 32 verified (6 Chrome-only profiles + vetting gate)
+Phase: 33 — Advanced Evasion ✅ COMPLETE (qa PASSED). ALL v1.7 phases done.
+Plan: 30 ✅, 32 ✅, 33 ✅ verified; Phase 31 CANCELLED
+Status: All active v1.7 phases (30, 32, 33) shipped + verified. At milestone-close gate (security review? → document → complete-milestone).
+Last activity: 2026-06-26 — Phase 33 verified (godoll dimensions activated; 4 hardening toggles)
 
-Progress: [████░░] 2 of active {30,32,33} complete (Phase 31 cancelled)
+Progress: [██████] 3 of 3 active phases complete (Phase 31 cancelled) — milestone-close pending
 
 ## Roadmap Summary
 
