@@ -374,13 +374,13 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: TBD
 
-### ✅ v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy (In Progress)
+### ✅ v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy (Shipped 2026-06-26)
 
 **Milestone Goal:** Build the MITM WebSocket CDP proxy designed in Phase 39 — a local, in-process WebSocket proxy that sits between go-rod's `cdp.Client` and Chrome's debugging WebSocket, implementing `cdp.WebSocketable`. The proxy is transparent by default (pass-through) and becomes the foundation for CDP traffic filtering, Runtime domain normalization, and timing jitter.
 
-- [ ] **Phase 40: Core Proxy (pass-through, logging)** — Fireable CDP WebSocket pass-through proxy with in-memory ring-buffer traffic logging, flag-gated behind `--cdp-proxy` (default OFF), wired into the browser launch path via godoll's `WithCDPWrapper`. 🔨 Building
-- [ ] **Phase 41: Runtime Domain Normalization** — Intercept and normalize Runtime domain CDP responses to suppress property-getter triggering when Runtime IS enabled (opt-in console/request capture path).
-- [ ] **Phase 42: Timing Jitter + `cdp-traffic` Command** — Configurable CDP command dispatch timing jitter + a `rod-cli cdp-traffic` diagnostic command that reads the proxy's ring buffer.
+- [x] **Phase 40: Core Proxy (pass-through, logging)** — Fireable CDP WebSocket pass-through proxy with in-memory ring-buffer traffic logging, flag-gated behind `--cdp-proxy` (default OFF), wired into the browser launch path via godoll's `WithCDPWrapper`. ✅ Completed
+- [x] **Phase 41: Runtime Domain Normalization** — Intercept and normalize Runtime domain CDP responses to suppress property-getter triggering when Runtime IS enabled (opt-in console/request capture path). ✅ Completed
+- [x] **Phase 42: Timing Jitter + `cdp-traffic` Command** — Configurable CDP command dispatch timing jitter + a `rod-cli cdp-traffic` diagnostic command that reads the proxy's ring buffer. ✅ Completed
 
 ### Phase 40: Core Proxy (pass-through, logging)
 
