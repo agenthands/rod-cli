@@ -1,6 +1,8 @@
 module github.com/agenthands/rod-cli
 
-go 1.25.1
+go 1.26.1
+
+toolchain go1.26.4
 
 require (
 	github.com/agenthands/godoll v0.0.0-20260314193512-b7f2b1da0553

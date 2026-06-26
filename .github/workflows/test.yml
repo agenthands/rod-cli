@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.x'
+          go-version: '1.26.x'
 
       # Build the binary so the e2e harness (tests/*.go) can drive ../rod-cli.
       - name: Build rod-cli
@@ -40,3 +40,6 @@ jobs:
       # See docs/stealth-validation.md for the Tier-1 vs Tier-2 rationale.
       - name: Run tests (headless)
         run: go test ./... -count=1
+
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

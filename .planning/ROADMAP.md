@@ -10,6 +10,7 @@
 - ✅ **v1.5 Plugin Ecosystem Documentation** — Phases 21–23 (shipped 2026-06-23) ([archive](milestones/v1.5-ROADMAP.md))
 - ✅ **v1.6 Proven & Configurable Stealth** — Phases 24–29 (shipped 2026-06-25) ([archive](milestones/v1.6-ROADMAP.md))
 - ✅ **v1.7 Complete Evasion Stack** — Phases 30, 32, 33 (shipped 2026-06-26; Phase 31/TLS cancelled — real-Chrome-only) ([archive](milestones/v1.7-ROADMAP.md))
+- 🔨 **v1.8 Debt Cleanup & Coding-Assistant Onboarding** — Phases 34–37 (in progress)
 
 Full per-phase detail for each shipped milestone lives under `.planning/milestones/`.
 
@@ -224,3 +225,65 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 **Plans**: TBD
 </content>
 </invoke>
+
+### 🔨 v1.8 Debt Cleanup & Coding-Assistant Onboarding (In Progress)
+
+**Milestone Goal:** Retire the three v1.7 follow-ups (toolchain bump, plugin-path CDP-ledger hole, font-spoof no-op) and ship authoritative install + agent-skill documentation so any of the five major coding assistants — Claude Code, Codex CLI, Gemini CLI, Pi (pi.dev), and opencode — can adopt rod-cli. **Grounding decision:** rod-cli is a pure CLI/daemon, not an MCP server (verified at HEAD — no `mcp` subcommand, no JSON-RPC, no MCP dep); every onboarding doc therefore teaches the agent to shell out to the `rod-cli` binary via that tool's agent-skill / instructions-file mechanism, and the MCP install path is deliberately not documented. TLS spoofing remains permanently out of scope (real Chrome only).
+
+- [ ] **Phase 34: Toolchain Bump & Vuln Gate** — Pin go.mod to go1.26.1, align CI/release, clear the 13 F1 stdlib vulns, and wire a govulncheck gate so the supply-chain fix can't silently regress. (BUILD-01, BUILD-02)
+- [ ] **Phase 35: Plugin-Path CDP-Ledger Closure** — Record CDP domains enabled via the plugin lifecycle path in the per-session ledger and assert the previously-uncovered path in the offline harness. (LEDGER-01, LEDGER-02)
+- [ ] **Phase 36: Real Font Spoofing** — Replace the godoll font-injector no-op with a real injector so `--font-spoof` actually changes detectable fonts (OS-coherent, stable per session), harness-asserted on/off/stability. (FONT-01, FONT-02, FONT-03)
+- [ ] **Phase 37: Coding-Assistant Onboarding Docs** — Binary install + the cross-tool SKILL.md update + per-assistant install/skill instructions for Claude Code, Codex CLI, Gemini CLI, Pi, and opencode, each with a copy-paste sequence and verify step, accurate to the real (MCP-free) command surface and linked from the README. (DOC-01..DOC-09)
+
+### Phase 34: Toolchain Bump & Vuln Gate
+
+**Goal**: Resolve v1.7 security follow-up F1 — `go.mod` declares `go 1.25.1` with no `toolchain` directive while dev builds run go1.26.0, and govulncheck flags 13 stdlib vulns fixed in go1.26.1. Pin the toolchain, align CI/release, clear the vulns, and gate against regression.
+**Depends on**: Phase 33 (v1.7) — foundation phase: every later v1.8 phase builds/tests on the fixed toolchain.
+**Requirements**: BUILD-01, BUILD-02
+**Success Criteria** (what must be TRUE):
+
+  1. `go.mod` declares `toolchain go1.26.1` (with the `go` directive aligned); `go build ./...` and `go test ./...` pass on go1.26.1.
+  2. `govulncheck ./...` reports no known-vulnerable called paths for the 13 F1 stdlib vulns; any residual finding is documented with justification.
+  3. The CI workflow runs on go1.26.1 and includes a `govulncheck` gate so the supply-chain fix cannot silently regress.
+
+**Plans**: TBD
+
+### Phase 35: Plugin-Path CDP-Ledger Closure
+
+**Goal**: Close the v1.7 CDP-ledger coverage hole — CDP domains enabled lazily via the plugin lifecycle path were not observed by the per-session ledger that v1.7's footprint guarantees depend on.
+**Depends on**: Phase 34 (clean toolchain) — independent of Phase 36.
+**Requirements**: LEDGER-01, LEDGER-02
+**Success Criteria** (what must be TRUE):
+
+  1. CDP domains enabled via the plugin lifecycle path are recorded in the per-session CDP-domain ledger, identically to the main navigation path — no enabled domain escapes the inventory.
+  2. The offline detection harness has a test that exercises a plugin enabling a lazy CDP domain and asserts the ledger reflects it (red before the fix, green after).
+  3. The per-command/per-path CDP inventory in the docs is updated to reflect the now-tracked plugin path.
+
+**Plans**: TBD
+
+### Phase 36: Real Font Spoofing
+
+**Goal**: Replace the documented godoll font-injector no-op (carried as a v1.7 follow-up) with a real injector so the `--font-spoof` toggle has an observable effect on the page's detectable font availability.
+**Depends on**: Phase 34 (clean toolchain) — independent of Phase 35.
+**Requirements**: FONT-01, FONT-02, FONT-03
+**Success Criteria** (what must be TRUE):
+
+  1. With `--font-spoof` enabled, a font-probe on the live page reads a spoofed font set that differs from the host baseline (the no-op is gone).
+  2. The spoofed set is coherent with the active profile's OS/locale and identical across re-reads on the same session; `--font-spoof=false` restores genuine host font behavior.
+  3. The offline detection harness asserts criteria 1 and 2 (differs-when-on, stable-across-re-reads, restored-when-off).
+
+**Plans**: TBD
+
+### Phase 37: Coding-Assistant Onboarding Docs
+
+**Goal**: Ship authoritative install + agent-skill documentation for the five major coding assistants, onboarding rod-cli via the agent-skill / instructions-file → shell-out path (no MCP, since rod-cli is not an MCP server). Accurate to the real command surface, verified against current tool docs, and discoverable from the README.
+**Depends on**: Phase 36 — docs reflect the final command surface and the now-real `--font-spoof` behavior.
+**Requirements**: DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, DOC-06, DOC-07, DOC-08, DOC-09
+**Success Criteria** (what must be TRUE):
+
+  1. A reader can follow the shared binary-install section (`go install` / prebuilt + `rod-cli install` for Chromium) and verify rod-cli runs (DOC-01).
+  2. The shipped `skills/rod-cli/SKILL.md` is updated to the current cross-tool Agent-Skills standard (valid frontmatter + explicit "when to use" trigger phrases) so one skill directory serves Claude Code, Codex, Pi, and opencode (DOC-02).
+  3. Each of the five assistants — Claude Code, Codex CLI, Gemini CLI (GEMINI.md context file), Pi (`~/.pi/agent/skills/`, explicit "no MCP"), opencode (native skills + `.claude/skills` compat) — has a section with a copy-paste install sequence and a concrete verify step that confirms the agent can drive rod-cli (DOC-03..DOC-08).
+  4. Every documented claim is accurate against the real rod-cli command surface and current tool docs — no MCP install path is documented — and the docs are linked from the top-level README (DOC-09).
+
+**Plans**: TBD
