@@ -1115,3 +1115,102 @@ func TestSeededFingerprintDimensions(t *testing.T) {
 		}
 	})
 }
+
+// fontProbeJS returns a JS expression that probes font availability via canvas
+// measurement and returns a deterministic hash of the measured widths.
+// The probe measures common fonts; font spoofing changes these widths.
+const fontProbeJS = `(function(){
+const c=document.createElement('canvas');
+const x=c.getContext('2d');
+const fs=['Arial','Times New Roman','Courier New','Georgia','Verdana',
+  'Comic Sans MS','Impact','Trebuchet MS','Lucida Console','Palatino Linotype'];
+var h=0;
+for(var i=0;i<fs.length;i++){
+x.font='72px '+fs[i]+',sans-serif';
+var w=x.measureText('abcdefghijklmnopqrstuvwxyz').width;
+h=((h<<5)-h+Math.round(w))|0;
+}
+return String(h);
+})()`
+
+// TestFontSpoof verifies FONT-01, FONT-02, and FONT-03:
+//   - With font-spoof ON, font-probe hash differs from the host baseline.
+//   - Within a session, two reads return the same hash (stability).
+//   - font-spoof OFF restores the genuine host font behavior.
+func TestFontSpoof(t *testing.T) {
+	ds, err := detect.New()
+	if err != nil {
+		t.Fatalf("detect.New() failed: %v", err)
+	}
+	ds.Start()
+	defer ds.Close()
+
+	// --- Baseline: font-spoof OFF ---
+	runCli("close")
+	defer runCli("close")
+
+	if _, err := runCli("--font-spoof=false", "goto", ds.URL()); err != nil {
+		t.Fatalf("baseline goto failed: %v", err)
+	}
+	waitForDetectReady(t)
+
+	baseline := evalFontHash(t)
+	if baseline == "" || baseline == "0" {
+		t.Fatal("font-probe returned empty baseline hash")
+	}
+	t.Logf("baseline font hash (off): %s", baseline)
+
+	// --- FONT-02: stability within session ---
+	baseline2 := evalFontHash(t)
+	if baseline != baseline2 {
+		t.Errorf("FONT-02: baseline re-read unstable: %q vs %q", baseline, baseline2)
+	}
+
+	// --- FONT-01: font-spoof ON changes the hash ---
+	runCli("close")
+	if _, err := runCli("--font-spoof=true", "goto", ds.URL()); err != nil {
+		t.Fatalf("spoofed goto failed: %v", err)
+	}
+	waitForDetectReady(t)
+
+	spoofed := evalFontHash(t)
+	t.Logf("spoofed font hash (on): %s", spoofed)
+
+	if spoofed == baseline {
+		t.Errorf("FONT-01: font-spoof ON produced the same hash as OFF — injector is still a no-op (both=%q)", baseline)
+	}
+
+	// --- FONT-02: stability within session (spoofed) ---
+	spoofed2 := evalFontHash(t)
+	if spoofed != spoofed2 {
+		t.Errorf("FONT-02: spoofed re-read unstable: %q vs %q", spoofed, spoofed2)
+	}
+
+	// --- FONT-02: font-spoof OFF restores baseline ---
+	runCli("close")
+	if _, err := runCli("--font-spoof=false", "goto", ds.URL()); err != nil {
+		t.Fatalf("restore goto failed: %v", err)
+	}
+	waitForDetectReady(t)
+
+	restored := evalFontHash(t)
+	t.Logf("restored font hash (off again): %s", restored)
+
+	if restored != baseline {
+		t.Errorf("FONT-02: font-spoof OFF did not restore baseline: %q vs %q", restored, baseline)
+	}
+}
+
+// evalFontHash runs the font-probe JS via eval and returns the string result.
+func evalFontHash(t *testing.T) string {
+	t.Helper()
+	out, err := runCli("eval", fontProbeJS)
+	if err != nil {
+		t.Fatalf("eval font-probe failed: %v\nOutput: %s", err, out)
+	}
+	val := out
+	if i := strings.Index(out, evalResultPrefix); i >= 0 {
+		val = out[i+len(evalResultPrefix):]
+	}
+	return strings.TrimSpace(val)
+}
