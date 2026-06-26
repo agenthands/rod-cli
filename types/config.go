@@ -607,8 +607,12 @@ func rejectUnsafeFingerprintValue(field, val string) error {
 		return nil
 	}
 	for _, r := range val {
-		if r == '"' {
-			return errors.Errorf("fingerprint field %s contains a double-quote, which is not allowed: %q", field, val)
+		if r == '"' || r == '\\' {
+			kind := "double-quote"
+			if r == '\\' {
+				kind = "backslash"
+			}
+			return errors.Errorf("fingerprint field %s contains a %s, which is not allowed: %q", field, kind, val)
 		}
 		// Reject ASCII control characters (C0, DEL) including CR/LF/tab.
 		if r < 0x20 || r == 0x7f {
