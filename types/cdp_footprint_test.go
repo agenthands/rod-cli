@@ -136,4 +136,24 @@ func TestCDPFootprintPositiveControls(t *testing.T) {
 			t.Errorf("a mock route must not enable Runtime/Network, ledger=%v", enabled)
 		}
 	})
+
+	t.Run("plugin lifecycle enables DOM", func(t *testing.T) {
+		ctx := newCDPContext(t, Config{})
+		if _, err := ctx.EnsurePage(); err != nil {
+			t.Fatalf("EnsurePage: %v", err)
+		}
+		// Simulate the plugin lifecycle path: BindLifecycle enables the DOM
+		// domain so DOMChildNodeInserted events fire. The ledger must record it.
+		engine := ctx.GetPluginEngine()
+		engine.Init()
+		engine.BindLifecycle(context.Background(), ctx.page, ctx.RecordCDPDomain)
+		enabled := ctx.GetEnabledCDPDomains()
+		if !enabled[CDPDomainDOM] {
+			t.Errorf("BindLifecycle should record DOM, ledger=%v", enabled)
+		}
+		// DOM is a footprint-adding domain — it must NOT enable Runtime/Network/Fetch.
+		if enabled[CDPDomainRuntime] || enabled[CDPDomainNetwork] || enabled[CDPDomainFetch] {
+			t.Errorf("BindLifecycle must not enable Runtime/Network/Fetch, ledger=%v", enabled)
+		}
+	})
 }

@@ -265,6 +265,7 @@ const (
 	CDPDomainRuntime = "Runtime"
 	CDPDomainNetwork = "Network"
 	CDPDomainFetch   = "Fetch"
+	CDPDomainDOM     = "DOM"
 )
 
 func NewContext(ctx context.Context, cfg Config) *Context {
@@ -721,7 +722,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// never registered, so a plain session never enables Runtime. The `console`
 		// command requires the daemon spawned with --console-capture.
 		if boolVal(ctx.config.Stealth.ConsoleCapture, false) {
-			ctx.recordCDPDomainLocked(CDPDomainRuntime)
+			ctx.RecordCDPDomain(CDPDomainRuntime)
 			go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
 				ctx.stateLock.Lock()
 				defer ctx.stateLock.Unlock()
@@ -739,7 +740,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// Network.enable, so it is OPT-IN (default OFF). The `requests`/`request`
 		// commands require the daemon spawned with --request-capture.
 		if boolVal(ctx.config.Stealth.RequestCapture, false) {
-			ctx.recordCDPDomainLocked(CDPDomainNetwork)
+			ctx.RecordCDPDomain(CDPDomainNetwork)
 			go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
 				ctx.stateLock.Lock()
 				defer ctx.stateLock.Unlock()
@@ -766,12 +767,12 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	return page, nil
 }
 
-// recordCDPDomainLocked marks a footprint-adding CDP domain as enabled for this
+// RecordCDPDomain marks a footprint-adding CDP domain as enabled for this
 // session (Phase 30 D-04 instrumentation). The CALLER MUST HOLD stateLock — every
 // set-point (the console/request subscription branches in createPage, which run
 // under initial()'s lock, and ensureInterceptorEnabled, called from AddRoute /
 // createPage under lock) already does.
-func (ctx *Context) recordCDPDomainLocked(domain string) {
+func (ctx *Context) RecordCDPDomain(domain string) {
 	if ctx.cdpDomains == nil {
 		ctx.cdpDomains = make(map[string]bool)
 	}
@@ -862,7 +863,7 @@ func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
 		ctx.interceptor = nil
 		return
 	}
-	ctx.recordCDPDomainLocked(CDPDomainFetch)
+	ctx.RecordCDPDomain(CDPDomainFetch)
 }
 
 // AddRoute registers a mock route, lazily creating + enabling the network

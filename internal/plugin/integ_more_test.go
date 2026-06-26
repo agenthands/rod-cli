@@ -71,7 +71,7 @@ func TestBindLifecycle_ForwardsDOMNodeInserted(t *testing.T) {
 	page := openIntegPage(t, integServerURL)
 	defer page.MustClose()
 
-	engine.BindLifecycle(context.Background(), page)
+	engine.BindLifecycle(context.Background(), page, nil)
 	time.Sleep(300 * time.Millisecond)
 
 	// Insert several DOM nodes to trigger DOMChildNodeInserted events.

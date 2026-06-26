@@ -17,7 +17,7 @@ type LifecycleEmitter interface {
 }
 
 // BindLifecycle attaches CDP event listeners to the active page and forwards them to JS functions
-func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page) {
+func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, recordCdpDomain func(string)) {
 	if e.vm != nil {
 		e.vm.Set("api", NewPluginAPI(page))
 	}
@@ -29,6 +29,9 @@ func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page) {
 	// so node tracking covers freshly navigated pages.
 	fullDepth := -1
 	_ = proto.DOMEnable{}.Call(page)
+	if recordCdpDomain != nil {
+		recordCdpDomain("DOM") // CDP domain ledger key (see types.CDPDomainDOM)
+	}
 	_, _ = proto.DOMGetDocument{Depth: &fullDepth}.Call(page)
 
 	go page.EachEvent(func(ev *proto.NetworkRequestWillBeSent) {

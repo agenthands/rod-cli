@@ -24,7 +24,7 @@ func PluginLoad(ctx *types.Context, path string) (string, error) {
 
 	page, err := ctx.ControlledPage()
 	if err == nil && page != nil {
-		engine.BindLifecycle(context.Background(), page)
+		engine.BindLifecycle(context.Background(), page, ctx.RecordCDPDomain)
 	}
 
 	ctx.AddLoadedPlugin(path)

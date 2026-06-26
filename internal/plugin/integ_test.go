@@ -59,7 +59,7 @@ func TestBindLifecycle_SetsAPIOnVM(t *testing.T) {
 	page := openIntegPage(t, integServerURL)
 	defer page.MustClose()
 
-	engine.BindLifecycle(context.Background(), page)
+	engine.BindLifecycle(context.Background(), page, nil)
 
 	// Verify that the 'api' global is set in the VM
 	val := engine.vm.Get("api")
@@ -74,7 +74,7 @@ func TestBindLifecycle_NilVM(t *testing.T) {
 	page := openIntegPage(t, integServerURL)
 	defer page.MustClose()
 
-	engine.BindLifecycle(context.Background(), page)
+	engine.BindLifecycle(context.Background(), page, nil)
 }
 
 func TestBindLifecycle_ForwardsOnLoad(t *testing.T) {
@@ -90,7 +90,7 @@ func TestBindLifecycle_ForwardsOnLoad(t *testing.T) {
 	page := openIntegPage(t, integServerURL)
 	defer page.MustClose()
 
-	engine.BindLifecycle(context.Background(), page)
+	engine.BindLifecycle(context.Background(), page, nil)
 
 	// Navigate to trigger onLoad
 	page.Navigate(integServerURL + "/")
