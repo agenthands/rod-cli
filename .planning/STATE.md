@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: 30 — CDP Footprint Reduction (context gathered, ready to plan)
-Plan: -
-Status: Phase 30 context captured
-Last activity: 2026-06-26 — Phase 30 discuss-phase complete
+Phase: 30 — CDP Footprint Reduction ✅ COMPLETE (qa PASSED). Next: Phase 32.
+Plan: 30-01/02/03 all executed + verified
+Status: Phase 30 shipped; Phase 31 (TLS) CANCELLED; autonomous run continuing to Phase 32
+Last activity: 2026-06-26 — Phase 30 verified; Phase 31 dropped (real-Chrome-only)
 
-Progress: [ ] 0% (0/4 phases planned)
+Progress: [██░░░░] Phase 30 of active {30,32,33} complete (Phase 31 cancelled)
 
 ## Roadmap Summary
 
