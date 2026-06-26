@@ -173,7 +173,7 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 - [x] **Phase 30: CDP Footprint Reduction** — Reduce or obfuscate Runtime.enable and other CDP signals; measure impact against detection targets; document the honest ceiling for what remains detectable. ✅ completed 2026-06-26 (qa PASSED; plain `goto` enables none of Runtime/Network/Fetch).
 - [x] ~~**Phase 31: Network-Layer Identity (TLS)**~~ — ❌ **CANCELLED (2026-06-26)** — was uTLS-style TLS spoofing; vetoed by operator constraint "always stick to real Chrome, never spoof TLS." Real-Chrome TLS is authentic by construction. TLS-01..04 moved to Out of Scope.
-- [ ] **Phase 32: Profile Library** — Ship 5-10 vetted **Chrome-only** device profiles with the binary; test against harness; users list and select by name. (No spoofed TLS in any profile.)
+- [x] **Phase 32: Profile Library** — Ship 5-10 vetted **Chrome-only** device profiles with the binary; test against harness; users list and select by name. (No spoofed TLS in any profile.) ✅ completed 2026-06-26 (qa PASSED; 6 profiles, `--profile=list`, vetting gate).
 - [ ] **Phase 33: Advanced Evasion** — Expand fingerprint hardening surfaces beyond v1.6; implement 2+ new hardening toggles; assert via harness.
 
 ### Phase 30: CDP Footprint Reduction

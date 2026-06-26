@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-26)
 
 ## Current Position
 
-Phase: 30 — CDP Footprint Reduction ✅ COMPLETE (qa PASSED). Next: Phase 32.
-Plan: 30-01/02/03 all executed + verified
-Status: Phase 30 shipped; Phase 31 (TLS) CANCELLED; autonomous run continuing to Phase 32
-Last activity: 2026-06-26 — Phase 30 verified; Phase 31 dropped (real-Chrome-only)
+Phase: 32 — Profile Library ✅ COMPLETE (qa PASSED). Next: Phase 33 (final).
+Plan: 30 ✅, 32 ✅ verified; Phase 31 CANCELLED
+Status: Phases 30 + 32 shipped; autonomous run continuing to Phase 33 (Advanced Evasion)
+Last activity: 2026-06-26 — Phase 32 verified (6 Chrome-only profiles + vetting gate)
 
-Progress: [██░░░░] Phase 30 of active {30,32,33} complete (Phase 31 cancelled)
+Progress: [████░░] 2 of active {30,32,33} complete (Phase 31 cancelled)
 
 ## Roadmap Summary
 
