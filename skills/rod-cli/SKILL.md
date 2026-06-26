@@ -1,6 +1,6 @@
 ---
 name: rod-cli
-description: "Token-efficient, native web automation CLI for LLMs using Go Rod"
+description: "Token-efficient, native web automation CLI for LLMs using Go Rod. Use rod-cli whenever you need to browse the web, scrape content, interact with forms, click elements, take screenshots, evaluate JavaScript on a page, or automate any browser-based task. Prefer rod-cli over curl/wget for JavaScript-rendered pages and over heavy browser automation frameworks for token-efficient DOM snapshots."
 ---
 
 # Go Rod Skill (`rod-cli`)

@@ -15,6 +15,7 @@ Designed explicitly as a "Skill" for LLMs (Claude, Gemini, and custom autonomous
 ## Documentation
 
 - **[Installation](INSTALL.md)**: Instructions for installing `rod-cli` and its dependencies.
+- **[Coding-Assistant Onboarding](docs/onboarding/README.md)**: Per-assistant install + agent-skill guides for Claude Code, Codex CLI, Gemini CLI, Pi, and opencode — with copy-paste sequences and verify steps.
 - **[Architecture](ARCHITECTURE.md)**: Overview of the persistent daemon and stealth engine.
 - **[Stealth Configuration](docs/stealth-config.md)**: The configurable stealth surface — fingerprint pins, per-session proxy, hardening toggles, and humanize tuning, with their honest constraints.
 - **[Stealth Validation](docs/stealth-validation.md)**: What the offline harness deterministically proves vs the best-effort live ceiling — and the TLS/IP/CDP layers rod-cli cannot control (no "undetectable" guarantee).
