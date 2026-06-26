@@ -169,11 +169,11 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 ### 🚧 v1.7 Complete Evasion Stack (In Progress)
 
-**Milestone Goal:** Extend rod-cli's stealth from JS-layer fingerprinting to a full-stack evasion solution — reducing CDP signals, spoofing TLS fingerprints, providing curated device profiles, and expanding fingerprint hardening surfaces.
+**Milestone Goal:** Extend rod-cli's stealth from JS-layer fingerprinting toward a fuller evasion solution — reducing CDP signals, providing curated (Chrome-only) device profiles, and expanding fingerprint hardening surfaces. **TLS fingerprint spoofing is explicitly out of scope: rod-cli drives real Chrome, so its TLS/JA3 handshake is already authentic — we never spoof it (operator constraint, 2026-06-26).**
 
 - [ ] **Phase 30: CDP Footprint Reduction** — Reduce or obfuscate Runtime.enable and other CDP signals; measure impact against detection targets; document the honest ceiling for what remains detectable.
-- [ ] **Phase 31: Network-Layer Identity (TLS)** — TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity; proxy-aware TLS.
-- [ ] **Phase 32: Profile Library** — Ship 5-10 vetted device profiles with the binary; test against harness; users list and select by name.
+- [x] ~~**Phase 31: Network-Layer Identity (TLS)**~~ — ❌ **CANCELLED (2026-06-26)** — was uTLS-style TLS spoofing; vetoed by operator constraint "always stick to real Chrome, never spoof TLS." Real-Chrome TLS is authentic by construction. TLS-01..04 moved to Out of Scope.
+- [ ] **Phase 32: Profile Library** — Ship 5-10 vetted **Chrome-only** device profiles with the binary; test against harness; users list and select by name. (No spoofed TLS in any profile.)
 - [ ] **Phase 33: Advanced Evasion** — Expand fingerprint hardening surfaces beyond v1.6; implement 2+ new hardening toggles; assert via harness.
 
 ### Phase 30: CDP Footprint Reduction
@@ -189,24 +189,16 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: TBD
 
-### Phase 31: Network-Layer Identity (TLS)
+### Phase 31: Network-Layer Identity (TLS) — ❌ CANCELLED (2026-06-26)
 
-**Goal**: TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity; proxy-aware TLS.
-**Depends on**: Phase 30
-**Requirements**: TLS-01, TLS-02, TLS-03, TLS-04
-**Success Criteria** (what must be TRUE):
+**Status**: CANCELLED. Operator constraint: "Don't do TLS fingerprint spoofing — we always stick to real Chrome, with all the profiles." rod-cli drives a real Chrome/Chromium browser, so its TLS/JA3-JA4 handshake is already an authentic Chrome fingerprint; a uTLS-style spoofing layer adds a major network-layer architectural surface for no gain. Requirements TLS-01..TLS-04 are moved to Out of Scope in REQUIREMENTS.md. A short note documenting the deliberate real-Chrome-TLS stance is added to the stealth docs (handled as part of the Phase 31 closeout).
 
-  1. TLS/JA3 fingerprint matches the declared User-Agent/platform profile — asserted by a harness test that reads the TLS signature via an external probe.
-  2. HTTP and SOCKS5 proxies preserve TLS spoofing (no leak of real TLS fingerprint through proxy connections).
-  3. A new `--tls-spoof` flag controls TLS fingerprinting per session (default ON; can be disabled for debugging).
-  4. The TLS layer is documented in `docs/stealth-config.md` with configuration guidance.
-
-**Plans**: TBD
+~~**Goal**: TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity; proxy-aware TLS.~~
 
 ### Phase 32: Profile Library
 
-**Goal**: Ship 5-10 vetted device profiles with the binary; test against harness; users list and select by name.
-**Depends on**: Phase 31
+**Goal**: Ship 5-10 vetted **Chrome-only** device profiles with the binary; test against harness; users list and select by name. No profile carries a spoofed TLS fingerprint — the TLS layer is always genuine Chrome.
+**Depends on**: Phase 30 (Phase 31 cancelled)
 **Requirements**: PROF-01, PROF-02, PROF-03, PROF-04
 **Success Criteria** (what must be TRUE):
 

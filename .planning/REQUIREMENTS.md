@@ -13,12 +13,14 @@
 - [ ] **CDP-02**: All CDP commands sent by rod-cli are inventoried; each has a documented mitigation or accepted visibility.
 - [ ] **CDP-03**: CDP footprint reduction is measured against live detection targets; the harness asserts the reduction baseline.
 
-### Network-Layer Identity (TLS)
+### Network-Layer Identity (TLS) — ❌ CANCELLED (2026-06-26)
 
-- [ ] **TLS-01**: TLS/JA3-JA4 fingerprint matches the declared User-Agent/platform profile — the network-layer identity is coherent with the JS-layer identity.
-- [ ] **TLS-02**: A TLS fingerprinting library (uTLS or equivalent) is integrated; HTTP/HTTPS requests from the browser carry spoofed TLS signatures.
-- [ ] **TLS-03**: Proxy-aware TLS spoofing works correctly — TLS fingerprints do not leak through HTTP or SOCKS5 proxies.
-- [ ] **TLS-04**: The TLS spoofing layer is configurable per session (enabled by default, can be disabled for debugging).
+> **Cancelled by operator constraint:** "Don't do TLS fingerprint spoofing — we always stick to real Chrome, with all the profiles." rod-cli drives a real Chrome/Chromium browser, so its TLS/JA3-JA4 handshake is already an authentic Chrome fingerprint. A uTLS-style spoofing layer is explicitly unwanted. TLS-01..04 are moved to Out of Scope and Phase 31 is cancelled.
+
+- ~~**TLS-01**: TLS/JA3-JA4 fingerprint matches the declared UA/platform profile.~~ → Out of Scope (real Chrome TLS is authentic by construction).
+- ~~**TLS-02**: Integrate a TLS-fingerprinting library (uTLS or equiv); requests carry spoofed TLS signatures.~~ → Out of Scope (no spoofing by design).
+- ~~**TLS-03**: Proxy-aware TLS spoofing works correctly.~~ → Out of Scope (no spoofing; real Chrome TLS is end-to-end from the browser).
+- ~~**TLS-04**: The TLS spoofing layer is configurable per session.~~ → Out of Scope (nothing to configure).
 
 ### Profile Library
 
@@ -56,20 +58,21 @@
 | CAPTCHA solving | Scope creep, ToS/legal exposure, external paid deps; breaks the zero-dependency single-binary constraint. |
 | Mobile fingerprints from desktop headless | Desktop reporting mobile signals is exactly the inconsistency detectors flag. Ship vetted desktop profiles only. |
 | Remote profile repository | Deferred to v2 (PROF-ECO-01) — built-in profiles are the v1.7 scope. |
+| **TLS fingerprint spoofing (TLS-01..04, was Phase 31)** | **Operator constraint (2026-06-26): always use real Chrome — never spoof TLS. rod-cli drives real Chrome/Chromium, so its TLS/JA3-JA4 handshake is authentic by construction; a uTLS-style spoof layer adds a major network-layer surface for no gain. All shipped profiles are Chrome-only with genuine Chrome TLS.** |
 
 ## Traceability
 
-Phase mapping will be assigned by the roadmapper (v1.7 = Phases 30–33).
+v1.7 active phases: 30, 32, 33 (Phase 31 / TLS-* cancelled 2026-06-26).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CDP-01 | Phase 30 | Pending |
-| CDP-02 | Phase 30 | Pending |
-| CDP-03 | Phase 30 | Pending |
-| TLS-01 | Phase 31 | Pending |
-| TLS-02 | Phase 31 | Pending |
-| TLS-03 | Phase 31 | Pending |
-| TLS-04 | Phase 31 | Pending |
+| CDP-01 | Phase 30 | Built (pending qa verify) |
+| CDP-02 | Phase 30 | Built (pending qa verify) |
+| CDP-03 | Phase 30 | Built (pending qa verify) |
+| ~~TLS-01~~ | ~~Phase 31~~ | ❌ Cancelled → Out of Scope |
+| ~~TLS-02~~ | ~~Phase 31~~ | ❌ Cancelled → Out of Scope |
+| ~~TLS-03~~ | ~~Phase 31~~ | ❌ Cancelled → Out of Scope |
+| ~~TLS-04~~ | ~~Phase 31~~ | ❌ Cancelled → Out of Scope |
 | PROF-01 | Phase 32 | Pending |
 | PROF-02 | Phase 32 | Pending |
 | PROF-03 | Phase 32 | Pending |
@@ -80,10 +83,11 @@ Phase mapping will be assigned by the roadmapper (v1.7 = Phases 30–33).
 
 **Coverage:**
 
-- v1 requirements: 13 total
-- Mapped to phases: 13 ✓ (100% — every requirement maps to exactly one phase)
+- v1 requirements (active): 10 (CDP ×3, PROF ×4, EVAD ×3)
+- Cancelled → Out of Scope: 4 (TLS-01..04, operator constraint)
+- Mapped to active phases (30, 32, 33): 10 ✓ (100%)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-26*
-*Last updated: 2026-06-26 at milestone start*
+*Last updated: 2026-06-26 — TLS-01..04 cancelled (real-Chrome-only constraint); Phase 31 dropped.*

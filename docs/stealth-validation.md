@@ -82,9 +82,18 @@ makes **no claim** to control them — which is exactly why even a clean live ru
 **not** mean "undetectable":
 
 - **TLS fingerprint (JA3 / JA4).** Anti-bot systems fingerprint the TLS ClientHello
-  (cipher suites, extensions, ordering). That handshake is the browser's / Go
-  runtime's, not something JavaScript can rewrite. A mismatch between the spoofed UA
-  and the real TLS stack is a tell rod-cli cannot close.
+  (cipher suites, extensions, ordering). That handshake is the browser's, not
+  something JavaScript can rewrite. **rod-cli takes this as a strength, not a gap:
+  it drives a real Chrome/Chromium browser, so the TLS handshake is an *authentic
+  Chrome* JA3/JA4 by construction — and rod-cli deliberately does NOT spoof it.**
+  All shipped device profiles are Chrome variants (they vary the JS / header
+  identity, never the TLS layer), so the TLS fingerprint and the spoofed UA always
+  tell the same Chrome story — there is no UA-vs-TLS mismatch to close. A uTLS-style
+  TLS-spoofing layer was evaluated for v1.7 and **deliberately rejected** (it adds a
+  large network-layer surface and risk for no gain when the browser is already real
+  Chrome). The residual caveat is version skew: if a profile claims a Chrome major
+  far from the actual binary's, the TLS reflects the *real* binary — so keep the
+  binary current.
 - **IP reputation.** Datacenter / proxy / known-bad ASNs are scored at the network
   layer, independent of any browser signal. rod-cli does not launder your egress IP;
   a flagged IP is detected regardless of a perfect fingerprint.
