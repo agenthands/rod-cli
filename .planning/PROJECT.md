@@ -18,19 +18,24 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 ## Current State
 
-rod-cli has completed its v1.5 Plugin Ecosystem Documentation milestone. The v1.4 plugin engine — script sandbox, browser lifecycle hooks (`OnRequest`, `OnResponse`, `OnLoad`, `OnDOMNodeInserted`), state/context sharing, and `plugin load/list/run` — is now fully documented in a `docs/plugins/` tree: reference pages, a flagship XSS-scanner worked example, per-hook recipes, a copyable starter, and an authoring tutorial, all linked from the README. v1.5 also landed three small engine fixes surfaced while documenting — `api.GetLocalStorage()`, a now-functional `plugin run` (invokes a named plugin function and returns its result), and CDP DOM-domain enablement so the `onDOMNodeInserted` hook fires — and removed the always-on startup banner for token-efficiency.
+rod-cli has completed its **v1.7 Complete Evasion Stack** milestone (shipped 2026-06-26). Building on v1.6's proven, configurable JS-layer stealth, v1.7 reduced the CDP transport footprint (a plain `goto` now enables none of the Runtime/Network/Fetch CDP domains — capture is opt-in, the interceptor is lazy, and HTTP↔JS identity coherence moved to the zero-enable `Emulation` domain), shipped a curated library of 6 vetted **Chrome-only** device profiles (embedded, `--profile=list`, with a real vetting gate), and activated godoll's dormant fingerprint dimensions (fonts/media-devices/battery/codecs) coherently behind 4 new hardening toggles. **TLS fingerprint spoofing was deliberately ruled out** — rod-cli drives real Chrome, whose TLS/JA3 is authentic by construction (TLS spoofing lives in the separate "munch" project). The milestone passed an independent security review with no blocker.
 
-## Current Milestone: v1.7 Complete Evasion Stack
+## Current Milestone: none — between milestones
 
-**Goal:** Extend rod-cli's stealth from JS-layer fingerprinting to a full-stack evasion solution — reducing CDP signals, spoofing TLS fingerprints, providing curated device profiles, and expanding fingerprint hardening surfaces.
+v1.7 is shipped and archived. Next milestone TBD via `/anvil-new-milestone`.
 
-**Target features:**
-- **CDP Footprint Reduction** — Deep implementation to reduce detectable `Runtime.enable` / CDP signals; measure impact against detection targets; document honest ceiling.
-- **Network-Layer Identity (TLS)** — Full TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing; network-layer rewrite to match JS-layer identity.
-- **Profile Library** — 5-10 vetted, coherent device profiles shipped with the binary; tested against detection harness; users can still provide custom profiles.
-- **Advanced Evasion** — Expand fingerprint hardening surfaces beyond v1.6 canvas/WebGL/WebRTC; address remaining detection vectors.
+<details>
+<summary>Archived: v1.7 Complete Evasion Stack (Shipped 2026-06-26)</summary>
 
-**Note:** This is a major architectural milestone — TLS spoofing requires network-layer changes structurally outside the JS-injection layer. CDP reduction was deferred from v1.6 tech debt; this milestone implements it properly.
+**Goal:** Extend rod-cli's stealth from JS-layer fingerprinting toward a fuller evasion solution — reducing CDP signals, curated Chrome-only device profiles, and expanded fingerprint hardening. (TLS spoofing ruled out: real Chrome only.)
+
+**Delivered (3 phases, 7 plans; Phase 31/TLS cancelled):**
+- **CDP Footprint Reduction (Phase 30):** plain `goto` enables none of Runtime/Network/Fetch; opt-in capture flags; lazy interceptor; zero-enable Emulation identity (design fork C+D); per-command inventory + honest ceiling; deterministic harness baseline gate.
+- **Profile Library (Phase 32):** 6 embedded Chrome-only profiles, `--profile=list`, built-in-first resolution, real PROF-02 vetting gate.
+- **Advanced Evasion (Phase 33):** godoll fonts/media-devices/battery/codecs dimensions activated coherently (OS-constrained), 4 CLI>profile>default toggles, harness-asserted.
+
+**Note:** TLS-01..04 / Phase 31 cancelled by operator constraint (real-Chrome-only; TLS spoofing handled in "munch"). Known follow-ups: godoll font-spoof no-op; plugin-path CDP-ledger gap; go1.26.1 toolchain bump. Full detail: `.planning/milestones/v1.7-*`.
+</details>
 
 <details>
 <summary>Archived: v1.5 Plugin Ecosystem Documentation</summary>

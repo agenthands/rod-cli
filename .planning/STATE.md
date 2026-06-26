@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Complete Evasion Stack
-status: planning
-stopped_at: Milestone v1.7 initialized — defining requirements
+milestone: none
+milestone_name: between milestones (v1.7 shipped)
+status: milestone_complete
+stopped_at: v1.7 Complete Evasion Stack shipped + archived (2026-06-26)
 last_updated: "2026-06-26T00:00:00.000Z"
 last_activity: 2026-06-26
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 3
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # STATE.md — rod-cli
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** v1.7 — Complete Evasion Stack
+**Current focus:** None — v1.7 shipped. Next milestone via `/anvil-new-milestone`.
 
 ## Current Position
 
-Phase: 33 — Advanced Evasion ✅ COMPLETE (qa PASSED). ALL v1.7 phases done.
-Plan: 30 ✅, 32 ✅, 33 ✅ verified; Phase 31 CANCELLED
-Status: All active v1.7 phases (30, 32, 33) shipped + verified. At milestone-close gate (security review? → document → complete-milestone).
+Phase: — (between milestones)
+Plan: —
+Status: ✅ v1.7 Complete Evasion Stack SHIPPED + archived (2026-06-26). Tag v1.7. Ready to start the next milestone.
 Last activity: 2026-06-26 — Phase 33 verified (godoll dimensions activated; 4 hardening toggles)
 
 Progress: [██████] 3 of 3 active phases complete (Phase 31 cancelled) — milestone-close pending
