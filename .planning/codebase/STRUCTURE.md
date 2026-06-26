@@ -3,6 +3,7 @@
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
 **Refreshed:** 2026-06-26 (milestone v1.7 close)
+**Refreshed:** 2026-06-26 (milestone v2.0 close — author: architect)
 
 > The original layout (`tools/`, `server.go`, `runner.go`) was stale; HEAD uses
 > `actions/`, `daemon/`, and `internal/`.
@@ -20,6 +21,8 @@
   - `actions.go`: browser command implementations + the humanize option builders
     (`typingOpts`/`mouseOpts`/`scrollOpts`).
   - `stealth_check.go`: the `stealth-check` command (per-signal verdicts).
+  - `cdp_traffic.go`: the `cdp-traffic` command (v2.0) — reads the CDP proxy's
+    ring buffer; formats human or `--json`.
   - `plugin.go`: plugin command surface.
 - `/daemon/`
   - `daemon.go`: per-session daemon protocol — `EnsureDaemon`, `ClientExecute`,
@@ -36,7 +39,8 @@
     + CH derivation), the LAZY interceptor (`ensureInterceptorEnabled`,
     `AddRoute`/`RemoveRoute`), the CDP-domain ledger (`recordCDPDomainLocked`,
     `GetEnabledCDPDomains`, `CDPDomainRuntime`/`Network`/`Fetch` consts), opt-in
-    console/request capture.
+    console/request capture. v2.0: `cdpProxy` field + `GetCDPProxy()`, proxy wired
+    into `launchBrowser()` via `WithCDPWrapper`, jitter + bypass gating.
   - `profiles_embed.go` + `profiles/*.json` (v1.7, Phase 32): embedded Chrome-only
     profile library (`//go:embed`); `BuiltinProfileNames`, `LoadBuiltinProfile`.
     6 profiles: `windows-11-chrome`, `windows-11-desktop-1440p`,
@@ -49,6 +53,12 @@
     `server.go`, `embed.go`.
 - `/internal/plugin/`
   - JS plugin engine: `engine.go`, `lifecycle.go`, `api.go`, `scanner/`.
+- `/internal/cdpproxy/` — v2.0
+  - `proxy.go`: `Proxy` struct (`cdp.WebSocketable`), ring-buffer logging,
+    timing jitter, `Traffic()` accessor.
+  - `filters.go`: `normalizeCDPResponse()` — Runtime.getProperties value
+    stripping (fail-safe, pass-through on unparseable).
+  - `filters_test.go`: 7 unit tests for normalization logic.
 - `/utils/`, `/banner/`: helpers and the CLI startup banner.
 - `/tests/`: end-to-end + integration tests (drive the built binary), incl.
   `detection_test.go` (offline Tier 1), `detection_live_test.go` (`//go:build
@@ -73,3 +83,6 @@
   `detect.Probe`, shared with `actions/stealth_check.go`).
 - **Snapshot logic:** client-side in `types/js/snapshotter_raw.js`, server-side
   in `types/snapshot.go` / `actions`.
+- **CDP proxy (v2.0):** `internal/cdpproxy/proxy.go` (`Proxy`, `Traffic()`),
+  `internal/cdpproxy/filters.go` (`normalizeCDPResponse`), wired in
+  `types/context.go launchBrowser()` via godoll's `WithCDPWrapper`.

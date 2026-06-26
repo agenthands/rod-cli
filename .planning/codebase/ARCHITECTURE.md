@@ -3,6 +3,7 @@
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close — author: codebase-archaeologist)
 **Refreshed:** 2026-06-26 (milestone v1.7 close — author: codebase-archaeologist)
+**Refreshed:** 2026-06-26 (milestone v2.0 close — author: architect)
 
 > **v1.7 (Complete Evasion Stack)** changed three things inside the same spine,
 > all in `types/context.go createPage`. (1) **CDP footprint reduction (Phase 30):**
@@ -19,6 +20,13 @@
 > `--battery-spoof`/`--codec-spoof`, default ON). **Phase 31 (TLS spoofing) was
 > CANCELLED** — real-Chrome-only, NO TLS/JA3 spoofing (that lives in a separate
 > project, "munch"); the authentic-Chrome TLS handshake is treated as a strength.
+> **v2.0 (CDP-DEEP-01 Build, 2026-06-26):** shipped an in-process MITM WebSocket
+> CDP proxy (`internal/cdpproxy/`, 402 lines) that sits between go-rod and Chrome's
+> debugging WebSocket, implementing `cdp.WebSocketable`. The proxy provides:
+> pass-through traffic logging (ring buffer), Runtime.getProperties normalization
+> (strips accessor `value` fields), configurable timing jitter (`--cdp-jitter-ms`),
+> a diagnostic `cdp-traffic` command (`actions/cdp_traffic.go`), and a
+> `--no-cdp-proxy` bypass escape hatch. Default-OFF behind `--cdp-proxy`.
 
 > NOTE: the original 2026-06-18 map described an MCP-server design (`tools/`,
 > `server.go`, `runner.go`, `mark3labs/mcp-go`). That is **stale** — the project
@@ -56,6 +64,8 @@ the browser alive between calls. It is built on `godoll` (a wrapper over
      retry/auto-wait + humanize helpers rather than raw go-rod primitives.
    - `stealth_check.go`: the `stealth-check` command — per-signal fingerprint
      verdicts (human / `--raw` / `--json`) using the shared `detect.Probe`.
+   - `cdp_traffic.go`: the `cdp-traffic` command (v2.0) — reads the CDP proxy's
+     ring buffer, formats output human or `--json`.
    - `plugin.go`: the plugin command surface.
 
 4. **Context & types (`types/`)**
@@ -88,12 +98,26 @@ the browser alive between calls. It is built on `godoll` (a wrapper over
    - JS plugin loading/lifecycle/scanner (`engine.go`, `lifecycle.go`, `api.go`,
      `scanner/`).
 
+7. **CDP proxy (`internal/cdpproxy/`)** — v2.0
+   - `proxy.go`: `Proxy` struct implementing `cdp.WebSocketable` — pass-through
+     with ring-buffer logging (cap 1024), configurable timing jitter
+     (`jitterMaxMs`), and `Traffic()` accessor for diagnostics.
+   - `filters.go`: `normalizeCDPResponse()` — JSON-level Runtime.getProperties
+     response normalization (strips `value` from accessor properties with `get`
+     field), fail-safe pass-through on unparseable input.
+   - Wired into `launchBrowser()` via godoll's `WithCDPWrapper`, gated behind
+     `--cdp-proxy` (default OFF).
+
 ## Data Flow
 
 1. The client process pings the session daemon; if absent, spawns it with the
    stealth flags baked into argv (secrets via env).
-2. The daemon resolves stealth once, launches Chromium via godoll, and listens.
+2. The daemon resolves stealth once, launches Chromium via godoll. If
+   `--cdp-proxy` is set (v2.0), godoll wraps the CDP WebSocket in a
+   `cdpproxy.Proxy` before go-rod connects — all CDP traffic then flows
+   through the proxy (normalization + jitter + logging).
 3. The client sends a JSON request; the daemon runs the matching `actions`
    function against the live page.
 4. Results (snapshot/markdown/verdict) return over the socket; the client prints
-   them plain, `--raw`, or `--json`.
+   them plain, `--raw`, or `--json`. If the proxy is active, `rod-cli cdp-traffic`
+   reads the proxy's ring buffer.

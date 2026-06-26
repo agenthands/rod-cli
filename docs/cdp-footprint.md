@@ -103,13 +103,45 @@ The concrete build plan lives in `.planning/phases/39/CDP-DEEP-01-PLAN.md` (3 ph
 
 ### Updated honest ceiling (post CDP-DEEP-01 research)
 
-| Signal | Current (v1.8) | With MITM proxy (planned) |
+## CDP-DEEP-01 Build (v2.0, shipped 2026-06-26)
+
+The MITM WebSocket CDP proxy (`internal/cdpproxy/`) is now **built and shipping.**
+It sits between go-rod's `cdp.Client` and Chrome's debugging WebSocket, implementing
+`cdp.WebSocketable`. In v1 it provides:
+
+- **Pass-through with traffic logging** — all CDP messages logged to a ring buffer,
+  exposed via `rod-cli cdp-traffic [--json]`
+- **Runtime domain normalization** — `Runtime.getProperties` responses have
+  accessor (getter) property `value` fields stripped, preventing the `console.debug`
+  stack-getter tell when Runtime IS enabled
+- **Timing jitter** — configurable 0-N ms random delay (`--cdp-jitter-ms=N`) before
+  each CDP `Send()` to break characteristic automation timing patterns
+- **Default-OFF** — gated behind `--cdp-proxy` (default false)
+- **Bypass flag** — `--no-cdp-proxy` provides a zero-risk escape hatch
+
+The proxy is 402 lines of Go in `internal/cdpproxy/` (proxy.go + filters.go) with
+7 unit tests for the normalization logic. Runtime normalization is active when the
+proxy is enabled; jitter and command dispatch are opt-in.
+
+### What the proxy can and cannot hide (v2.0, built)
+
+| Signal | Without proxy | With proxy (`--cdp-proxy`) |
 |---|---|---|
 | `Runtime.enable` (baseline) | Not enabled | Not enabled |
-| `Runtime.enable` (console capture) | Enabled, logged | Enabled, normalized (getter triggers suppressed) |
+| `Runtime.enable` (console capture) | Enabled, logged | Enabled, **normalized** (getter `value` stripped) |
 | `cdpTell` stack-getter | No-signal on baseline | No-signal on baseline + normalized when Runtime on |
-| `Page`/`Target` events | Accepted-visible | Jittered (timing patterns broken) |
+| `Page`/`Target` events | Accepted-visible | Jittered (timing patterns broken with `--cdp-jitter-ms`) |
 | WebSocket port on localhost | Accepted-visible (OS-level only) | Accepted-visible (OS-level only) |
+| CDP command timing patterns | Accepted-visible | **Reduced** with `--cdp-jitter-ms` |
 | TLS/JA3 fingerprint | Out of scope (real Chrome) | Out of scope (real Chrome) |
+| Raw CDP traffic diagnostics | None | `rod-cli cdp-traffic` (ring buffer) |
 
-The proxy **measurably reduces** the observable surface but does not eliminate the CDP transport. A detector with OS-level access can always observe the WebSocket connection. As with all rod-cli stealth: **no "undetectable" guarantee.**
+### Honest ceiling (v2.0)
+
+The proxy cannot eliminate the CDP transport. A detector with OS-level access can
+always observe the WebSocket connection. The normalization is a JSON-level
+heuristic — it strips the RESULT of getter calls from CDP responses, but cannot
+prevent Chrome from calling the getter during serialization. Timing jitter uses
+`math/rand` (not crypto-grade) and is additive — sophisticated timing analysis
+may still identify patterns. As with all rod-cli stealth: **no "undetectable"
+guarantee.**
