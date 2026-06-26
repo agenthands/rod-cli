@@ -279,14 +279,14 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 </invoke>
 
-### 🔨 v1.8 Debt Cleanup & Coding-Assistant Onboarding (In Progress)
+### ✅ v1.8 Debt Cleanup & Coding-Assistant Onboarding (Shipped 2026-06-26)
 
-**Milestone Goal:** Retire the three v1.7 follow-ups (toolchain bump, plugin-path CDP-ledger hole, font-spoof no-op) and ship authoritative install + agent-skill documentation so any of the five major coding assistants — Claude Code, Codex CLI, Gemini CLI, Pi (pi.dev), and opencode — can adopt rod-cli. **Grounding decision:** rod-cli is a pure CLI/daemon, not an MCP server (verified at HEAD — no `mcp` subcommand, no JSON-RPC, no MCP dep); every onboarding doc therefore teaches the agent to shell out to the `rod-cli` binary via that tool's agent-skill / instructions-file mechanism, and the MCP install path is deliberately not documented. TLS spoofing remains permanently out of scope (real Chrome only).
+**Milestone Goal:** Retire the three v1.7 follow-ups (toolchain bump, plugin-path CDP-ledger hole, font-spoof no-op) and ship authoritative install + agent-skill documentation so any of the five major coding assistants — Claude Code, Codex CLI, Gemini CLI, Pi (pi.dev), and opencode — can adopt rod-cli.
 
-- [ ] **Phase 34: Toolchain Bump & Vuln Gate** — Pin go.mod to go1.26.1, align CI/release, clear the 13 F1 stdlib vulns, and wire a govulncheck gate so the supply-chain fix can't silently regress. (BUILD-01, BUILD-02)
-- [ ] **Phase 35: Plugin-Path CDP-Ledger Closure** — Record CDP domains enabled via the plugin lifecycle path in the per-session ledger and assert the previously-uncovered path in the offline harness. (LEDGER-01, LEDGER-02)
-- [ ] **Phase 36: Real Font Spoofing** — Replace the godoll font-injector no-op with a real injector so `--font-spoof` actually changes detectable fonts (OS-coherent, stable per session), harness-asserted on/off/stability. (FONT-01, FONT-02, FONT-03)
-- [ ] **Phase 37: Coding-Assistant Onboarding Docs** — Binary install + the cross-tool SKILL.md update + per-assistant install/skill instructions for Claude Code, Codex CLI, Gemini CLI, Pi, and opencode, each with a copy-paste sequence and verify step, accurate to the real (MCP-free) command surface and linked from the README. (DOC-01..DOC-09)
+- [x] **Phase 34: Toolchain Bump & Vuln Gate** — Pin go.mod to go1.26.1, align CI/release, clear the 13 F1 stdlib vulns, and wire a govulncheck gate so the supply-chain fix can't silently regress. (BUILD-01, BUILD-02)
+- [x] **Phase 35: Plugin-Path CDP-Ledger Closure** — Record CDP domains enabled via the plugin lifecycle path in the per-session ledger and assert the previously-uncovered path in the offline harness. (LEDGER-01, LEDGER-02)
+- [x] **Phase 36: Real Font Spoofing** — Replace the godoll font-injector no-op with a real injector so `--font-spoof` actually changes detectable fonts (OS-coherent, stable per session), harness-asserted on/off/stability. (FONT-01, FONT-02, FONT-03)
+- [x] **Phase 37: Coding-Assistant Onboarding Docs** — Binary install + the cross-tool SKILL.md update + per-assistant install/skill instructions for Claude Code, Codex CLI, Gemini CLI, Pi, and opencode, each with a copy-paste sequence and verify step, accurate to the real (MCP-free) command surface and linked from the README. (DOC-01..DOC-09)
 
 ### Phase 34: Toolchain Bump & Vuln Gate
 
@@ -341,12 +341,12 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: TBD
 
-### 🔨 v1.9 godoll Hygiene & CDP-DEEP-01 Research (In Progress)
+### ✅ v1.9 godoll Hygiene & CDP-DEEP-01 Research (Shipped 2026-06-26)
 
 **Milestone Goal:** Close the two remaining v1.7 security-review hygiene items (F2/F4) in godoll and rod-cli, and produce an evaluated, grounded design for CDP-DEEP-01 (deep CDP signal obfuscation) that a follow-on milestone can execute.
 
-- [ ] **Phase 38: Godoll Hygiene** — Close v1.7 F2 (backslash reject in rod-cli) and F4 (json.Marshal in godoll's EnableRequestInterception). (HYGIENE-01, HYGIENE-02)
-- [ ] **Phase 39: CDP-DEEP-01 Research & Design** — Evaluate the three CDP-DEEP-01 approaches (browser-patching, MITM/alternate transport, patched DevTools endpoint) against Chrome's detection surface. Pick one. Produce a grounded, executable PLAN. Update `docs/cdp-footprint.md`. (CDP-DEEP-01, CDP-DEEP-02, CDP-DEEP-03)
+- [x] **Phase 38: Godoll Hygiene** — Close v1.7 F2 (backslash reject in rod-cli) and F4 (json.Marshal in godoll's EnableRequestInterception). (HYGIENE-01, HYGIENE-02)
+- [x] **Phase 39: CDP-DEEP-01 Research & Design** — Evaluate the three CDP-DEEP-01 approaches (browser-patching, MITM/alternate transport, patched DevTools endpoint) against Chrome's detection surface. Pick one. Produce a grounded, executable PLAN. Update `docs/cdp-footprint.md`. (CDP-DEEP-01, CDP-DEEP-02, CDP-DEEP-03)
 
 ### Phase 38: Godoll Hygiene
 
