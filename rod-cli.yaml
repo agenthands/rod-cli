@@ -22,6 +22,8 @@ stealth:
     canvasNoise: true
     fontSpoof: true
     cdpProxy: null
+    cdpJitterMs: null
+    noCdpProxy: null
     mediaDevicesSpoof: true
     batterySpoof: true
     codecSpoof: true
