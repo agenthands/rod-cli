@@ -72,6 +72,50 @@ All flags are global (defined in `cmd.go`) and forwarded at daemon spawn.
 | `--webrtc-protection` | prevent WebRTC local-IP leaks; `--webrtc-protection=false` to disable |
 | `--canvas-noise` | stable-per-session canvas/WebGL/audio noise; `--canvas-noise=false` to disable |
 
+### Advanced fingerprint-dimension toggles (Phase 33, default ON)
+
+These four activate godoll's per-vector fingerprint-dimension injectors (fonts,
+media devices, battery, codecs; `plugins` rides the same path). Each is a `*bool`
+on the same **CLI > profile > default** precedence (§5), default ON; pass
+`=false` to disable. They follow the exact `--canvas-noise` pattern.
+
+| Flag | Meaning |
+|---|---|
+| `--font-spoof` | spoof OS-coherent font availability; `--font-spoof=false` to disable |
+| `--media-devices-spoof` | spoof `navigator.mediaDevices.enumerateDevices()`; `--media-devices-spoof=false` to disable |
+| `--battery-spoof` | spoof `navigator.getBattery()` (level/charging); `--battery-spoof=false` to disable |
+| `--codec-spoof` | spoof media `canPlayType()` / codec support; `--codec-spoof=false` to disable |
+
+**Coherent per profile OS.** The dimensions are generated **constrained to the
+active profile's OS + locale** (`FPWithOS`/`FPWithLocales`, OS mapped from
+`navigator.platform`), so a Windows profile gets Windows-family fonts/devices and
+a macOS profile gets macOS-family — never an unconstrained random draw on a pinned
+identity (that would be a *new* cross-layer tell). Generation is seeded with the
+per-session noise seed, so a re-read (or a recreated page) within one session
+reads the **same** values (stability).
+
+**On/off guidance.** Leave ON (the default) for the most complete, coherent
+surface. Turn an individual vector OFF only to diagnose a site that reacts to that
+specific surface, or to fall back to the browser default for one dimension while
+keeping the others hardened. A toggle OFF *fully* suppresses that vector's
+injection (it reverts to the un-hardened browser default — e.g. with
+`--battery-spoof=false`, headless `getBattery` reads back `level: 1, charging:
+true`, vs a spoofed laptop-like `level: 0.38, charging: false` when ON). The
+`media-devices-spoof` toggle-off is the harness-proven leg (ON vs OFF device
+signatures differ); the other vectors revert by the same per-dimension gate.
+
+**Performance.** Each is a one-time JS injection at page setup
+(`EvalOnNewDocument`); cost is negligible and there is no per-call overhead.
+
+**Real Chrome, no TLS.** Like the rest of the stack these are real-Chrome JS
+overrides only — there is **no** TLS/JA3 spoofing (see `stealth-validation.md`).
+
+> **Font caveat:** godoll's font injector currently does not alter observable
+> `measureText` widths, so `--font-spoof` is wired and gates injection but is not
+> separately harness-asserted on the live page; OS-coherence of the font *set* is
+> enforced at generation (the OS-keyed font list), and the media-devices, battery,
+> and codec vectors carry the live coherence/stability/toggle-off proofs.
+
 ### Humanize tuning (Phase 28, all opt-in)
 
 | Flag | godoll option | Notes |
@@ -170,11 +214,13 @@ mid-session.
 
 ## 5. Hardening toggles and the `*bool` pattern
 
-`WebRTCLeakProtection` and `CanvasNoise` are `*bool`, not `bool`, on purpose:
-`nil` ("unset") must be distinguishable from a deliberate `false`. A config file
-that persisted `canvasNoise: false` arrives as a non-nil `*bool(false)` and
-**survives** `ResolveStealth` — only a `nil` (omitted key, no flag) resolves to
-the hardened default `true`. Consumers read them through `boolVal(p, true)`.
+`WebRTCLeakProtection`, `CanvasNoise`, and the Phase-33 dimension toggles
+(`FontSpoof`, `MediaDevicesSpoof`, `BatterySpoof`, `CodecSpoof`) are `*bool`, not
+`bool`, on purpose: `nil` ("unset") must be distinguishable from a deliberate
+`false`. A config file that persisted `canvasNoise: false` (or
+`mediaDevicesSpoof: false`) arrives as a non-nil `*bool(false)` and **survives**
+`ResolveStealth` — only a `nil` (omitted key, no flag) resolves to the hardened
+default `true`. Consumers read them through `boolVal(p, true)`.
 
 - **WebRTC (HARDEN-01):** when on, `launchBrowser` sets the
   disable-non-proxied-UDP browser preference *and* `createPage` injects godoll's
@@ -184,6 +230,14 @@ the hardened default `true`. Consumers read them through `boolVal(p, true)`.
   `EvasionManager.SetNoiseSeed`). The seed makes the noise **stable within a
   session** — re-reads return an identical hash — because an unstable hash across
   reads is itself a tell.
+- **Fingerprint dimensions (Phase 33 / EVAD-01..03):** `createPage` calls
+  `em.SetFingerprint(fp)` (before `SetProfile`, so the config identity stays the
+  source of truth) with an **OS/locale-constrained, seeded** fingerprint, then
+  `em.SetDimensionOptions(...)` from the four toggles. godoll's
+  `applyFingerprintDimensions` injects only the enabled vectors. The same
+  `noiseSeed` seeds generation, so the dimensions are stable per session; a toggle
+  OFF skips that vector's injection entirely. See §2 "Advanced fingerprint-
+  dimension toggles" for the per-flag table and the font caveat.
 
 ---
 

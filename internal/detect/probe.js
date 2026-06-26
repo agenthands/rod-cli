@@ -96,15 +96,65 @@
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   });
 
-  // --- Async probe: permissions consistency ---------------------------------
-  //
-  // permissionsConsistent: Notification.permission vs the state reported by
-  // navigator.permissions.query({name:'notifications'}). The classic headless
-  // mismatch is "default" vs "denied". `ready` flips true only after this
-  // settles, with a global timeout fallback so a stalled probe never blocks
-  // the reader forever.
+  // --- Phase 33: advanced fingerprint-dimension signals (sync) --------------
 
-  var settled = false;
+  // fonts: a measureText width signature across a fixed probe set. NOTE: godoll's
+  // current font injector (scriptMockFonts) returns the original measureText width
+  // on every branch, so this signature does NOT change when font-spoof toggles —
+  // it is shipped as a stable informational signal (and for stealth-check), not a
+  // coherence/toggle discriminator. The harness proves toggle effectiveness on
+  // mediaDevices/battery/codecs instead.
+  probe("fonts", function () {
+    var c = document.createElement("canvas");
+    var ctx = c.getContext("2d");
+    if (!ctx) return "no-2d-context";
+    var sample = "mmmmmmmmmmlli";
+    var families = ["monospace", "sans-serif", "serif", "Arial", "Times New Roman", "Courier New"];
+    var parts = [];
+    for (var i = 0; i < families.length; i++) {
+      ctx.font = "72px " + families[i];
+      parts.push(Math.round(ctx.measureText(sample).width));
+    }
+    return parts.join(",");
+  });
+
+  // codecs: a canPlayType signature for representative MIME types. godoll's codec
+  // injector overrides HTMLMediaElement.prototype.canPlayType, so a toggle ON/OFF
+  // can change these readings. Empty string ("" = not supported) is normalized to
+  // "no" so the signature stays comparable.
+  probe("codecs", function () {
+    var v = document.createElement("video");
+    var a = document.createElement("audio");
+    var cases = [
+      ['video/mp4; codecs="avc1.42E01E"', v],
+      ['video/webm; codecs="vp9"', v],
+      ['video/ogg; codecs="theora"', v],
+      ["audio/mpeg", a],
+      ['audio/ogg; codecs="opus"', a],
+    ];
+    var parts = [];
+    for (var i = 0; i < cases.length; i++) {
+      var r = cases[i][1].canPlayType(cases[i][0]);
+      parts.push(cases[i][0] + "=" + (r === "" ? "no" : r));
+    }
+    return parts.join("|");
+  });
+
+  // --- Async probes: permissions + media devices + battery ------------------
+  //
+  // `ready` flips true only after EVERY async probe settles (a reference-counted
+  // gate), with a global timeout fallback so a stalled probe never blocks the
+  // reader forever. Probes:
+  //   - permissionsConsistent: Notification.permission vs the state reported by
+  //     navigator.permissions.query({name:'notifications'}) (the classic headless
+  //     "default" vs "denied" mismatch).
+  //   - mediaDevices: navigator.mediaDevices.enumerateDevices() count + kinds
+  //     (godoll scriptMockMediaDevices overrides this; headless default differs).
+  //   - battery: navigator.getBattery() presence + level + charging (godoll
+  //     scriptMockBattery overrides getBattery to resolve a fixed BatteryManager).
+
+  var pending = 0;
+  var timedOut = false;
   var settleTimer = null;
 
   function markReady() {
@@ -116,42 +166,119 @@
     d.ready = true;
   }
 
-  function settle() {
-    if (settled) return;
-    settled = true;
-    markReady();
+  // settleOne decrements the pending counter; ready flips when all probes settle.
+  function settleOne() {
+    if (timedOut) return;
+    pending--;
+    if (pending <= 0) markReady();
   }
 
-  (function () {
+  // asyncProbe registers one async probe in the gate; a synchronous throw inside
+  // the registrant still settles its slot so the gate can never deadlock.
+  function asyncProbe(fn) {
+    pending++;
     try {
-      var notif =
-        typeof Notification !== "undefined" ? Notification.permission : "no-Notification";
-      if (navigator.permissions && navigator.permissions.query) {
-        navigator.permissions
-          .query({ name: "notifications" })
-          .then(function (status) {
-            d.notificationPermission = notif;
-            d.permissionsQueryState = status.state;
-            d.permissionsConsistent =
-              notif === "denied" ? status.state === "denied" : status.state !== "denied";
-            settle();
+      fn(settleOne);
+    } catch (e) {
+      settleOne();
+    }
+  }
+
+  // Registration guard: hold one extra count across the whole registration phase
+  // and release it only after every probe is registered (releaseGuard below). This
+  // prevents an early `ready` flip if a probe settles SYNCHRONOUSLY before its
+  // siblings are registered (e.g. a missing permissions API) — pending can never
+  // hit 0 mid-registration while the guard is held.
+  pending++;
+
+  // permissions consistency
+  asyncProbe(function (done) {
+    var notif =
+      typeof Notification !== "undefined" ? Notification.permission : "no-Notification";
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: "notifications" })
+        .then(function (status) {
+          d.notificationPermission = notif;
+          d.permissionsQueryState = status.state;
+          d.permissionsConsistent =
+            notif === "denied" ? status.state === "denied" : status.state !== "denied";
+          done();
+        })
+        .catch(function (e) {
+          d.permissionsConsistent = "error: " + (e && e.message ? e.message : String(e));
+          done();
+        });
+    } else {
+      d.notificationPermission = notif;
+      d.permissionsQueryState = "no-permissions-api";
+      d.permissionsConsistent = "no-permissions-api";
+      done();
+    }
+  });
+
+  // media devices: count + sorted kind set (a stable comparable signature).
+  asyncProbe(function (done) {
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then(function (list) {
+          d.mediaDevicesCount = list.length;
+          var kinds = {};
+          for (var i = 0; i < list.length; i++) {
+            var k = (list[i] && list[i].kind) || "unknown";
+            kinds[k] = (kinds[k] || 0) + 1;
+          }
+          d.mediaDevicesKinds = Object.keys(kinds).sort().join(",");
+          d.mediaDevices = d.mediaDevicesCount + ":" + d.mediaDevicesKinds;
+          done();
+        })
+        .catch(function (e) {
+          d.mediaDevices = "error: " + (e && e.message ? e.message : String(e));
+          done();
+        });
+    } else {
+      d.mediaDevices = "no-mediaDevices-api";
+      done();
+    }
+  });
+
+  // battery: presence + level + charging (a stable comparable signature).
+  asyncProbe(function (done) {
+    if (typeof navigator.getBattery === "function") {
+      try {
+        navigator
+          .getBattery()
+          .then(function (b) {
+            d.batteryPresent = true;
+            d.batteryLevel = b.level;
+            d.batteryCharging = b.charging;
+            d.battery = "present:" + b.level + ":" + b.charging;
+            done();
           })
           .catch(function (e) {
-            d.permissionsConsistent = "error: " + (e && e.message ? e.message : String(e));
-            settle();
+            d.battery = "error: " + (e && e.message ? e.message : String(e));
+            done();
           });
-      } else {
-        d.notificationPermission = notif;
-        d.permissionsQueryState = "no-permissions-api";
-        d.permissionsConsistent = "no-permissions-api";
-        settle();
+      } catch (e) {
+        d.battery = "error: " + (e && e.message ? e.message : String(e));
+        done();
       }
-    } catch (e) {
-      d.permissionsConsistent = "error: " + (e && e.message ? e.message : String(e));
-      settle();
+    } else {
+      d.batteryPresent = false;
+      d.battery = "no-getBattery";
+      done();
     }
-  })();
+  });
 
-  // Global timeout fallback: always populate `ready` even if the probe stalls.
-  settleTimer = setTimeout(markReady, 3000);
+  // Release the registration guard: now that every probe is registered, settling
+  // the guard lets `ready` flip as soon as the real probes have all completed
+  // (or immediately, if they already settled synchronously during registration).
+  settleOne();
+
+  // Global timeout fallback: always populate `ready` even if a probe stalls.
+  settleTimer = setTimeout(function () {
+    timedOut = true;
+    markReady();
+  }, 3000);
 })();

@@ -92,6 +92,45 @@
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   });
 
+  // --- Phase 33: advanced fingerprint-dimension signals (sync) --------------
+  // Mirror of internal/detect/probe.js (kept in sync by convention). See probe.js
+  // for the per-signal rationale.
+
+  // fonts: measureText width signature. godoll's font injector is an observable
+  // no-op on widths, so this is informational/stable, not a toggle discriminator.
+  probe("fonts", function () {
+    var c = document.createElement("canvas");
+    var ctx = c.getContext("2d");
+    if (!ctx) return "no-2d-context";
+    var sample = "mmmmmmmmmmlli";
+    var families = ["monospace", "sans-serif", "serif", "Arial", "Times New Roman", "Courier New"];
+    var parts = [];
+    for (var i = 0; i < families.length; i++) {
+      ctx.font = "72px " + families[i];
+      parts.push(Math.round(ctx.measureText(sample).width));
+    }
+    return parts.join(",");
+  });
+
+  // codecs: canPlayType signature (godoll overrides HTMLMediaElement.canPlayType).
+  probe("codecs", function () {
+    var v = document.createElement("video");
+    var a = document.createElement("audio");
+    var cases = [
+      ['video/mp4; codecs="avc1.42E01E"', v],
+      ['video/webm; codecs="vp9"', v],
+      ['video/ogg; codecs="theora"', v],
+      ["audio/mpeg", a],
+      ['audio/ogg; codecs="opus"', a],
+    ];
+    var parts = [];
+    for (var i = 0; i < cases.length; i++) {
+      var r = cases[i][1].canPlayType(cases[i][0]);
+      parts.push(cases[i][0] + "=" + (r === "" ? "no" : r));
+    }
+    return parts.join("|");
+  });
+
   // Canvas readback (informational / traceability). Draws DETERMINISTIC fixed
   // content (no Date / no Math.random) so the only source of variability in the
   // returned data URL is the injected seeded canvas noise (HARDEN-02). A human can
@@ -149,7 +188,9 @@
   // This is the KNOWN-RED WebRTC leak signal — record current truth, do not fix
   // (HARDEN-01 is Phase 27).
 
-  var pending = 2;
+  // pending = permissions + WebRTC + mediaDevices + battery (Phase 33 added the
+  // last two; keep this count in sync with the IIFE probes below).
+  var pending = 4;
   var settleTimer = null;
 
   function markReady() {
@@ -252,6 +293,67 @@
       setTimeout(finish, 1500);
     } catch (e) {
       d.webrtcIce = "error: " + (e && e.message ? e.message : String(e));
+      settleOne();
+    }
+  })();
+
+  // Media devices: enumerateDevices count + sorted kind set (godoll
+  // scriptMockMediaDevices overrides this; headless default differs in count).
+  (function () {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then(function (list) {
+            d.mediaDevicesCount = list.length;
+            var kinds = {};
+            for (var i = 0; i < list.length; i++) {
+              var k = (list[i] && list[i].kind) || "unknown";
+              kinds[k] = (kinds[k] || 0) + 1;
+            }
+            d.mediaDevicesKinds = Object.keys(kinds).sort().join(",");
+            d.mediaDevices = d.mediaDevicesCount + ":" + d.mediaDevicesKinds;
+            settleOne();
+          })
+          .catch(function (e) {
+            d.mediaDevices = "error: " + (e && e.message ? e.message : String(e));
+            settleOne();
+          });
+      } else {
+        d.mediaDevices = "no-mediaDevices-api";
+        settleOne();
+      }
+    } catch (e) {
+      d.mediaDevices = "error: " + (e && e.message ? e.message : String(e));
+      settleOne();
+    }
+  })();
+
+  // Battery: getBattery presence + level + charging (godoll scriptMockBattery
+  // overrides getBattery to resolve a fixed BatteryManager).
+  (function () {
+    try {
+      if (typeof navigator.getBattery === "function") {
+        navigator
+          .getBattery()
+          .then(function (b) {
+            d.batteryPresent = true;
+            d.batteryLevel = b.level;
+            d.batteryCharging = b.charging;
+            d.battery = "present:" + b.level + ":" + b.charging;
+            settleOne();
+          })
+          .catch(function (e) {
+            d.battery = "error: " + (e && e.message ? e.message : String(e));
+            settleOne();
+          });
+      } else {
+        d.batteryPresent = false;
+        d.battery = "no-getBattery";
+        settleOne();
+      }
+    } catch (e) {
+      d.battery = "error: " + (e && e.message ? e.message : String(e));
       settleOne();
     }
   })();

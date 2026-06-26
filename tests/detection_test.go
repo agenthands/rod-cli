@@ -36,11 +36,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	rodfp "github.com/agenthands/godoll/fingerprint"
 	"github.com/agenthands/rod-cli/internal/detect"
 	"github.com/agenthands/rod-cli/types"
 )
@@ -882,4 +885,233 @@ func TestDetectionHarness(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAdvancedEvasionDimensions proves the Phase 33 fingerprint-dimension
+// hardening (EVAD-02 "asserted by harness"). All three legs read back from the
+// LIVE page (validate-live-not-source), drive the shipped ../rod-cli binary
+// against the loopback detect fixture, and run offline with zero network egress:
+//
+//   - COHERENCE (toggles ON / default): the new vectors read back
+//     coherent/non-headless-default — mediaDevices enumerates a plausible device
+//     set, getBattery reports a level in [0,1] + boolean charging, codecs report
+//     plausible canPlayType support.
+//   - STABILITY (success criterion 4): a vector reads identically on re-read
+//     within a session.
+//   - TOGGLE-OFF (independence): with --media-devices-spoof=false the vector
+//     reverts to the un-hardened default reading, proving the toggle is effective.
+//
+// Coverage note: fonts ships a toggle + probe but godoll's scriptMockFonts is an
+// observable no-op on measureText widths, so fonts is NOT asserted live here (see
+// 33-02-SUMMARY). The 2+ EVAD-02 surfaces proven are mediaDevices + battery (+
+// codecs); the toggle-off leg proves mediaDevices independence.
+func TestAdvancedEvasionDimensions(t *testing.T) {
+	ds, err := detect.New()
+	if err != nil {
+		t.Fatalf("detect.New() failed: %v", err)
+	}
+	ds.Start()
+	defer ds.Close()
+
+	runCli("close")
+	defer runCli("close")
+
+	// Default daemon (all dimension toggles ON) on the detect fixture.
+	if _, err := runCli("goto", ds.URL()); err != nil {
+		t.Fatalf("goto fixture failed: %v", err)
+	}
+	waitForDetectReady(t)
+
+	// --- COHERENCE (toggles ON) ----------------------------------------------
+
+	// mediaDevices: godoll injects >=3 devices (1-2 webcams + 1-2 micros + 1-2
+	// speakers). Signature is "<count>:<sorted,kind,set>". Assert a plausible,
+	// non-headless-default reading with only known device kinds.
+	t.Run("media_devices_coherent_on", func(t *testing.T) {
+		sig := evalDetect(t, "mediaDevices")
+		if sig == "" || sig == "undefined" || strings.HasPrefix(sig, "error") ||
+			sig == "no-mediaDevices-api" {
+			t.Fatalf("mediaDevices unreadable/absent (sig=%q)", sig)
+		}
+		countStr, kinds := sig, ""
+		if i := strings.Index(sig, ":"); i >= 0 {
+			countStr, kinds = sig[:i], sig[i+1:]
+		}
+		n, perr := strconv.Atoi(countStr)
+		if perr != nil || n < 1 {
+			t.Errorf("mediaDevices count not plausible (headless-default tell?): %q", sig)
+		}
+		for _, k := range strings.Split(kinds, ",") {
+			if k == "" {
+				continue
+			}
+			switch k {
+			case "videoinput", "audioinput", "audiooutput":
+			default:
+				t.Errorf("mediaDevices reported implausible kind %q (full sig %q)", k, sig)
+			}
+		}
+	})
+
+	// battery: getBattery overridden to resolve a fixed BatteryManager. The
+	// injector only replaces an EXISTING getBattery, so a Chrome build without it
+	// is not a hardening failure — skip in that case.
+	t.Run("battery_coherent_on", func(t *testing.T) {
+		if present := evalDetect(t, "batteryPresent"); present != "true" {
+			t.Skipf("navigator.getBattery not present in this Chrome (battery=%q); injector "+
+				"overrides only an existing API", evalDetect(t, "battery"))
+		}
+		lvlStr := evalDetect(t, "batteryLevel")
+		lvl, perr := strconv.ParseFloat(lvlStr, 64)
+		if perr != nil || lvl < 0 || lvl > 1 {
+			t.Errorf("battery level not in [0,1] (coherence): %q", lvlStr)
+		}
+		if charging := evalDetect(t, "batteryCharging"); charging != "true" && charging != "false" {
+			t.Errorf("battery charging not boolean (coherence): %q", charging)
+		}
+	})
+
+	// codecs: canPlayType overridden. At least one representative type must report
+	// support — an all-"no" result would be an implausible/blanked reading.
+	t.Run("codecs_coherent_on", func(t *testing.T) {
+		sig := evalDetect(t, "codecs")
+		if sig == "" || sig == "undefined" || strings.HasPrefix(sig, "error") {
+			t.Fatalf("codecs unreadable: %q", sig)
+		}
+		if !strings.Contains(sig, "=probably") && !strings.Contains(sig, "=maybe") {
+			t.Errorf("codecs report no supported types (implausible): %q", sig)
+		}
+	})
+
+	// --- CONSISTENCY-ON-REREAD (live, weak) ----------------------------------
+
+	// A live guard that the injected vector is consistent (not re-randomized /
+	// blanked) on re-read within the session. NOTE: this is a WEAK check — the
+	// dimension is injected once and memoized into window.__detect, so two reads of
+	// the same page are stable by construction. The LOAD-BEARING proof of success
+	// criterion 4 (same session seed => same regenerated dimensions, so a recreated
+	// page reproduces them) is the deterministic unit test
+	// TestSeededFingerprintDimensions below, which exercises the seeded generator
+	// directly without a browser.
+	t.Run("media_devices_consistent_on_reread", func(t *testing.T) {
+		s1 := evalDetect(t, "mediaDevices")
+		s2 := evalDetect(t, "mediaDevices")
+		if s1 == "" || strings.HasPrefix(s1, "error") {
+			t.Fatalf("mediaDevices probe blanked: %q", s1)
+		}
+		if s1 != s2 {
+			t.Errorf("mediaDevices inconsistent on re-read within session: %q vs %q", s1, s2)
+		}
+	})
+
+	// --- TOGGLE-OFF (independence / effectiveness) ---------------------------
+
+	// With --media-devices-spoof=false the dimension must NOT be injected, so the
+	// vector reverts to the un-hardened headless default — a reading that differs
+	// from the ON (mocked) signature. Proves the toggle is effective, not cosmetic.
+	t.Run("media_devices_toggle_off_reverts", func(t *testing.T) {
+		onSig := evalDetect(t, "mediaDevices")
+		runCli("close")
+		if _, err := runCli("--media-devices-spoof=false", "goto", ds.URL()); err != nil {
+			t.Fatalf("goto with --media-devices-spoof=false failed: %v", err)
+		}
+		waitForDetectReady(t)
+		defer restoreDefaultDaemon(t, ds.URL())
+
+		offSig := evalDetect(t, "mediaDevices")
+		if offSig == onSig {
+			t.Errorf("media-devices-spoof toggle is INEFFECTIVE: ON and OFF signatures "+
+				"identical (%q) — the off path still injected the mocked device set", onSig)
+		}
+	})
+}
+
+// fontSet returns a presence set of a font slice for subset/exclusion checks.
+func fontSet(fonts []string) map[string]bool {
+	m := make(map[string]bool, len(fonts))
+	for _, f := range fonts {
+		m[f] = true
+	}
+	return m
+}
+
+// TestSeededFingerprintDimensions is the deterministic, browser-free proof for two
+// Phase 33 guarantees that the live harness cannot establish on its own:
+//
+//   - SUCCESS CRITERION 4 (stability): the godoll fingerprint generator is SEEDED
+//     with the per-session noiseSeed, so the same seed reproduces the exact same
+//     dimensions. That is what makes a page recreated within one session reproduce
+//     identical fonts/devices/codecs/battery — the property the (necessarily weak)
+//     live re-read subtest cannot exercise because ctx.page is created once per
+//     session and `close` regenerates the seed.
+//   - COHERENT-NOT-RANDOM (coherence): generation is constrained to the profile OS
+//     (FPWithOS), so a Windows draw carries Windows-family fonts and a macOS draw
+//     macOS-family — never an unconstrained random set. This is asserted here at
+//     the generation layer because godoll's font injector is an observable no-op on
+//     measureText, so OS-coherent fonts cannot be read back from the live page.
+//
+// Offline, no browser, no network — pure generator determinism.
+func TestSeededFingerprintDimensions(t *testing.T) {
+	const seed = int64(0x5EEDC0FFEE)
+	gen := func(os string) *rodfp.Fingerprint {
+		t.Helper()
+		g := rodfp.NewFingerprintGeneratorSeeded(seed,
+			rodfp.FPWithBrowserNames("chrome"), rodfp.FPWithOS(os))
+		f, err := g.Generate()
+		if err != nil {
+			t.Fatalf("Generate(%s) failed: %v", os, err)
+		}
+		if f == nil {
+			t.Fatalf("Generate(%s) returned nil fingerprint", os)
+		}
+		return f
+	}
+
+	// (1) DETERMINISM: same seed + same OS => byte-identical dimensions.
+	t.Run("same_seed_same_dimensions", func(t *testing.T) {
+		a, b := gen("windows"), gen("windows")
+		if !reflect.DeepEqual(a.Fonts, b.Fonts) {
+			t.Errorf("fonts not deterministic for same seed:\n a=%v\n b=%v", a.Fonts, b.Fonts)
+		}
+		if !reflect.DeepEqual(a.MediaDevices, b.MediaDevices) {
+			t.Errorf("media devices not deterministic for same seed")
+		}
+		if !reflect.DeepEqual(a.VideoCodecs, b.VideoCodecs) ||
+			!reflect.DeepEqual(a.AudioCodecs, b.AudioCodecs) {
+			t.Errorf("codecs not deterministic for same seed")
+		}
+		if !reflect.DeepEqual(a.Battery, b.Battery) {
+			t.Errorf("battery not deterministic for same seed")
+		}
+	})
+
+	// (2) OS-COHERENCE: a Windows draw must contain NO mac/linux-only fonts (and
+	// symmetrically), proving the font set tells the profile's OS story.
+	t.Run("os_coherent_fonts", func(t *testing.T) {
+		winOnly := []string{"Segoe UI", "Calibri", "Tahoma", "Consolas", "Cambria"}
+		macOnly := []string{"Helvetica Neue", "Menlo", "Monaco", "Avenir", "Lucida Grande"}
+		linuxOnly := []string{"DejaVu Sans", "Ubuntu", "Liberation Sans", "Noto Sans", "FreeSans"}
+
+		excludes := func(os string, set map[string]bool, forbidden []string) {
+			t.Helper()
+			for _, f := range forbidden {
+				if set[f] {
+					t.Errorf("OS=%s font draw contains foreign font %q (incoherent — coherent-not-random)", os, f)
+				}
+			}
+		}
+
+		win := fontSet(gen("windows").Fonts)
+		mac := fontSet(gen("macos").Fonts)
+		lin := fontSet(gen("linux").Fonts)
+
+		excludes("windows", win, append(append([]string{}, macOnly...), linuxOnly...))
+		excludes("macos", mac, append(append([]string{}, winOnly...), linuxOnly...))
+		excludes("linux", lin, append(append([]string{}, winOnly...), macOnly...))
+
+		// The OS draws must differ from each other — not one shared random set.
+		if reflect.DeepEqual(gen("windows").Fonts, gen("macos").Fonts) {
+			t.Errorf("windows and macos font draws are identical — OS constraint not applied")
+		}
+	})
 }
