@@ -224,7 +224,59 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   4. New hardening surfaces are stable within a session (consistent hash on re-read, matching v1.6 canvas behavior).
 
 **Plans**: TBD
-</content>
+
+### 🔨 v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy (In Progress)
+
+**Milestone Goal:** Build the MITM WebSocket CDP proxy designed in Phase 39 — a local, in-process WebSocket proxy that sits between go-rod's `cdp.Client` and Chrome's debugging WebSocket, implementing `cdp.WebSocketable`. The proxy is transparent by default (pass-through) and becomes the foundation for CDP traffic filtering, Runtime domain normalization, and timing jitter.
+
+- [ ] **Phase 40: Core Proxy (pass-through, logging)** — Fireable CDP WebSocket pass-through proxy with in-memory ring-buffer traffic logging, flag-gated behind `--cdp-proxy` (default OFF), wired into the browser launch path via godoll's `WithCDPWrapper`.
+- [ ] **Phase 41: Runtime Domain Normalization** — Intercept and normalize Runtime domain CDP responses to suppress property-getter triggering when Runtime IS enabled (opt-in console/request capture path).
+- [ ] **Phase 42: Timing Jitter + `cdp-traffic` Command** — Configurable CDP command dispatch timing jitter + a `rod-cli cdp-traffic` diagnostic command that reads the proxy's ring buffer.
+
+### Phase 40: Core Proxy (pass-through, logging)
+
+**Goal**: Implement the core CDP WebSocket proxy — a pass-through proxy that implements `cdp.WebSocketable`, logs all messages to an in-memory ring buffer, and is wired into the browser launch path gated behind `--cdp-proxy` (default OFF).
+**Depends on**: Phase 39 (CDP-DEEP-01 research & design)
+**Requirements**: CDP-PROXY-01, CDP-PROXY-02, CDP-PROXY-03, CDP-PROXY-04, CDP-PROXY-05
+**Success Criteria** (what must be TRUE):
+
+  1. `go build ./...` succeeds with the proxy wired but default-off.
+  2. A browser session with `--cdp-proxy` navigates a page successfully (no breakage).
+  3. With `--cdp-proxy`, the proxy's `Traffic()` contains expected CDP messages (Page.frameNavigated, etc.) after navigation.
+  4. Without `--cdp-proxy`, behavior is identical to pre-phase-40 (no regression).
+  5. The ring buffer enforces its capacity (doesn't leak memory).
+
+**Plans**: 1/1 plan complete
+
+- [x] 40-PLAN.md — Proxy core + config surface + CLI flag + browser launch wiring + context storage
+
+### Phase 41: Runtime Domain Normalization
+
+**Goal**: When Runtime is enabled (opt-in via `--console-capture` or plugins), normalize Runtime domain CDP responses to suppress property-getter triggering — intercept `Runtime.getProperties` responses and strip or replace accessor property `value` descriptors that trigger getters observable from the page.
+**Depends on**: Phase 40
+**Requirements**: CDP-NORM-01, CDP-NORM-02
+**Success Criteria** (what must be TRUE):
+
+  1. With `--cdp-proxy` and `--console-capture`, the `cdpTell` probe returns `"no-signal"` (no stack-getter triggering).
+  2. Normalization does not break `console-capture` functionality (console messages are still captured).
+  3. With `--cdp-proxy` but WITHOUT `--console-capture`, behavior is unchanged (Runtime not enabled, no normalization needed).
+
+**Plans**: TBD
+
+### Phase 42: Timing Jitter + `cdp-traffic` Command
+
+**Goal**: Add configurable timing jitter to CDP command dispatch to break characteristic automation timing patterns, and add a `rod-cli cdp-traffic` diagnostic command that reads the proxy's ring buffer for CDP traffic analysis.
+**Depends on**: Phase 41
+**Requirements**: CDP-JITTER-01, CDP-TRAFFIC-01
+**Success Criteria** (what must be TRUE):
+
+  1. CDP command dispatch includes a random 0-N ms delay (`--cdp-jitter-ms`, default 0 = off).
+  2. `rod-cli cdp-traffic` prints the proxy's logged CDP messages in a human-readable format.
+  3. `rod-cli cdp-traffic --json` emits machine-readable JSON.
+  4. A `--no-cdp-proxy` bypass flag exists for zero-risk deployment.
+
+**Plans**: TBD
+
 </invoke>
 
 ### 🔨 v1.8 Debt Cleanup & Coding-Assistant Onboarding (In Progress)
@@ -319,5 +371,57 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   1. Each approach is evaluated against Chrome's CDP detection surface with real citations (not speculation). (CDP-DEEP-01)
   2. A concrete, executable PLAN exists for the chosen approach, grounded against the real go-rod/rod-cli transport layer. (CDP-DEEP-02)
   3. `docs/cdp-footprint.md` is updated with findings and the updated honest ceiling. (CDP-DEEP-03)
+
+**Plans**: TBD
+
+### ✅ v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy (In Progress)
+
+**Milestone Goal:** Build the MITM WebSocket CDP proxy designed in Phase 39 — a local, in-process WebSocket proxy that sits between go-rod's `cdp.Client` and Chrome's debugging WebSocket, implementing `cdp.WebSocketable`. The proxy is transparent by default (pass-through) and becomes the foundation for CDP traffic filtering, Runtime domain normalization, and timing jitter.
+
+- [ ] **Phase 40: Core Proxy (pass-through, logging)** — Fireable CDP WebSocket pass-through proxy with in-memory ring-buffer traffic logging, flag-gated behind `--cdp-proxy` (default OFF), wired into the browser launch path via godoll's `WithCDPWrapper`. 🔨 Building
+- [ ] **Phase 41: Runtime Domain Normalization** — Intercept and normalize Runtime domain CDP responses to suppress property-getter triggering when Runtime IS enabled (opt-in console/request capture path).
+- [ ] **Phase 42: Timing Jitter + `cdp-traffic` Command** — Configurable CDP command dispatch timing jitter + a `rod-cli cdp-traffic` diagnostic command that reads the proxy's ring buffer.
+
+### Phase 40: Core Proxy (pass-through, logging)
+
+**Goal**: Implement the core CDP WebSocket proxy — a pass-through proxy that implements `cdp.WebSocketable`, logs all messages to an in-memory ring buffer, and is wired into the browser launch path gated behind `--cdp-proxy` (default OFF).
+**Depends on**: Phase 39 (CDP-DEEP-01 research & design)
+**Requirements**: CDP-PROXY-01 through CDP-PROXY-05
+**Success Criteria** (what must be TRUE):
+
+  1. `go build ./...` succeeds with the proxy wired but default-off.
+  2. A browser session with `--cdp-proxy` navigates a page successfully (no breakage).
+  3. With `--cdp-proxy`, the proxy's `Traffic()` contains expected CDP messages (Page.frameNavigated, etc.) after navigation.
+  4. Without `--cdp-proxy`, behavior is identical to pre-phase-40 (no regression).
+  5. The ring buffer enforces its capacity (doesn't leak memory).
+
+**Plans**: 1/1 plan complete
+
+- [x] 40-PLAN.md — Proxy core + config surface + CLI flag + browser launch wiring + context storage
+
+### Phase 41: Runtime Domain Normalization
+
+**Goal**: When Runtime is enabled (opt-in via `--console-capture` or plugins), normalize Runtime domain CDP responses to suppress property-getter triggering.
+**Depends on**: Phase 40
+**Requirements**: CDP-NORM-01, CDP-NORM-02
+**Success Criteria** (what must be TRUE):
+
+  1. With `--cdp-proxy` and `--console-capture`, the `cdpTell` probe returns `"no-signal"` (no stack-getter triggering).
+  2. Normalization does not break `console-capture` functionality.
+  3. With `--cdp-proxy` but WITHOUT `--console-capture`, behavior is unchanged.
+
+**Plans**: TBD
+
+### Phase 42: Timing Jitter + `cdp-traffic` Command
+
+**Goal**: Add configurable timing jitter to CDP command dispatch and a diagnostic command that reads the proxy's ring buffer.
+**Depends on**: Phase 41
+**Requirements**: CDP-JITTER-01, CDP-TRAFFIC-01
+**Success Criteria** (what must be TRUE):
+
+  1. CDP command dispatch includes a random 0-N ms delay (`--cdp-jitter-ms`, default 0 = off).
+  2. `rod-cli cdp-traffic` prints the proxy's logged CDP messages in human-readable format.
+  3. `rod-cli cdp-traffic --json` emits machine-readable JSON.
+  4. A `--no-cdp-proxy` bypass flag exists for zero-risk deployment.
 
 **Plans**: TBD

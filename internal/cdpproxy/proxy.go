@@ -48,12 +48,14 @@ func (p *Proxy) Send(data []byte) error {
 	return p.inner.Send(data)
 }
 
-// Read reads from Chrome and logs it.
+// Read reads from Chrome, normalizes CDP responses (stripping accessor
+// property values to suppress getter triggering), and logs the result.
 func (p *Proxy) Read() ([]byte, error) {
 	data, err := p.inner.Read()
 	if err != nil {
 		return data, err
 	}
+	data = normalizeCDPResponse(data)
 	p.logMessage("recv", data)
 	return data, nil
 }
