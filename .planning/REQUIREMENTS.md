@@ -1,54 +1,36 @@
-# Requirements — v1.8 Debt Cleanup & Coding-Assistant Onboarding
+# Requirements — v1.9 godoll Hygiene & CDP-DEEP-01 Research
 
-**Milestone goal:** Retire the three v1.7 follow-ups and ship authoritative install + agent-skill documentation so any of the five major coding assistants can adopt rod-cli.
+**Milestone goal:** Close the two remaining v1.7 security-review hygiene items (F2/F4) in godoll and rod-cli, and produce an evaluated, grounded design for CDP-DEEP-01 (deep CDP signal obfuscation) that a follow-on milestone can execute.
 
-**Grounding:** rod-cli is a **pure CLI/daemon** (no MCP server — verified at HEAD: no `mcp` subcommand, no JSON-RPC, no MCP dep). All onboarding docs therefore teach the agent to **shell out to the `rod-cli` binary** via each tool's agent-skill / instructions-file mechanism; the MCP path is deliberately not documented for any assistant. Research synthesis: `.planning/research/assistant-onboarding-SUMMARY.md`.
+**Grounding:** rod-cli is a **pure CLI/daemon** (no MCP server — verified at HEAD). The v1.8 onboarding docs document shell-out only. v1.9 continues the v1.7→v1.8 carry-forward chain: F2/F4 are the last unaddressed v1.7 security-review findings; CDP-DEEP-01 is the honest-ceiling work deferred from v1.7 Phase 30.
 
 ---
 
-## v1.8 Requirements
+## v1.9 Requirements
 
-### Toolchain & Supply-Chain (BUILD) — v1.7 follow-up F1
+### Godoll Hygiene (HYGIENE) — v1.7 security-review F2/F4
 
-- [ ] **BUILD-01**: `go.mod` pins the toolchain to **go1.26.1** (add a `toolchain go1.26.1` directive and align the `go` directive); CI and release workflows build on go1.26.1; the full build and existing test suite pass on go1.26.1.
-- [ ] **BUILD-02**: `govulncheck` reports **no known-vulnerable called paths** for the 13 stdlib vulns the F1 audit flagged (fixed in go1.26.1); any residual finding is documented with justification. A `govulncheck` run is wired into CI so the gate cannot silently regress.
+- [ ] **HYGIENE-01 (F2):** rod-cli's `rejectUnsafeFingerprintValue` rejects backslash (`\`) in addition to the already-rejected `"` and control chars — defense-in-depth (godoll's `json.Marshal` already escapes it, so this is a belt-and-suspenders hardening).
+- [ ] **HYGIENE-02 (F4):** godoll's `EnableRequestInterception` uses `json.Marshal` when interpolating `platform` into the JS literal, matching the pattern used for other profile-controlled strings — upstream correctness fix (note: rod-cli never calls this function; it carries identity via Emulation + its own interceptor).
 
-### CDP-Ledger Coverage (LEDGER) — v1.7 follow-up
+### CDP-DEEP-01 Research & Design (CDP-DEEP)
 
-- [ ] **LEDGER-01**: CDP domains enabled via the **plugin lifecycle path** (the path the v1.7 ledger did not observe) are recorded in the per-session CDP-domain ledger, identically to the main navigation path — no enabled domain escapes the inventory.
-- [ ] **LEDGER-02**: The offline detection harness asserts the plugin-path CDP footprint — a test exercises a plugin that enables a lazy CDP domain and verifies the ledger reflects it — closing the v1.7 coverage hole so the regression cannot reappear unseen.
-
-### Real Font Spoofing (FONT) — v1.7 follow-up
-
-- [ ] **FONT-01**: With `--font-spoof` enabled, the page's **detectable font availability actually changes** — the godoll font-injector no-op is replaced with a real injector so a font-probe reads a spoofed font set, not the host's genuine fonts.
-- [ ] **FONT-02**: The spoofed font set is **coherent with the active profile's OS/locale** and **stable within a session** (identical across re-reads on the same session); `--font-spoof=false` restores the genuine host font behavior.
-- [ ] **FONT-03**: The offline detection harness asserts FONT-01 and FONT-02 (font set differs from baseline when on, identical across re-reads, restored when off) — the fix is observable, not just claimed.
-
-### Coding-Assistant Onboarding Docs (DOC)
-
-- [ ] **DOC-01**: A binary-install section documents the shared prerequisite for every assistant — getting `rod-cli` on PATH (`go install` and/or a prebuilt binary) plus `rod-cli install` to fetch Chromium — with a verify step.
-- [ ] **DOC-02**: The shipped `skills/rod-cli/SKILL.md` is updated to the current cross-tool Agent-Skills standard (valid `name`/`description` frontmatter plus explicit "when to use" trigger phrases) so one skill directory works across Claude Code, Codex, Pi, and opencode.
-- [ ] **DOC-03**: **Claude Code** install documented — place the skill at `~/.claude/skills/rod-cli/` (user) or `.claude/skills/rod-cli/` (project), with the restart-on-first-create gotcha and a `/rod-cli` verify step.
-- [ ] **DOC-04**: **Codex CLI** install documented — SKILL.md agent-skill path (pinned against the installed Codex version, since the skills directory differs between official `.agents/skills/` and community `~/.codex/skills/`) plus AGENTS.md as the secondary instructions path.
-- [ ] **DOC-05**: **Gemini CLI** install documented — using a `GEMINI.md` context file (`~/.gemini/GEMINI.md` global or project `.gemini/GEMINI.md`), explicitly noting Gemini has no skills primitive and that the MCP path does not apply (rod-cli is not an MCP server).
-- [ ] **DOC-06**: **Pi** install documented — `npm install -g --ignore-scripts @earendil-works/pi-coding-agent`, the SKILL.md skill under `~/.pi/agent/skills/` (or shared `~/.agents/skills/`), with an explicit "Pi has no MCP support" note and the project-trust gotcha.
-- [ ] **DOC-07**: **opencode** install documented — the native skill path (`.opencode/skills/rod-cli/` or `~/.config/opencode/skills/`) and the fact that opencode natively reads `.claude/skills/` and `.agents/skills/`, plus AGENTS.md instructions.
-- [ ] **DOC-08**: Each per-assistant section provides a **copy-paste install sequence and a concrete verify step** that confirms the assistant can actually drive rod-cli (not just that files are placed).
-- [ ] **DOC-09**: Every documented claim is **accurate against the real rod-cli command surface and current tool docs** — verified (no MCP install path is documented, the shared `~/.agents/skills/` substrate is noted where it applies), with the docs discoverable from the top-level README.
+- [ ] **CDP-DEEP-01:** Evaluate the three approaches named in the v1.7 honest ceiling — **browser-patching**, **MITM/alternate transport**, and **patched DevTools endpoint** — against Chrome's current detection surface (CDP WebSocket observable via `chrome.debugger`, protocol message sniffing, `Page`/`Target` domain enable signals). Produce a grounded recommendation with feasibility, risk, and effort estimates.
+- [ ] **CDP-DEEP-02:** Produce a concrete, executable PLAN for the chosen approach — centerpiece symbols grounded against the real go-rod/rod-cli transport layer via SMTC, with a phased execution path — so a follow-on milestone can pick it up and build.
+- [ ] **CDP-DEEP-03:** Update `docs/cdp-footprint.md` with the CDP-DEEP-01 research findings, the chosen approach, and an updated honest ceiling reflecting what the chosen approach can and cannot obfuscate.
 
 ---
 
 ## Future Requirements (deferred)
 
-- Heavier first-class **Extensions** that wrap rod-cli as an LLM-callable tool (Pi TypeScript extension, Gemini `gemini-extension.json`) — optional polish beyond shell-out onboarding.
-- Deeper CDP signal obfuscation (v2 candidate `CDP-DEEP-01`, carried from v1.7).
-- A genuine MCP server mode for rod-cli (would re-open the MCP install path for Codex/Gemini/opencode) — only if a future milestone re-adds MCP.
+- Build the CDP-DEEP-01 approach (browser-patching, MITM, or patched endpoint) — gated on this milestone's research/design output.
+- Heavier first-class Extensions that wrap rod-cli as an LLM-callable tool (Pi TypeScript extension, Gemini `gemini-extension.json`) — optional polish beyond shell-out onboarding.
+- A genuine MCP server mode for rod-cli — only if a future milestone re-adds MCP.
 
 ## Out of Scope
 
-- **TLS/JA3-JA4 spoofing** — rod-cli drives real Chrome; its TLS is authentic by construction (spoofing lives in the separate "munch" project). Permanent exclusion.
-- **MCP server install instructions** — rod-cli does not ship an MCP server; documenting one would be false.
-- Upstream-godoll hygiene items beyond the font-injector fix (F2/F4 from the v1.7 security review).
+- **TLS/JA3-JA4 spoofing** — rod-cli drives real Chrome; its TLS is authentic by construction. Permanent exclusion.
+- Building the CDP-DEEP-01 approach — this milestone produces the evaluated design, not the implementation.
 
 ---
 
@@ -56,21 +38,16 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| BUILD-01 | TBD | pending |
-| BUILD-02 | TBD | pending |
-| LEDGER-01 | TBD | pending |
-| LEDGER-02 | TBD | pending |
-| FONT-01 | TBD | pending |
-| FONT-02 | TBD | pending |
-| FONT-03 | TBD | pending |
-| DOC-01 | TBD | pending |
-| DOC-02 | TBD | pending |
-| DOC-03 | TBD | pending |
-| DOC-04 | TBD | pending |
-| DOC-05 | TBD | pending |
-| DOC-06 | TBD | pending |
-| DOC-07 | TBD | pending |
-| DOC-08 | TBD | pending |
-| DOC-09 | TBD | pending |
+| HYGIENE-01 | TBD | pending |
+| HYGIENE-02 | TBD | pending |
+| CDP-DEEP-01 | TBD | pending |
+| CDP-DEEP-02 | TBD | pending |
+| CDP-DEEP-03 | TBD | pending |
 
-*Traceability filled by the roadmap.*
+## Archived
+
+<details>
+<summary>v1.8 Debt Cleanup & Coding-Assistant Onboarding (shipped 2026-06-26)</summary>
+
+All 16 requirements (BUILD-01/02, LEDGER-01/02, FONT-01/02/03, DOC-01..09) met and verified. See `.planning/v1.8-MILESTONE-AUDIT.md`.
+</details>

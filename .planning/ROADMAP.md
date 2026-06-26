@@ -10,7 +10,8 @@
 - ✅ **v1.5 Plugin Ecosystem Documentation** — Phases 21–23 (shipped 2026-06-23) ([archive](milestones/v1.5-ROADMAP.md))
 - ✅ **v1.6 Proven & Configurable Stealth** — Phases 24–29 (shipped 2026-06-25) ([archive](milestones/v1.6-ROADMAP.md))
 - ✅ **v1.7 Complete Evasion Stack** — Phases 30, 32, 33 (shipped 2026-06-26; Phase 31/TLS cancelled — real-Chrome-only) ([archive](milestones/v1.7-ROADMAP.md))
-- 🔨 **v1.8 Debt Cleanup & Coding-Assistant Onboarding** — Phases 34–37 (in progress)
+- ✅ **v1.8 Debt Cleanup & Coding-Assistant Onboarding** — Phases 34–37 (shipped 2026-06-26)
+- 🔨 **v1.9 godoll Hygiene & CDP-DEEP-01 Research** — Phases 38–39 (in progress)
 
 Full per-phase detail for each shipped milestone lives under `.planning/milestones/`.
 
@@ -285,5 +286,38 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   2. The shipped `skills/rod-cli/SKILL.md` is updated to the current cross-tool Agent-Skills standard (valid frontmatter + explicit "when to use" trigger phrases) so one skill directory serves Claude Code, Codex, Pi, and opencode (DOC-02).
   3. Each of the five assistants — Claude Code, Codex CLI, Gemini CLI (GEMINI.md context file), Pi (`~/.pi/agent/skills/`, explicit "no MCP"), opencode (native skills + `.claude/skills` compat) — has a section with a copy-paste install sequence and a concrete verify step that confirms the agent can drive rod-cli (DOC-03..DOC-08).
   4. Every documented claim is accurate against the real rod-cli command surface and current tool docs — no MCP install path is documented — and the docs are linked from the top-level README (DOC-09).
+
+**Plans**: TBD
+
+### 🔨 v1.9 godoll Hygiene & CDP-DEEP-01 Research (In Progress)
+
+**Milestone Goal:** Close the two remaining v1.7 security-review hygiene items (F2/F4) in godoll and rod-cli, and produce an evaluated, grounded design for CDP-DEEP-01 (deep CDP signal obfuscation) that a follow-on milestone can execute.
+
+- [ ] **Phase 38: Godoll Hygiene** — Close v1.7 F2 (backslash reject in rod-cli) and F4 (json.Marshal in godoll's EnableRequestInterception). (HYGIENE-01, HYGIENE-02)
+- [ ] **Phase 39: CDP-DEEP-01 Research & Design** — Evaluate the three CDP-DEEP-01 approaches (browser-patching, MITM/alternate transport, patched DevTools endpoint) against Chrome's detection surface. Pick one. Produce a grounded, executable PLAN. Update `docs/cdp-footprint.md`. (CDP-DEEP-01, CDP-DEEP-02, CDP-DEEP-03)
+
+### Phase 38: Godoll Hygiene
+
+**Goal**: Close the two remaining v1.7 security-review hygiene items — F2 (add backslash to rod-cli's reject list as defense-in-depth) and F4 (fix godoll's EnableRequestInterception to json.Marshal platform).
+**Depends on**: Phase 37 (v1.8 shipped).
+**Requirements**: HYGIENE-01, HYGIENE-02
+**Success Criteria** (what must be TRUE):
+
+  1. rod-cli's `rejectUnsafeFingerprintValue` rejects the backslash character in addition to the already-rejected quote and control chars (HYGIENE-01).
+  2. godoll's `EnableRequestInterception` uses `json.Marshal` when interpolating `platform` into the JS literal (HYGIENE-02).
+  3. Both repos build and pass existing tests (no regression).
+
+**Plans**: TBD
+
+### Phase 39: CDP-DEEP-01 Research & Design
+
+**Goal**: Evaluate the three approaches named in the v1.7 honest ceiling — browser-patching, MITM/alternate transport, and patched DevTools endpoint — against Chrome's current detection surface. Produce a grounded recommendation with a concrete, executable PLAN.
+**Depends on**: Phase 38.
+**Requirements**: CDP-DEEP-01, CDP-DEEP-02, CDP-DEEP-03
+**Success Criteria** (what must be TRUE):
+
+  1. Each approach is evaluated against Chrome's CDP detection surface with real citations (not speculation). (CDP-DEEP-01)
+  2. A concrete, executable PLAN exists for the chosen approach, grounded against the real go-rod/rod-cli transport layer. (CDP-DEEP-02)
+  3. `docs/cdp-footprint.md` is updated with findings and the updated honest ceiling. (CDP-DEEP-03)
 
 **Plans**: TBD
