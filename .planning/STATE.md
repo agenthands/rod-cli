@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: between milestones (v1.7 shipped)
-status: milestone_complete
-stopped_at: v1.7 Complete Evasion Stack shipped + archived (2026-06-26)
+milestone: v1.8
+milestone_name: Debt Cleanup & Coding-Assistant Onboarding
+status: defining_requirements
+stopped_at: v1.8 started — defining requirements
 last_updated: "2026-06-26T00:00:00.000Z"
 last_activity: 2026-06-26
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE.md — rod-cli
@@ -21,39 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-26)
 
 **Core value:** Native, token-efficient browser automation via standard I/O explicitly designed for LLM integration.
-**Current focus:** None — v1.7 shipped. Next milestone via `/anvil-new-milestone`.
+**Current focus:** v1.8 — retire the three v1.7 follow-ups and ship per-coding-assistant install + agent-skill documentation.
 
 ## Current Position
 
-Phase: — (between milestones)
+Phase: Not started (defining requirements)
 Plan: —
-Status: ✅ v1.7 Complete Evasion Stack SHIPPED + archived (2026-06-26). Tag v1.7. Ready to start the next milestone.
-Last activity: 2026-06-26 — Phase 33 verified (godoll dimensions activated; 4 hardening toggles)
-
-Progress: [██████] 3 of 3 active phases complete (Phase 31 cancelled) — milestone-close pending
+Status: Defining requirements
+Last activity: 2026-06-26 — Milestone v1.8 started
 
 ## Roadmap Summary
 
-Brownfield "full-stack evasion" milestone — extends JS-layer stealth (v1.6) to network-layer identity (TLS/JA3), reduces CDP footprint, provides curated device profiles, and expands hardening surfaces.
-
-- Phase 30 — CDP Footprint Reduction: deep implementation of Runtime.enable signal reduction, measure impact, document ceiling
-- Phase 31 — Network-Layer Identity: TLS/JA3-JA4 fingerprint alignment via uTLS-style spoofing, network-layer rewrite
-- Phase 32 — Profile Library: 5-10 vetted profiles shipped with binary, tested against harness
-- Phase 33 — Advanced Evasion: expand fingerprint hardening, address remaining vectors
+To be created by roadmap step. v1.8 covers: (A) three v1.7 debt follow-ups — go1.26.1 toolchain bump, plugin-path CDP-ledger coverage fix, real/observable font-spoof; and (B) authoritative install + agent-skill docs for Claude Code, Codex CLI, Gemini CLI, Pi (pi.dev), and opencode.
 
 ## Operator Next Steps
 
 1. Confirm requirements in REQUIREMENTS.md
-2. Run `/anvil-plan-phase 30` to begin CDP Footprint Reduction
+2. Review + approve the roadmap
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.7 scope: all four areas (CDP, TLS, Profiles, Evasion) together in one milestone
-- Profile library: built-in 5-10 curated profiles, not remote update mechanism
-- CDP: deep implementation (not just spike), measure impact
-- TLS: full uTLS-style spoofing (major architectural change)
+- v1.8 scope = v1.7 debt cleanup + coding-assistant onboarding docs (operator-chosen).
+- Font-spoof: make it REAL & observable (replace godoll no-op; harness asserts detected-font change). Largest single item.
+- All three v1.7 follow-ups in scope: toolchain bump, plugin-path CDP-ledger hole, font-spoof.
+- Docs must cover agent-skill installation per assistant, not just the binary `go install` (standing project preference).
+- TLS spoofing stays OUT (real Chrome only — lives in the separate "munch" project).
+- Research-first: verify each assistant's current skill-registration mechanism against live docs before scoping docs.
+- Phase numbering continues from 33 (v1.8 starts at Phase 34).
 
 ### Pending Todos
 
@@ -61,22 +57,19 @@ None yet.
 
 ### Blockers/Concerns
 
-- TLS spoofing requires network-layer changes structurally outside JS-injection — this is the most complex architectural change in the project's history
-- CDP reduction was deferred from v1.6 as "small spike with documented ceiling" — now implementing properly
-- Profile library extends v1.6 config surface (already works), this adds curated content
+- Font-spoof real fix may require touching the vendored/local godoll font injector — verify how rod-cli consumes godoll before committing to the approach.
+- Per-assistant skill mechanisms drift fast; docs accuracy depends on current-docs research (Pi = pi.dev / `@earendil-works/pi-coding-agent`).
 
 ## Session Continuity
 
 Last session: 2026-06-26
-Stopped at: Phase 30 context gathered — ready for planning
-Resume options: Run `/anvil-plan-phase 30` to plan, or `/anvil-autonomous` to drive all phases.
-
-Resume file: .planning/phases/30-cdp-footprint-reduction/30-CONTEXT.md
+Stopped at: Milestone v1.8 kickoff — PROJECT.md + STATE.md updated, research next.
+Resume options: continue `/anvil-new-milestone` (research → requirements → roadmap).
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (v1.7)
+- Total plans completed: 0 (v1.8)
 - Average duration: —
 - Total execution time: —
