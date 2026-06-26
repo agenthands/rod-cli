@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"github.com/agenthands/rod-cli/internal/detect"
+	"github.com/agenthands/rod-cli/types"
 )
 
 // chromeMajorRe extracts the Chrome major version from a UA string (digits only).
@@ -691,6 +692,92 @@ func TestDetectionHarness(t *testing.T) {
 		}
 		if chPlat := stripQuotes(liveHeader(t, "Sec-Ch-Ua-Platform")); chPlat != "macOS" {
 			t.Errorf("pinned Sec-Ch-Ua-Platform: got %q (want macOS)", chPlat)
+		}
+	})
+
+	// builtin_profiles — PROF-02 HARNESS leg. Drive a representative SUBSET of the
+	// built-in library (Phase 32) through the offline fixture via --profile=<name>
+	// and assert the table-stakes signals read back from the LIVE page are coherent:
+	// the profile's UA + platform reach the page, no HeadlessChrome, navigator.webdriver
+	// is not a tell, WebGL is not a software rasterizer, and — built-ins enable
+	// spoofClientHints — the Sec-Ch-Ua major + platform agree with the UA. A profile
+	// failing a key signal FAILS the test ("profiles that fail key signals are not
+	// shipped"). Each profile resolves to the EMBEDDED built-in (no temp file).
+	//
+	// Subset rationale: each profile is a full browser spawn, so driving all 6 would
+	// bloat the suite. We pick one per OS family plus a HW/screen variant —
+	// windows-11-chrome, windows-10-laptop (4-core / 1366x768), macos-applesilicon-chrome
+	// (Retina MacIntel). The OFFLINE consistency gate types.TestBuiltinProfilesAreVetted
+	// covers ALL 6 deterministically; this leg proves the live end-to-end story for a
+	// representative subset.
+	t.Run("builtin_profiles", func(t *testing.T) {
+		defer restoreDefaultDaemon(t, ds.URL())
+		subset := []string{"windows-11-chrome", "windows-10-laptop", "macos-applesilicon-chrome"}
+		for _, name := range subset {
+			name := name
+			t.Run(name, func(t *testing.T) {
+				prof, ok, err := types.LoadBuiltinProfile(name)
+				if err != nil || !ok {
+					t.Fatalf("LoadBuiltinProfile(%q): ok=%v err=%v", name, ok, err)
+				}
+				wantUAMajor := chromeMajor(prof.UserAgent)
+				wantOS := osFromUA(prof.UserAgent)
+
+				runCli("close")
+				out, err := runCli("--profile", name, "goto", ds.URL())
+				if err != nil {
+					t.Fatalf("goto with built-in %q failed: %v\nOutput: %s", name, err, out)
+				}
+				// A built-in is coherent by construction; the daemon-spawn consistency
+				// gate must NOT reject it or warn.
+				if lo := strings.ToLower(out); strings.Contains(lo, "warning:") || strings.Contains(lo, "contradict") {
+					t.Errorf("built-in %q spawn emitted an unexpected warning/rejection: %s", name, out)
+				}
+				waitForDetectReady(t)
+
+				// Live-page JS surfaces FIRST (window.__detect present on the fixture page).
+				ua := liveEval(t, "navigator.userAgent")
+				if strings.Contains(ua, "HeadlessChrome") {
+					t.Errorf("built-in %q live UA leaks HeadlessChrome: %q", name, ua)
+				}
+				if got := chromeMajor(ua); got != wantUAMajor {
+					t.Errorf("built-in %q UA major: got %q want %q (UA=%q)", name, got, wantUAMajor, ua)
+				}
+				// godoll masks navigator.webdriver (reads back undefined/false) — a `true`
+				// is the automation tell.
+				if wd := liveEval(t, "navigator.webdriver"); wd == "true" {
+					t.Errorf("built-in %q navigator.webdriver is true (automation tell)", name)
+				}
+				if platform := liveEval(t, "navigator.platform"); platform != prof.Platform {
+					t.Errorf("built-in %q navigator.platform: got %q want %q", name, platform, prof.Platform)
+				}
+				vendor := evalDetect(t, "webglVendor")
+				renderer := evalDetect(t, "webglRenderer")
+				combined := strings.ToLower(vendor + " " + renderer)
+				for _, tell := range []string{"swiftshader", "llvmpipe", "software"} {
+					if strings.Contains(combined, tell) {
+						t.Errorf("built-in %q WebGL software renderer %q (headless tell): vendor=%q renderer=%q",
+							name, tell, vendor, renderer)
+					}
+				}
+
+				// Header surfaces LAST (navigates to the loopback echo server). Built-ins
+				// enable spoofClientHints, so CH must be populated and UA-derived.
+				chMajor := liveSecChUaMajor(t)
+				if chMajor != wantUAMajor {
+					t.Errorf("built-in %q Sec-Ch-Ua major: got %q want %q (UA-derived)", name, chMajor, wantUAMajor)
+				}
+				// Unconditional: built-ins enable spoofClientHints, so an ABSENT
+				// Sec-Ch-Ua-Platform is itself the regression this leg guards — fail on
+				// empty rather than skipping (don't gate the assertion on its own subject).
+				chPlat := stripQuotes(liveHeader(t, "Sec-Ch-Ua-Platform"))
+				if chPlat == "" {
+					t.Errorf("built-in %q Sec-Ch-Ua-Platform absent (spoofClientHints is on)", name)
+				} else if got := osFromChPlatform(chPlat); got != wantOS {
+					t.Errorf("built-in %q Sec-Ch-Ua-Platform OS family: got %q (=>%s) want %s",
+						name, chPlat, got, wantOS)
+				}
+			})
 		}
 	})
 

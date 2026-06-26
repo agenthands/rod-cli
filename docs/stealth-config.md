@@ -35,9 +35,11 @@ spawn — run close first to re-apply`) and is otherwise inert.
 
 - *Tier 3* — `stealth.DefaultProfile()` (godoll), plus the hardened defaults
   rod-cli adds (see §4).
-- *Tier 2* — a `--profile` JSON file (`stealth.LoadProfile`), overlaid onto
-  `cfg.Stealth`. A missing/malformed profile is a **loud** failure: the daemon
-  aborts rather than silently shipping a default identity.
+- *Tier 2* — a `--profile`, overlaid onto `cfg.Stealth`. A **bare name** resolves
+  to an embedded **built-in profile first** (Phase 32, see §8), then to
+  `~/.rod-cli/profiles/<name>.json`; a value that looks like a path (contains a
+  separator or ends in `.json`) loads verbatim. A missing/malformed profile is a
+  **loud** failure: the daemon aborts rather than silently shipping a default identity.
 - *Tier 1* — explicit CLI flags win over both.
 
 ---
@@ -61,7 +63,7 @@ All flags are global (defined in `cmd.go`) and forwarded at daemon spawn.
 | `--locale` | BCP-47 locale | derived from `languages[0]` when unset |
 | `--timezone` | IANA timezone ID | e.g. `America/New_York` |
 | `--platform` | `navigator.platform` | auto-derived from the UA OS token when unset |
-| `--profile` | a saved `stealth.Profile` JSON (name or path) | name resolves under `~/.rod-cli/profiles/<name>.json` |
+| `--profile` | a built-in name, a custom name, or a path to a `stealth.Profile` JSON | bare name → **built-in first** (§8), then `~/.rod-cli/profiles/<name>.json`; `--profile=list` lists the built-ins |
 
 ### Hardening toggles (Phase 27, default ON)
 
@@ -153,7 +155,9 @@ both godoll's evasion JS and rod-cli's interceptor. Notable behavior:
 - If the UA carries no recognized OS token, a user-pinned `--platform` must be one
   of the known values (`Win32`, `MacIntel`, `Linux`) — it does **not** fail open.
 - Hardware/screen values are range-checked (`hardwareConcurrency` 1–256,
-  `deviceMemory` 1–64 GB, screen width/height both-or-neither & positive).
+  `deviceMemory` 1–8 GB — `navigator.deviceMemory` is **capped at 8** by the W3C
+  Device Memory API, so a higher value is a synthetic tell and is rejected; screen
+  width/height both-or-neither & positive).
 - String fields carrying control chars or double-quotes are rejected before they
   can reach the JS injection boundary.
 - `timezone` ↔ proxy-geo is **warn-only** (a stderr line), never a hard failure —
@@ -215,3 +219,47 @@ deep inside a frozen session.
 - Resolution is deterministic and happens **once at spawn** (PROFILE-02); there is
   no per-command stealth state, and no bleed across named sessions.
 - Secrets (`--proxy-auth`) never enter argv; the daemon log is `0600`.
+
+---
+
+## 8. Built-in profile library (Phase 32, PROF-01..04)
+
+rod-cli ships a vetted library of **Chrome-only desktop** identity profiles
+embedded in the binary (`//go:embed`, `types/profiles/*.json`). Pick one by name —
+no JSON authoring, no external file:
+
+```
+rod-cli --profile=list                       # discover (honors --raw / --json)
+rod-cli --profile=windows-11-chrome goto …   # select by name
+```
+
+| Name | OS (UA token) | `navigator.platform` | Screen | HW cores / mem |
+|---|---|---|---|---|
+| `windows-11-chrome` | Windows NT 10.0 | `Win32` | 1920×1080 @1.0 | 8 / 8 GB |
+| `windows-11-desktop-1440p` | Windows NT 10.0 | `Win32` | 2560×1440 @1.0 | 16 / 8 GB |
+| `windows-10-chrome` | Windows NT 10.0 | `Win32` | 1920×1080 @1.0 | 8 / 8 GB |
+| `windows-10-laptop` | Windows NT 10.0 | `Win32` | 1366×768 @1.0 | 4 / 8 GB |
+| `macos-applesilicon-chrome` | Intel Mac OS X 10_15_7 | `MacIntel` | 2560×1600 @2.0 | 8 / 8 GB |
+| `macos-intel-chrome` | Intel Mac OS X 10_15_7 | `MacIntel` | 1920×1080 @1.0 | 8 / 8 GB |
+
+Notes:
+
+- **Real Chrome, no spoofed TLS.** Every profile drives a real Chrome whose
+  TLS/JA3 is authentic by construction — there is no TLS-spoofing knob in the
+  profile schema or anywhere in rod-cli (see `docs/stealth-validation.md`).
+- **Chrome can't tell Win 10 from Win 11** in the UA (both report `Windows NT 10.0`)
+  and reports `MacIntel` for **both** Apple-Silicon and Intel Macs — so the Win
+  variants share a UA and differ in screen/hardware, and the two Mac profiles
+  differ in screen/scale, not `platform`. This matches genuine Chrome.
+- **Vetted gate (PROF-02).** `types.TestBuiltinProfilesAreVetted` runs EVERY
+  built-in through the v1.6 consistency validator offline (UA↔platform, locale↔
+  languages, plausible screen/hardware, a parseable Chrome major), and the
+  detection harness drives a representative subset live; an incoherent profile
+  **fails the build** and is not shipped.
+- **Precedence unchanged (PROF-04).** Built-ins overlay at the same Tier 2 as a
+  custom profile file, so CLI flags still win (`--user-agent`/`--platform`/… over
+  the profile) and a custom profile file or path still works exactly as before.
+- **Reserved names.** A built-in name resolves to the embedded profile *before* the
+  user-dir path. To use a custom profile whose name collides with a built-in, pass
+  an explicit path (e.g. `--profile=./windows-11-chrome.json` or any path ending in
+  `.json`). `list` is reserved for discovery and never names a profile.
