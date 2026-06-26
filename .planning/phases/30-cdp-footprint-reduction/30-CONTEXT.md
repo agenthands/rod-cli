@@ -91,6 +91,36 @@ requiring browser patching or a MITM/alternate transport is **deferred to v2
   - **Cross-links** to `docs/stealth-validation.md` (Tier-1 offline blocking vs
     Tier-2 live opt-in framing). No "undetectable" claim.
 
+### Header coherence vs Fetch.enable — RESOLVED DESIGN FORK (added during planning)
+- **D-09:** During planning the architect found the network interceptor is **not a
+  pure opt-in feature** — its always-on catch-all rule (`updateInterceptorRules`,
+  `URLPattern:"*"`, `network.Continue`) rewrites identity headers (UA,
+  Accept-Language, Sec-Ch-Ua client hints) on every request to match the JS
+  identity. That is the **v1.6 FINGERPRINT-01/02 triple-agreement invariant**, so
+  naively making the interceptor opt-in (per D-01) would remove `Fetch.enable`
+  **but regress HTTP↔JS header coherence**. Surfaced via `anvil-design-options`;
+  **co-driver chose Option C+D (2026-06-26).**
+- **Resolution (C+D hybrid):**
+  - **Plain path:** set identity via `proto.EmulationSetUserAgentOverride{UserAgent,
+    AcceptLanguage, Platform, UserAgentMetadata{Brands, FullVersionList, Platform,
+    Mobile, ...}}` at page setup, built from the active `stealth.Profile` (reuse
+    `parseChromeMajor` for the brand version — ONE derivation path). The **Emulation
+    domain has no `enable` command**, so this enables **zero CDP domains** while
+    Chrome natively emits coherent UA / `Sec-Ch-Ua*` / `navigator.userAgentData` —
+    coherence becomes *stronger* than today's two-mechanism scheme.
+  - **Lazy Fetch:** the interceptor is created + `.Enable()`d (→ `Fetch.enable`)
+    **only** when a mock route is added (`AddRoute`) or a strict-header mode is
+    opted in; disabled when the last route is removed. The catch-all `Continue`
+    identity rule is **removed** (Emulation now carries identity).
+  - **Fallback (Option B):** IF harness capture shows `Emulation.setUserAgentOverride`
+    does NOT put `Sec-Ch-Ua`/`Accept-Language` on the **outgoing wire** without
+    `Network.enable`, fall back to `proto.NetworkSetUserAgentOverride` +
+    `proto.NetworkSetExtraHTTPHeaders` (accepts `Network.enable`, guarantees headers).
+    **The engineer MUST verify wire propagation on the Phase 24/29 harness before
+    committing**, and document whichever lands in `docs/cdp-footprint.md`.
+  - Known minor gap to check: `X-Requested-With` deletion has no Fetch path on the
+    plain page — verify Chrome doesn't emit it in this config, else note it.
+
 ### Claude's Discretion
 - Exact flag names for the now-opt-in features (console capture, request logging,
   interceptor) — within the CLI>profile>default convention.
