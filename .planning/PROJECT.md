@@ -18,19 +18,34 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 ## Current State
 
-rod-cli has completed its **v1.7 Complete Evasion Stack** milestone (shipped 2026-06-26). Building on v1.6's proven, configurable JS-layer stealth, v1.7 reduced the CDP transport footprint (a plain `goto` now enables none of the Runtime/Network/Fetch CDP domains — capture is opt-in, the interceptor is lazy, and HTTP↔JS identity coherence moved to the zero-enable `Emulation` domain), shipped a curated library of 6 vetted **Chrome-only** device profiles (embedded, `--profile=list`, with a real vetting gate), and activated godoll's dormant fingerprint dimensions (fonts/media-devices/battery/codecs) coherently behind 4 new hardening toggles. **TLS fingerprint spoofing was deliberately ruled out** — rod-cli drives real Chrome, whose TLS/JA3 is authentic by construction (TLS spoofing lives in the separate "munch" project). The milestone passed an independent security review with no blocker.
+rod-cli has completed its **v2.0 CDP-DEEP-01 Build** milestone (shipped 2026-06-26).
+Building on the Phase 39 research design, v2.0 shipped an in-process MITM WebSocket
+CDP proxy (`internal/cdpproxy/`) that sits between go-rod and Chrome's debugging
+WebSocket — providing pass-through traffic logging (ring buffer), Runtime.getProperties
+normalization (strips accessor `value` fields), configurable timing jitter, a
+`cdp-traffic` diagnostic command, and a `--no-cdp-proxy` bypass escape hatch.
+All gated behind `--cdp-proxy` (default OFF).
 
-## Current Milestone: v1.8 Debt Cleanup & Coding-Assistant Onboarding
+Previous milestones: v1.7 reduced the CDP transport footprint (zero-enable baseline),
+shipped 6 Chrome-only device profiles, and activated godoll's dormant fingerprint
+dimensions. v1.8 closed the debt cleanup (toolchain bump, plugin-path CDP-ledger,
+font-spoof stub, 5-assistant onboarding docs). v1.9 closed hygiene items (backslash
+reject, json.Marshal platform) and produced the CDP-DEEP-01 research/design that
+v2.0 executed. **TLS fingerprint spoofing remains permanently out of scope** —
+rod-cli drives real Chrome, whose TLS/JA3 is authentic by construction.
 
-**Goal:** Retire the three v1.7 follow-ups and ship authoritative install + agent-skill documentation so any of the five major coding assistants can adopt rod-cli.
+## Current Milestone: v2.1 CDP Proxy Hardening & Diagnostics
+
+**Goal:** Close the v2.0 carry-forward items (live-browser proxy test, jitter validation,
+cdp-traffic sensitivity warning) and the long-standing v1.7 font-spoof no-op.
 
 **Target features:**
-- Toolchain bump go1.26.0 → go1.26.1 (security F1); build/CI green.
-- Plugin-path CDP-ledger fix — lazy CDP domains enabled on the plugin path are tracked in the per-session ledger and harness-asserted (closes the v1.7 coverage hole).
-- Real, observable font-spoof — replace the godoll font-injector no-op with actual font-list spoofing the harness asserts changes the page's detected fonts, stable within a session.
-- Coding-assistant install & skill docs — for Claude (Code), Codex CLI, Gemini CLI, Pi (pi.dev), and opencode: binary install AND how each tool discovers/loads rod-cli as an agent-skill (not just `go install`).
-
-**Key context:** TLS spoofing stays out of scope (real Chrome only). Phase numbering continues from 33 (this milestone starts at Phase 34). Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
+- Live-browser proxy integration test — start browser with `--cdp-proxy`, assert
+  `Traffic()` contents + `cdpTell` returns `"no-signal"` with `--console-capture`.
+- `--cdp-jitter-ms` soft-warning above 1000ms.
+- `cdp-traffic` help-text caveat about sensitive CDP payload exposure.
+- Real font spoofing — replace the godoll font-injector no-op with observable
+  font-list spoofing, harness-asserted on/off/stability.
 
 <details>
 <summary>Archived: v1.7 Complete Evasion Stack (Shipped 2026-06-26)</summary>

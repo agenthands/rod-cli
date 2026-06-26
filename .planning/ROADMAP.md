@@ -425,3 +425,65 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   4. A `--no-cdp-proxy` bypass flag exists for zero-risk deployment.
 
 **Plans**: TBD
+
+### 🔨 v2.1 CDP Proxy Hardening & Diagnostics (In Progress)
+
+**Milestone Goal:** Close the v2.0 carry-forward items and the long-standing v1.7 font-spoof no-op.
+
+- [ ] **Phase 43: Proxy Integration Test** — Live-browser test asserting `Traffic()` contents + `cdpTell` normalization with `--console-capture`. (PROXY-01, PROXY-02)
+- [ ] **Phase 44: Jitter Validation + Sensitivity Warning** — `--cdp-jitter-ms` soft-warning above 1000ms + `cdp-traffic` caveat in help text. (PROXY-03, PROXY-04)
+- [ ] **Phase 45: Real Font Spoofing** — Replace godoll font-injector no-op with real `scriptMockFonts`, harness-asserted. (FONT-04, FONT-05, FONT-06)
+- [ ] **Phase 46: Font Harness Gate** — Offline detection harness asserts font-spoof on/off/stability. (FONT-07)
+
+### Phase 43: Proxy Integration Test
+
+**Goal**: A live-browser integration test starts a session with `--cdp-proxy`, navigates a page, and asserts the proxy's traffic log contains expected CDP messages. Also confirms `cdpTell` normalization with `--console-capture`.
+**Depends on**: Phase 42 (v2.0)
+**Requirements**: PROXY-01, PROXY-02
+**Success Criteria** (what must be TRUE):
+
+  1. `go test` with `--cdp-proxy` starts a browser, navigates, and `Traffic()` is non-empty with expected CDP message IDs.
+  2. With `--cdp-proxy` + `--console-capture`, the `cdpTell` probe returns `"no-signal"`.
+  3. Test works in CI (headless Chrome required).
+
+**Plans**: TBD
+
+### Phase 44: Jitter Validation + Sensitivity Warning
+
+**Goal**: Add sanity validation to `--cdp-jitter-ms` and a sensitivity caveat to `cdp-traffic` help text.
+**Depends on**: Phase 42
+**Requirements**: PROXY-03, PROXY-04
+**Success Criteria** (what must be TRUE):
+
+  1. `--cdp-jitter-ms=5000` emits a soft stderr warning (not blocking) about high jitter values.
+  2. `rod-cli cdp-traffic --help` or the command `Usage` string mentions that output may contain sensitive CDP payload data.
+  3. No regression in existing behavior.
+
+**Plans**: TBD
+
+### Phase 45: Real Font Spoofing
+
+**Goal**: Replace the godoll font-injector no-op (carried from v1.7) with a real injector so `--font-spoof` actually changes detectable fonts.
+**Depends on**: Phase 44 (independent, but sequenced after)
+**Requirements**: FONT-04, FONT-05, FONT-06
+**Success Criteria** (what must be TRUE):
+
+  1. With `--font-spoof` enabled, a font-probe on the live page reads a spoofed font set that DIFFERS from the host baseline (the no-op is gone).
+  2. The spoofed set is coherent with the active profile's OS/locale.
+  3. The spoofed set is identical across re-reads on the same session (stable).
+  4. `--font-spoof=false` restores genuine host font behavior.
+
+**Plans**: TBD
+
+### Phase 46: Font Harness Gate
+
+**Goal**: Add deterministic offline harness assertions for font-spoof on/off/stability.
+**Depends on**: Phase 45
+**Requirements**: FONT-07
+**Success Criteria** (what must be TRUE):
+
+  1. The offline detection harness has a `TestFontSpoof` test that asserts font set differs when `--font-spoof` is enabled.
+  2. Harness asserts font set is stable across re-reads on the same session.
+  3. Harness asserts `--font-spoof=false` restores genuine host font behavior.
+
+**Plans**: TBD
