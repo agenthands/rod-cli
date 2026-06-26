@@ -127,6 +127,11 @@ type StealthConfig struct {
 	// scriptMockFonts). Read via boolVal(cfg.Stealth.FontSpoof, true).
 	FontSpoof *bool `yaml:"fontSpoof" json:"fontSpoof"`
 
+	// CDPProxy enables the in-process CDP WebSocket proxy (pass-through logging
+	// in v1; Runtime normalization + jitter in later phases). Default OFF until
+	// baked in.
+	CDPProxy *bool `yaml:"cdpProxy" json:"cdpProxy"`
+
 	// MediaDevicesSpoof enables navigator.mediaDevices.enumerateDevices() spoofing
 	// (godoll scriptMockMediaDevices). Read via boolVal(cfg.Stealth.MediaDevicesSpoof, true).
 	MediaDevicesSpoof *bool `yaml:"mediaDevicesSpoof" json:"mediaDevicesSpoof"`

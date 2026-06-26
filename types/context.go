@@ -19,8 +19,10 @@ import (
 	"github.com/agenthands/godoll/stealth"
 	rodfingerprint "github.com/agenthands/godoll/fingerprint"
 	"github.com/agenthands/rod-cli/internal/plugin"
+	"github.com/agenthands/rod-cli/internal/cdpproxy"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
+	"github.com/go-rod/rod/lib/cdp"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
@@ -109,11 +111,11 @@ func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) 
 // non-nil only when an authenticated proxy spun up a local godoll relay; the
 // caller MUST invoke it on session close to stop that relay (T-25-07). It is nil
 // for the no-proxy and no-auth-proxy paths.
-func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error) {
+func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 
 	if cfg.CDPEndpoint != "" {
-		b, err := controlBrowser(ctx, cfg.CDPEndpoint)
-		return b, nil, err
+		b, err := controlBrowser(context.Background(), cfg.CDPEndpoint)
+		return b, nil, nil, err
 	}
 
 	if cfg.BrowserTempDir == "" {
@@ -124,7 +126,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 	cfg.BrowserTempDir = fmt.Sprintf("%s/%s", cfg.BrowserTempDir, utils.RandomString(10))
 	// Create basic launcher manually so we can set Headless, Proxy, UserDataDir
 	browserLauncher := launcher.New().
-		Context(ctx).
+		Context(context.Background()).
 		Headless(cfg.Headless).
 		NoSandbox(cfg.NoSandbox).
 		Set("no-gpu").
@@ -145,7 +147,7 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 		if browserPath, has := launcherLookPath(); has {
 			browserLauncher.Bin(browserPath)
 		} else {
-			return nil, nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
+			return nil, nil, nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
 		}
 	}
 
@@ -156,13 +158,13 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 	// a cleanup that stops it. Credentials never reach --proxy-server.
 	proxyCfg, err := parseProxyConfig(cfg.Stealth.Proxy, cfg.Stealth.ProxyAuth)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "invalid proxy configuration")
+		return nil, nil, nil, errors.Wrap(err, "invalid proxy configuration")
 	}
 	var proxyCleanup func()
 	if proxyCfg != nil {
 		proxyCleanup, err = proxyCfg.ApplyToLauncher(browserLauncher)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "apply proxy to launcher")
+			return nil, nil, nil, errors.Wrap(err, "apply proxy to launcher")
 		}
 	}
 
@@ -171,28 +173,35 @@ func launchBrowser(ctx context.Context, cfg Config) (*rod.Browser, func(), error
 		WithLauncher(browserLauncher).
 		SetBrowserPreferences(browser.NewBrowserOptions().StealthPreset())
 
+	// CDP-DEEP-01: optionally wrap the CDP WebSocket in a pass-through proxy
+	// for traffic logging and (future) Runtime normalization.
+	var cdpProxyInstance *cdpproxy.Proxy
+	if boolVal(cfg.Stealth.CDPProxy, false) {
+		opts = opts.WithCDPWrapper(func(inner cdp.WebSocketable) cdp.WebSocketable {
+			cdpProxyInstance = cdpproxy.New(inner, 1024)
+			return cdpProxyInstance
+		})
+	}
+
 	// HARDEN-01 browser-pref leg: disable non-proxied UDP so the real host IP
 	// cannot leak past a proxy via WebRTC. Gated on the toggle (default on).
 	if boolVal(cfg.Stealth.WebRTCLeakProtection, true) {
 		opts = opts.WithWebRTCLeakProtection(true)
 	}
 
-	browserInstance, err := browser.NewBrowserE(ctx, opts)
+	browserInstance, err := browser.NewBrowserE(context.Background(), opts)
 	if err != nil {
 		if proxyCleanup != nil {
-			proxyCleanup() // don't leak the relay if the browser fails to start
+			proxyCleanup()
 		}
-		return nil, nil, errors.Wrap(err, "launch local browser failed via godoll")
+		return nil, nil, nil, errors.Wrap(err, "launch local browser failed via godoll")
 	}
 
-	// Register the persistent CDP auth handler BEFORE any Page()/Navigate() so an
-	// authenticated proxy is answered programmatically — no 407 / hanging native
-	// auth dialog (T-25-06). SetupBrowserAuth is a no-op unless HasAuth().
 	if proxyCfg != nil && proxyCfg.HasAuth() {
 		proxyCfg.SetupBrowserAuth(browserInstance)
 	}
 
-	return browserInstance, proxyCleanup, nil
+	return browserInstance, cdpProxyInstance, proxyCleanup, nil
 }
 
 func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error) {
@@ -256,6 +265,7 @@ type Context struct {
 	// closePage disabling the interceptor does not clear Fetch. Read via
 	// GetEnabledCDPDomains. The deterministic offline harness asserts a plain session
 	// records NONE of these — the falsifiable CDP-01 baseline gate.
+	cdpProxy    *cdpproxy.Proxy
 	cdpDomains map[string]bool
 }
 
@@ -315,7 +325,7 @@ func (ctx *Context) initial() error {
 	var err error
 	if ctx.browser == nil {
 		var proxyCleanup func()
-		ctx.browser, proxyCleanup, err = launchBrowser(ctx.stdContext, ctx.config)
+		ctx.browser, ctx.cdpProxy, proxyCleanup, err = launchBrowser(ctx.config)
 		if err != nil {
 			return err
 		}

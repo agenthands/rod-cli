@@ -254,6 +254,7 @@ func getApp() *cli.App {
 			&cli.BoolFlag{Name: "media-devices-spoof", Usage: "Spoof navigator.mediaDevices.enumerateDevices() (default on; --media-devices-spoof=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "battery-spoof", Usage: "Spoof navigator.getBattery() (default on; --battery-spoof=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "codec-spoof", Usage: "Spoof media canPlayType / codec support (default on; --codec-spoof=false to disable)", Value: true},
+			&cli.BoolFlag{Name: "cdp-proxy", Usage: "Enable the in-process CDP WebSocket proxy for traffic logging and normalization (default off)", Value: false},
 			// Phase-30 CDP-footprint capture toggles (CDP-01). Default OFF: a plain
 			// session enables neither Runtime nor Network. Enable at spawn to let the
 			// console / requests commands collect their logs. Resolved once per session.
