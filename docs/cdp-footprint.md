@@ -136,12 +136,30 @@ proxy is enabled; jitter and command dispatch are opt-in.
 | TLS/JA3 fingerprint | Out of scope (real Chrome) | Out of scope (real Chrome) |
 | Raw CDP traffic diagnostics | None | `rod-cli cdp-traffic` (ring buffer) |
 
-### Honest ceiling (v2.0)
+### v2.1 CDP Proxy Hardening (shipped 2026-06-27)
 
-The proxy cannot eliminate the CDP transport. A detector with OS-level access can
-always observe the WebSocket connection. The normalization is a JSON-level
-heuristic — it strips the RESULT of getter calls from CDP responses, but cannot
-prevent Chrome from calling the getter during serialization. Timing jitter uses
-`math/rand` (not crypto-grade) and is additive — sophisticated timing analysis
-may still identify patterns. As with all rod-cli stealth: **no "undetectable"
-guarantee.**
+The v2.1 milestone added verification and hardening for the v2.0 proxy:
+
+- **Proxy integration tests** (`tests/proxy_integration_test.go`): live-browser
+  tests driving the real binary — `TestProxyTraffic` asserts the ring buffer
+  contains CDP messages after navigation; `TestProxyCdpTell` injects a
+  self-contained probe and asserts `"no-signal"` with normalization active.
+- **Jitter soft-warning** (`types/context.go`): `--cdp-jitter-ms > 1000` emits
+  a stderr warning without blocking — protects users from accidentally setting
+  extreme values that make navigation unusably slow.
+- **Sensitivity caveat** (`cmd.go`): `cdp-traffic --help` warns that output may
+  contain sensitive CDP payload data (URLs, cookies, page content).
+- **Font spoofing confirmed real**: the godoll injector (`scriptMockFonts`) is
+  already shipping a real canvas `measureText` offset (godoll `1d90494`); the
+  harness `TestFontSpoof` in `tests/detection_test.go` asserts on/off difference,
+  stability, and restore-to-baseline.
+
+### Honest ceiling (v2.1)
+
+Unchanged from v2.0. The proxy cannot eliminate the CDP transport. A detector
+with OS-level access can always observe the WebSocket connection. The
+normalization is a JSON-level heuristic — it strips the RESULT of getter calls
+from CDP responses, but cannot prevent Chrome from calling the getter during
+serialization. Timing jitter uses `math/rand` (not crypto-grade) and is
+additive — sophisticated timing analysis may still identify patterns. As with
+all rod-cli stealth: **no "undetectable" guarantee.**

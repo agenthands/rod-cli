@@ -446,7 +446,9 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   2. With `--cdp-proxy` + `--console-capture`, the `cdpTell` probe returns `"no-signal"`.
   3. Test works in CI (headless Chrome required).
 
-**Plans**: TBD
+**Plans**: 1/1 plan complete (inlined in CONTEXT.md)
+
+- [x] 43-CONTEXT.md/PLAN.md — Combined context-and-plan: two test functions in `tests/proxy_integration_test.go`
 
 ### Phase 44: Jitter Validation + Sensitivity Warning
 
@@ -459,7 +461,9 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   2. `rod-cli cdp-traffic --help` or the command `Usage` string mentions that output may contain sensitive CDP payload data.
   3. No regression in existing behavior.
 
-**Plans**: TBD
+**Plans**: 1/1 plan complete (inlined in CONTEXT.md)
+
+- [x] 44-CONTEXT.md — Jitter soft-warning (>1000ms → stderr) + cdp-traffic sensitivity caveat in Usage
 
 ### Phase 45: Real Font Spoofing
 
@@ -473,17 +477,20 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   3. The spoofed set is identical across re-reads on the same session (stable).
   4. `--font-spoof=false` restores genuine host font behavior.
 
-**Plans**: TBD
+**Plans**: 1/1 plan complete (inlined in CONTEXT.md; folded with Phase 46)
 
-### Phase 46: Font Harness Gate
+- [x] 45-CONTEXT.md — **Discovery:** godoll font injector already real (godoll `1d90494`). Phase shifted to proving it via existing `TestFontSpoof` in `tests/detection_test.go`. Only code change: updated `detect.js` comment from "observable no-op" to "deterministic offsets."
+- [x] 45-SUMMARY.md + 45-VERIFICATION.md — Backfilled 2026-06-27 during re-audit.
+
+### Phase 46: Font Harness Gate — FOLDED INTO PHASE 45
 
 **Goal**: Add deterministic offline harness assertions for font-spoof on/off/stability.
 **Depends on**: Phase 45
 **Requirements**: FONT-07
-**Success Criteria** (what must be TRUE):
+**Status**: ✅ Complete (folded into Phase 45 — `TestFontSpoof` at `tests/detection_test.go:1140` already satisfied FONT-07)
 
-  1. The offline detection harness has a `TestFontSpoof` test that asserts font set differs when `--font-spoof` is enabled.
-  2. Harness asserts font set is stable across re-reads on the same session.
-  3. Harness asserts `--font-spoof=false` restores genuine host font behavior.
+  1. ✅ `TestFontSpoof` asserts font set differs when `--font-spoof` is enabled.
+  2. ✅ Harness asserts font set is stable across re-reads on the same session.
+  3. ✅ Harness asserts `--font-spoof=false` restores genuine host font behavior.
 
-**Plans**: TBD
+**Plans**: 0 (folded — see Phase 45)

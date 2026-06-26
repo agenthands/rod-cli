@@ -4,6 +4,7 @@
 **Refreshed:** 2026-06-25 (milestone v1.6 close — author: codebase-archaeologist)
 **Refreshed:** 2026-06-26 (milestone v1.7 close — author: codebase-archaeologist)
 **Refreshed:** 2026-06-26 (milestone v2.0 close — author: architect)
+**Refreshed:** 2026-06-27 (milestone v2.1 close — author: architect)
 
 > **v1.7 (Complete Evasion Stack)** changed three things inside the same spine,
 > all in `types/context.go createPage`. (1) **CDP footprint reduction (Phase 30):**
@@ -107,6 +108,11 @@ the browser alive between calls. It is built on `godoll` (a wrapper over
      field), fail-safe pass-through on unparseable input.
    - Wired into `launchBrowser()` via godoll's `WithCDPWrapper`, gated behind
      `--cdp-proxy` (default OFF).
+   - **v2.1:** added stderr soft-warning when `--cdp-jitter-ms > 1000`
+     (`types/context.go:185`); `cdp-traffic` Usage now includes sensitivity
+     caveat about CDP payload data (`cmd.go:516`). Proxy integration tests
+     in `tests/proxy_integration_test.go` assert traffic log contents and
+     Runtime normalization via a self-contained cdpTell probe.
 
 ## Data Flow
 

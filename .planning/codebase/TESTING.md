@@ -3,6 +3,8 @@
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
 **Refreshed:** 2026-06-26 (milestone v1.7 close)
+**Refreshed:** 2026-06-27 (milestone v2.0 close)
+**Refreshed:** 2026-06-27 (milestone v2.1 close)
 
 > The original map claimed "lack of test files / no CI." That is **stale and
 > wrong** — HEAD has ~40 `*_test.go` files and a blocking CI gate.
@@ -38,6 +40,20 @@
 - **Built-in profile vetting** (`types/profiles_test.go`,
   `TestBuiltinProfilesAreVetted`): runs EVERY embedded profile through the v1.6
   consistency validator; an incoherent profile fails the build (PROF-02).
+
+## v2.0–v2.1 CDP proxy integration tests (offline, blocking)
+
+- **Proxy traffic log** (`tests/proxy_integration_test.go`, `TestProxyTraffic`):
+  launches a headless browser with `--cdp-proxy`, navigates, and asserts
+  `cdp-traffic --json` returns a non-empty JSON array containing CDP messages
+  with recv direction and JSON-RPC structure (PROXY-01).
+- **cdpTell normalization** (`tests/proxy_integration_test.go`, `TestProxyCdpTell`):
+  launches with `--cdp-proxy --console-capture`, injects a self-contained cdpTell
+  probe (Error with getter on `stack`, `console.debug`), and asserts `"no-signal"`
+  — confirming Runtime.getProperties normalization strips accessor getters (PROXY-02).
+- **Font spoofing** (`tests/detection_test.go:1140`, `TestFontSpoof`): asserts
+  `--font-spoof` ON produces a different font hash than OFF, OFF restores baseline,
+  and hash is stable within session (FONT-04..07).
 
 ## Framework & Execution
 - Go's built-in `testing` package.
