@@ -245,7 +245,27 @@ type Context struct {
 	// invoked exactly once on browser close and nil'd to guard against double-call
 	// (T-25-07).
 	proxyCleanup func()
+	// cdpDomains is the per-session CDP domain-enable ledger (Phase 30 CDP-01 / D-04
+	// instrumentation): the set of footprint-adding CDP domains this session has
+	// enabled BEYOND what go-rod structurally requires (Page/Target/etc). Keyed by
+	// CDPDomain* name. Written under stateLock at each enable-point: Runtime/Network
+	// are recorded when their event subscription is REQUESTED (synchronously, before
+	// the async EachEvent goroutine that triggers the enable — conservative: it can
+	// only over-report, never hide); Fetch is recorded only after a CONFIRMED
+	// interceptor Enable() success. It is cumulative ("ever enabled this session") —
+	// closePage disabling the interceptor does not clear Fetch. Read via
+	// GetEnabledCDPDomains. The deterministic offline harness asserts a plain session
+	// records NONE of these — the falsifiable CDP-01 baseline gate.
+	cdpDomains map[string]bool
 }
+
+// CDP domain ledger keys (Phase 30 D-04). String constants so the instrumentation
+// set-points and the harness assertion can never silently drift on a typo.
+const (
+	CDPDomainRuntime = "Runtime"
+	CDPDomainNetwork = "Network"
+	CDPDomainFetch   = "Fetch"
+)
 
 func NewContext(ctx context.Context, cfg Config) *Context {
 	c := &Context{
@@ -253,6 +273,7 @@ func NewContext(ctx context.Context, cfg Config) *Context {
 		config:     cfg,
 		mode:       cfg.Mode,
 		routes:     make(map[string]string),
+		cdpDomains: make(map[string]bool),
 	}
 	// Generate the per-session canvas/audio noise seed ONCE (crypto/rand for an
 	// unpredictable value). Generating it here guarantees the same seed across
@@ -638,6 +659,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// never registered, so a plain session never enables Runtime. The `console`
 		// command requires the daemon spawned with --console-capture.
 		if boolVal(ctx.config.Stealth.ConsoleCapture, false) {
+			ctx.recordCDPDomainLocked(CDPDomainRuntime)
 			go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
 				ctx.stateLock.Lock()
 				defer ctx.stateLock.Unlock()
@@ -655,6 +677,7 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// Network.enable, so it is OPT-IN (default OFF). The `requests`/`request`
 		// commands require the daemon spawned with --request-capture.
 		if boolVal(ctx.config.Stealth.RequestCapture, false) {
+			ctx.recordCDPDomainLocked(CDPDomainNetwork)
 			go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
 				ctx.stateLock.Lock()
 				defer ctx.stateLock.Unlock()
@@ -679,6 +702,35 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		return nil, errors.Wrap(err, "create page failed")
 	}
 	return page, nil
+}
+
+// recordCDPDomainLocked marks a footprint-adding CDP domain as enabled for this
+// session (Phase 30 D-04 instrumentation). The CALLER MUST HOLD stateLock — every
+// set-point (the console/request subscription branches in createPage, which run
+// under initial()'s lock, and ensureInterceptorEnabled, called from AddRoute /
+// createPage under lock) already does.
+func (ctx *Context) recordCDPDomainLocked(domain string) {
+	if ctx.cdpDomains == nil {
+		ctx.cdpDomains = make(map[string]bool)
+	}
+	ctx.cdpDomains[domain] = true
+}
+
+// GetEnabledCDPDomains returns a copy of the per-session CDP domain-enable ledger
+// (Phase 30 D-04): the footprint-adding CDP domains this session enabled beyond
+// go-rod's structural requirements. A plain session (no capture flags, no mock
+// routes, no plugins) returns an EMPTY map — the falsifiable CDP-01 baseline that
+// the offline harness asserts. Lock-safe.
+func (ctx *Context) GetEnabledCDPDomains() map[string]bool {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	out := make(map[string]bool, len(ctx.cdpDomains))
+	for k, v := range ctx.cdpDomains {
+		if v {
+			out[k] = true
+		}
+	}
+	return out
 }
 
 // Accessors
@@ -746,7 +798,9 @@ func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
 	if err := ic.Enable(); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to enable network interceptor: %v\n", err)
 		ctx.interceptor = nil
+		return
 	}
+	ctx.recordCDPDomainLocked(CDPDomainFetch)
 }
 
 // AddRoute registers a mock route, lazily creating + enabling the network
