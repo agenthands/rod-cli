@@ -87,8 +87,29 @@ vs Tier-2 (live, opt-in, non-blocking) framing.
 `rod-cli` does **not** claim to be "undetectable." The baseline CDP footprint is now
 minimal, but the CDP *transport itself* remains observable to a determined detector:
 the `Page`/`Target` domains are enabled (irreducibly, to drive the browser), and any
-opted-in feature pays its domain's footprint by design. Fully obfuscating or
-eliminating the CDP transport — via **browser-patching, a MITM/alternate transport,
-or a patched DevTools endpoint** — is out of scope for v1.7 and deferred to
-**v2 (CDP-DEEP-01)**. The TLS/JA3 and IP-reputation layers remain outside the JS/CDP
-surface entirely (see the stealth-validation honest ceiling).
+opted-in feature pays its domain's footprint by design.
+
+### v1.9 CDP-DEEP-01 Research (2026-06-26)
+
+The v1.9 research phase evaluated three approaches for deeper CDP obfuscation:
+
+| Approach | Verdict |
+|---|---|
+| **Browser-patching** (fork Chromium) | Comprehensive but high maintenance burden — maintaining a Chromium fork across releases. Deferred unless MITM proxy proves insufficient. |
+| **MITM WebSocket proxy** (in-process, between go-rod and Chrome) | **Chosen for next milestone.** Implements go-rod's `WebSocketable` interface, passes through by default. Can normalize Runtime domain object previews (suppress `console.debug` stack-getter triggering even when Runtime is enabled), jitter CDP command timing to break characteristic patterns, and log all CDP traffic for diagnostics. Flag-gated: `--cdp-proxy`. Does NOT require a Chromium fork. |
+| **Patched DevTools endpoint** | Not a distinct approach — either browser-patching (A) or MITM (B) at a different layer. Not pursued. |
+
+The concrete build plan lives in `.planning/phases/39/CDP-DEEP-01-PLAN.md` (3 phases: core proxy, Runtime normalization, timing jitter + diagnostic command).
+
+### Updated honest ceiling (post CDP-DEEP-01 research)
+
+| Signal | Current (v1.8) | With MITM proxy (planned) |
+|---|---|---|
+| `Runtime.enable` (baseline) | Not enabled | Not enabled |
+| `Runtime.enable` (console capture) | Enabled, logged | Enabled, normalized (getter triggers suppressed) |
+| `cdpTell` stack-getter | No-signal on baseline | No-signal on baseline + normalized when Runtime on |
+| `Page`/`Target` events | Accepted-visible | Jittered (timing patterns broken) |
+| WebSocket port on localhost | Accepted-visible (OS-level only) | Accepted-visible (OS-level only) |
+| TLS/JA3 fingerprint | Out of scope (real Chrome) | Out of scope (real Chrome) |
+
+The proxy **measurably reduces** the observable surface but does not eliminate the CDP transport. A detector with OS-level access can always observe the WebSocket connection. As with all rod-cli stealth: **no "undetectable" guarantee.**
