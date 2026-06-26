@@ -426,14 +426,14 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: TBD
 
-### 🔨 v2.1 CDP Proxy Hardening & Diagnostics (In Progress)
+### ✅ v2.1 CDP Proxy Hardening & Diagnostics (Shipped 2026-06-27)
 
 **Milestone Goal:** Close the v2.0 carry-forward items and the long-standing v1.7 font-spoof no-op.
 
-- [ ] **Phase 43: Proxy Integration Test** — Live-browser test asserting `Traffic()` contents + `cdpTell` normalization with `--console-capture`. (PROXY-01, PROXY-02)
-- [ ] **Phase 44: Jitter Validation + Sensitivity Warning** — `--cdp-jitter-ms` soft-warning above 1000ms + `cdp-traffic` caveat in help text. (PROXY-03, PROXY-04)
-- [ ] **Phase 45: Real Font Spoofing** — Replace godoll font-injector no-op with real `scriptMockFonts`, harness-asserted. (FONT-04, FONT-05, FONT-06)
-- [ ] **Phase 46: Font Harness Gate** — Offline detection harness asserts font-spoof on/off/stability. (FONT-07)
+- [x] **Phase 43: Proxy Integration Test** — Live-browser test asserting `Traffic()` contents + `cdpTell` normalization with `--console-capture`. (PROXY-01, PROXY-02)
+- [x] **Phase 44: Jitter Validation + Sensitivity Warning** — `--cdp-jitter-ms` soft-warning above 1000ms + `cdp-traffic` caveat in help text. (PROXY-03, PROXY-04)
+- [x] **Phase 45: Real Font Spoofing** — Replace godoll font-injector no-op with real `scriptMockFonts`, harness-asserted. (FONT-04, FONT-05, FONT-06)
+- [x] **Phase 46: Font Harness Gate** — Offline detection harness asserts font-spoof on/off/stability. (FONT-07)
 
 ### Phase 43: Proxy Integration Test
 
