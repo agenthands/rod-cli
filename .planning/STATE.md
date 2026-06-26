@@ -67,9 +67,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-26T00:00:00.000Z
-Stopped at: Milestone v1.7 initialized
-Resume options: Continue with `/anvil-autonomous` to drive all phases, or `/anvil-discuss-phase 30` to gather context first.
+Last session: 2026-06-26 (resumed)
+Stopped at: Session resumed — v1.7 roadmap + requirements done, Phase 30 not yet discussed/planned
+Resume options: Continue with `/anvil-autonomous` to drive all phases, or `/anvil-discuss-phase 30` to gather context first, or `/anvil-plan-phase 30` to plan directly.
 
 Resume file: None
 
