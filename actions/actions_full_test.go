@@ -64,9 +64,20 @@ func newFixtureServer() *httptest.Server {
 // newLiveCtx returns a context with a launched headless browser and a created
 // page, plus a cleanup func. The browser is real but headless.
 func newLiveCtx(t *testing.T) (*types.Context, func()) {
+	return newLiveCtxCfg(t, nil)
+}
+
+// newLiveCtxCfg is newLiveCtx with an optional config mutator, used by tests that
+// need a footprint-adding feature opted in (Phase 30 made console/request capture
+// off-by-default; a test asserting capture must enable it via the mutator).
+func newLiveCtxCfg(t *testing.T, mutate func(*types.Config)) (*types.Context, func()) {
 	t.Helper()
 	u := launcher.New().Headless(true).MustLaunch()
-	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
+	cfg := types.Config{CDPEndpoint: u}
+	if mutate != nil {
+		mutate(&cfg)
+	}
+	ctx := types.NewContext(context.Background(), cfg)
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage failed: %v", err)
 	}
@@ -820,7 +831,12 @@ func TestConsoleLogs(t *testing.T) {
 }
 
 func TestNetworkRequests(t *testing.T) {
-	ctx, cleanup := newLiveCtx(t)
+	// Phase 30 (CDP-01): request capture is opt-in; enable it so the daemon installs
+	// the NetworkRequestWillBeSent subscription and this test can read index 0.
+	ctx, cleanup := newLiveCtxCfg(t, func(c *types.Config) {
+		rc := true
+		c.Stealth.RequestCapture = &rc
+	})
 	defer cleanup()
 	srv := newFixtureServer()
 	defer srv.Close()
@@ -862,6 +878,36 @@ func TestRoutes(t *testing.T) {
 	}
 	if _, err := Unroute(ctx, "*.example.com"); err != nil {
 		t.Errorf("Unroute: %v", err)
+	}
+}
+
+// TestRouteBeforeFirstGoto is a Phase-30 CR regression: with the interceptor now
+// lazily created, a `route` issued BEFORE the first `goto` (ctx.page still nil)
+// must still take effect — createPage re-establishes the lazy interceptor from the
+// stored routes when the first page is created. Previously the route was stored
+// but inert until a second AddRoute happened to trip the lazy-create.
+func TestRouteBeforeFirstGoto(t *testing.T) {
+	u := launcher.New().Headless(true).MustLaunch()
+	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
+	defer func() { _ = ctx.CloseBrowser() }()
+
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	// Add the route BEFORE any page/goto exists.
+	if _, err := Route(ctx, "*mock-target*", "MOCKED-BEFORE-GOTO"); err != nil {
+		t.Fatalf("Route before goto: %v", err)
+	}
+	// First navigation creates the page; the stored route must now be effective.
+	if _, err := Navigate(ctx, srv.URL+"/mock-target"); err != nil {
+		t.Fatalf("Navigate: %v", err)
+	}
+	out, err := Evaluate(ctx, "() => document.documentElement.outerHTML", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if !strings.Contains(out, "MOCKED-BEFORE-GOTO") {
+		t.Errorf("route added before first goto did not activate; got: %s", out)
 	}
 }
 

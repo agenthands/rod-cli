@@ -110,6 +110,26 @@ type StealthConfig struct {
 	// reason as WebRTCLeakProtection (nil = unset = resolve to the default true).
 	CanvasNoise *bool `yaml:"canvasNoise" json:"canvasNoise"`
 
+	// --- Phase 30: CDP-footprint opt-in capture toggles (CDP-01) ---
+	//
+	// These gate the two always-on CDP event subscriptions that previously forced
+	// Runtime.enable / Network.enable on EVERY session. They default OFF: a plain
+	// session installs neither subscription, so a plain `goto` enables neither
+	// Runtime nor Network (the CDP-01 baseline reduction). A *bool so an explicit
+	// `--console-capture=false` can override a profile/yaml-set true; nil = unset =
+	// resolve to the default false. Read via boolVal(..., false) at the consumer.
+
+	// ConsoleCapture, when true, installs the RuntimeConsoleAPICalled subscription
+	// (forcing Runtime.enable) so the `console` command has logs to return. OFF by
+	// default — the `console` command requires the daemon spawned with this on.
+	ConsoleCapture *bool `yaml:"consoleCapture" json:"consoleCapture"`
+
+	// RequestCapture, when true, installs the NetworkRequestWillBeSent subscription
+	// (forcing Network.enable) so the `requests`/`request` commands have a log to
+	// return. OFF by default — those commands require the daemon spawned with this
+	// on.
+	RequestCapture *bool `yaml:"requestCapture" json:"requestCapture"`
+
 	// --- Phase 28: human-behavior tuning knobs (HUMANIZE-01) ---
 	//
 	// Every tunable is a POINTER so nil = "unset" is distinguishable from an
@@ -218,6 +238,13 @@ type StealthFlags struct {
 	// *bool so "unset" is distinguishable from an explicit "--canvas-noise=false".
 	CanvasNoise *bool
 
+	// --- Phase 30: CDP-footprint capture flags (CDP-01) ---
+	// ConsoleCapture / RequestCapture are the --console-capture / --request-capture
+	// values; nil when unset (default OFF). A *bool so an explicit
+	// "--console-capture=false" can override a profile/yaml-set true.
+	ConsoleCapture *bool
+	RequestCapture *bool
+
 	// --- Phase 28: human-behavior tuning flags (HUMANIZE-01) ---
 	// Each is a pointer captured only when the corresponding flag IsSet, so an
 	// unset flag stays nil and ResolveStealth leaves cfg.Stealth's value alone
@@ -318,6 +345,20 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.CanvasNoise = flags.CanvasNoise
 	} else if cfg.Stealth.CanvasNoise == nil {
 		cfg.Stealth.CanvasNoise = boolPtr(true)
+	}
+
+	// Phase-30 CDP-footprint capture toggles, same precedence shape but defaulting
+	// OFF (the CDP-01 minimal baseline): explicit --flag > yaml-loaded cfg value
+	// (honored when non-nil, including an explicit true) > built-in default false.
+	if flags.ConsoleCapture != nil {
+		cfg.Stealth.ConsoleCapture = flags.ConsoleCapture
+	} else if cfg.Stealth.ConsoleCapture == nil {
+		cfg.Stealth.ConsoleCapture = boolPtr(false)
+	}
+	if flags.RequestCapture != nil {
+		cfg.Stealth.RequestCapture = flags.RequestCapture
+	} else if cfg.Stealth.RequestCapture == nil {
+		cfg.Stealth.RequestCapture = boolPtr(false)
 	}
 
 	// Phase-28 humanize tuning, resolved precedence:

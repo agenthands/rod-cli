@@ -59,6 +59,10 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// set them so the daemon's *bool stays nil = keep-default-true otherwise.
 	if c.IsSet("webrtc-protection") { flags = append(flags, fmt.Sprintf("--webrtc-protection=%t", c.Bool("webrtc-protection"))) }
 	if c.IsSet("canvas-noise") { flags = append(flags, fmt.Sprintf("--canvas-noise=%t", c.Bool("canvas-noise"))) }
+	// Phase-30 CDP-footprint capture toggles default OFF; forward ONLY when the user
+	// explicitly set them so the daemon's *bool stays nil = keep-default-off otherwise.
+	if c.IsSet("console-capture") { flags = append(flags, fmt.Sprintf("--console-capture=%t", c.Bool("console-capture"))) }
+	if c.IsSet("request-capture") { flags = append(flags, fmt.Sprintf("--request-capture=%t", c.Bool("request-capture"))) }
 	// Phase-28 humanize tuning flags forward ONLY when explicitly set so the
 	// daemon-side pointer stays nil (= keep godoll default) otherwise. Bool flags
 	// use the =%t form (so --mouse-tremor=false survives); int/float pass a value.
@@ -92,7 +96,8 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 		c.IsSet("typing-speed-min") || c.IsSet("typing-speed-max") || c.IsSet("typo-rate") ||
 		c.IsSet("mouse-tremor") || c.IsSet("mouse-steps") || c.IsSet("mouse-speed-min") ||
 		c.IsSet("mouse-speed-max") || c.IsSet("mouse-deviation") ||
-		c.IsSet("scroll-duration") || c.IsSet("scroll-physics")
+		c.IsSet("scroll-duration") || c.IsSet("scroll-physics") ||
+		c.IsSet("console-capture") || c.IsSet("request-capture")
 	if stealthRequested && daemonRunning(session) {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
@@ -151,6 +156,11 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "platform", Usage: "pin navigator.platform (e.g. Win32, MacIntel, Linux); auto-derived from the UA OS token when unset"},
 			&cli.BoolFlag{Name: "webrtc-protection", Usage: "Prevent WebRTC local-IP leaks (default on; --webrtc-protection=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "canvas-noise", Usage: "Apply stable-per-session canvas/WebGL/audio noise (default on; --canvas-noise=false to disable)", Value: true},
+			// Phase-30 CDP-footprint capture toggles (CDP-01). Default OFF: a plain
+			// session enables neither Runtime nor Network. Enable at spawn to let the
+			// console / requests commands collect their logs. Resolved once per session.
+			&cli.BoolFlag{Name: "console-capture", Usage: "Capture browser console messages for the `console` command (default off; enables Runtime CDP domain)"},
+			&cli.BoolFlag{Name: "request-capture", Usage: "Capture network requests for the `requests`/`request` commands (default off; enables Network CDP domain)"},
 			// Phase-28 human-behavior tuning (HUMANIZE-01). Each is unset by default
 			// (no Value:) so c.IsSet gates forwarding; an unset knob keeps godoll's
 			// own default (zero regression). Resolved once at session spawn.
@@ -697,21 +707,21 @@ func getApp() *cli.App {
 			},
 			{
 				Name:  "console",
-				Usage: "List console messages",
+				Usage: "List console messages (requires the session spawned with --console-capture; off by default)",
 				Action: func(c *cli.Context) error {
 					return runClientCommand(c, daemon.Request{Command: "console"})
 				},
 			},
 			{
 				Name:  "requests",
-				Usage: "List network requests",
+				Usage: "List network requests (requires the session spawned with --request-capture; off by default)",
 				Action: func(c *cli.Context) error {
 					return runClientCommand(c, daemon.Request{Command: "requests"})
 				},
 			},
 			{
 				Name:  "request",
-				Usage: "Show details for a specific request",
+				Usage: "Show details for a specific request (requires the session spawned with --request-capture; off by default)",
 				Action: func(c *cli.Context) error {
 					index := c.Args().First()
 					if index == "" {

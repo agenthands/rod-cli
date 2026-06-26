@@ -83,6 +83,30 @@ All flags are global (defined in `cmd.go`) and forwarded at daemon spawn.
 | `--scroll-duration` | `WithDuration` | base scroll animation in ms |
 | `--scroll-physics` | `WithPhysics` | see the constraint in §6 |
 
+### CDP footprint / capture (Phase 30, default OFF)
+
+Minimal CDP footprint is just **correct default behavior** — there is no
+`--cdp-stealth` master switch. A plain session (`goto` + `snapshot`, no capture
+flags, no mock routes, no plugins) enables **none** of the `Runtime`, `Network`,
+or `Fetch` CDP domains. HTTP↔JS identity coherence (UA / `Accept-Language` /
+`Sec-Ch-Ua*` / `navigator.userAgentData`) is carried by Chrome's
+`Emulation.setUserAgentOverride`, which has **no `enable` command** and therefore
+adds zero CDP footprint. The footprint-adding features are opt-in, each following
+the same **CLI > profile > default** precedence as every other flag:
+
+| Flag | Meaning |
+|---|---|
+| `--console-capture` | capture console messages for the `console` command; installs the `RuntimeConsoleAPICalled` subscription (enables the **Runtime** domain). Default OFF. |
+| `--request-capture` | capture network requests for the `requests`/`request` commands; installs the `NetworkRequestWillBeSent` subscription (enables the **Network** domain). Default OFF. |
+
+The network interceptor (godoll **Fetch** domain) is created + enabled **lazily**
+on the first mock `route` and torn down when the last route is removed — so a
+session that never adds a route never enables Fetch. Plugin `onRequest`/`onResponse`
+hooks enable their own Network subscription on demand, independent of the baseline.
+
+See [`cdp-footprint.md`](cdp-footprint.md) for the per-command inventory and the
+offline harness baseline assertion.
+
 ---
 
 ## 3. Per-session proxy

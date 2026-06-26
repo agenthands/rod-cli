@@ -10,10 +10,16 @@ func TestNetworkAndDevCommands(t *testing.T) {
 	defer ts.Close()
 	runCli("close")
 
+	// Phase 30 (CDP-01): console + request capture are now OPT-IN (default OFF) so a
+	// plain session enables neither Runtime nor Network. This command exercises the
+	// `console`/`requests` commands, so the daemon must be spawned WITH the capture
+	// flags — they resolve once at spawn, so they ride the first command after close.
+	// (Route mocking still works regardless; it lazily enables the Fetch interceptor.)
+
 	// 1. Setup Route Mocking
 	// We'll mock /api/data to return something else
-	runCli("goto", ts.URL)
-	
+	runCli("--console-capture", "--request-capture", "goto", ts.URL)
+
 	out, err := runCli("--raw", "route", "--body", "Mocked API Data!", "*api/data*")
 	if err != nil || !strings.Contains(out, "Added route") {
 		t.Errorf("Route failed: err=%v out=%s", err, out)

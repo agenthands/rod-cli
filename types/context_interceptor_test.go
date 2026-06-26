@@ -33,9 +33,12 @@ func TestContextInterceptorRules(t *testing.T) {
 		t.Fatal("interceptor should not be nil")
 	}
 
+	// Phase 30 (CDP-01): the always-on identity catch-all rule was removed —
+	// header coherence now rides on Emulation.setUserAgentOverride, so the
+	// interceptor carries ONLY mock-route rules. One route ⇒ exactly one rule.
 	rules := ctx.interceptor.Rules()
-	if len(rules) < 2 { // 1 for mock route, 1 for evasion catch-all
-		t.Fatalf("expected at least 2 rules, got %d", len(rules))
+	if len(rules) != 1 {
+		t.Fatalf("expected exactly 1 mock rule (no catch-all), got %d", len(rules))
 	}
 
 	foundMock := false
@@ -45,6 +48,9 @@ func TestContextInterceptorRules(t *testing.T) {
 			if r.MockResponse == nil || r.MockResponse.Body != "mocked png" {
 				t.Errorf("mock response body mismatch: %v", r.MockResponse)
 			}
+		}
+		if r.URLPattern == "*" {
+			t.Errorf("unexpected catch-all rule: identity moved to Emulation override")
 		}
 	}
 

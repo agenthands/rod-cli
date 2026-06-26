@@ -57,6 +57,16 @@ func runDaemonServer(c *cli.Context) error {
 		v := c.Bool("canvas-noise")
 		stealthFlags.CanvasNoise = &v
 	}
+	// Phase-30 CDP-footprint capture toggles: capture as *bool only when explicitly
+	// set so an unset flag leaves the field nil = keep the default-OFF baseline.
+	if c.IsSet("console-capture") {
+		v := c.Bool("console-capture")
+		stealthFlags.ConsoleCapture = &v
+	}
+	if c.IsSet("request-capture") {
+		v := c.Bool("request-capture")
+		stealthFlags.RequestCapture = &v
+	}
 	// Phase-28 humanize tuning: capture each as a non-nil pointer ONLY when the
 	// flag is set on the daemon argv, so an unset knob stays nil (= emit no godoll
 	// option = byte-for-byte default behavior).

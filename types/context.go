@@ -408,6 +408,17 @@ func (ctx *Context) closePage() error {
 	if ctx.page == nil {
 		return nil
 	}
+	// Tear down the lazy network interceptor bound to this page (CR fix): it is
+	// bound to the page being closed, and Disable() cancels its context + stops the
+	// router.Run() goroutine. Without this, a later EnsurePage→createPage would
+	// inherit a stale interceptor pointing at the closed page (so new mock routes
+	// would silently not apply) and leak the old router goroutine. The mock-route
+	// set (ctx.routes) is intentionally preserved so createPage re-establishes the
+	// interceptor, bound to the fresh page, from those routes.
+	if ctx.interceptor != nil {
+		ctx.interceptor.Disable()
+		ctx.interceptor = nil
+	}
 	err := ctx.page.Close()
 	if err != nil {
 		return errors.Wrap(err, "close page failed")
@@ -514,6 +525,65 @@ func profileFromStealth(s StealthConfig) stealth.Profile {
 	return p
 }
 
+// chPlatformFor maps a navigator.platform value to the Sec-Ch-Ua-Platform /
+// UserAgentMetadata.Platform token (WITHOUT surrounding quotes — the Emulation
+// metadata field is the bare value; Chrome quotes it on the wire). Mirrors the
+// mapping that previously lived inline in updateInterceptorRules so the Emulation
+// identity tells the same OS story the interceptor used to inject.
+func chPlatformFor(platform string) string {
+	switch platform {
+	case "Win32":
+		return "Windows"
+	case "MacIntel":
+		return "macOS"
+	default:
+		return platform
+	}
+}
+
+// brandsForUA builds the Sec-Ch-Ua brand list from the active profile UA's
+// `Chrome/<major>` token (parseChromeMajor; defaultChromeMajor fallback for
+// empty/garbage UAs). It mirrors the EXACT tuple the interceptor catch-all used
+// to inject at context.go ~671 so the Emulation-emitted Sec-Ch-Ua agrees with the
+// UA and godoll's navigator.userAgentData brand version (FINGERPRINT-02). ONE
+// derivation path: same parseChromeMajor as the rest of rod-cli.
+func brandsForUA(ua string) []*proto.EmulationUserAgentBrandVersion {
+	major := defaultChromeMajor
+	if m, ok := parseChromeMajor(ua); ok {
+		major = strconv.Itoa(m)
+	}
+	return []*proto.EmulationUserAgentBrandVersion{
+		{Brand: "Not A(Brand", Version: "99"},
+		{Brand: "Google Chrome", Version: major},
+		{Brand: "Chromium", Version: major},
+	}
+}
+
+// applyEmulationIdentity carries the active profile's HTTP identity onto the page
+// via Chrome's Emulation domain (no `enable` command → zero CDP footprint). With
+// UserAgentMetadata set, Chrome natively emits coherent Sec-Ch-Ua* headers and
+// navigator.userAgentData WITHOUT Network.enable — the CDP-01 design-C mechanism.
+// UA-metadata is attached only when the active profile spoofs Client-Hints (mirrors
+// the prior interceptor gating). Log-and-continue on error (VALIDATE-03 discipline,
+// matching em.Apply) so a failed override never aborts the daemon.
+func (ctx *Context) applyEmulationIdentity(page *rod.Page, prof *stealth.Profile) {
+	override := proto.EmulationSetUserAgentOverride{
+		UserAgent:      prof.UserAgent,
+		AcceptLanguage: prof.AcceptLanguage,
+		Platform:       prof.Platform,
+	}
+	if prof.SpoofClientHints {
+		override.UserAgentMetadata = &proto.EmulationUserAgentMetadata{
+			Brands:   brandsForUA(prof.UserAgent),
+			Platform: chPlatformFor(prof.Platform),
+			Mobile:   false,
+		}
+	}
+	if err := override.Call(page); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: emulation user-agent override failed: %v\n", err)
+	}
+}
+
 func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	page, err := ctx.browser.Page(proto.TargetCreateTarget{URL: strings.Join(urls, "/")})
 	if page != nil {
@@ -552,33 +622,57 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 			}
 		}
 
-		page.EvalOnNewDocument(js.InjectedSnapShot)
-		
-		// Setup logging
-		go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
-			ctx.stateLock.Lock()
-			defer ctx.stateLock.Unlock()
-			var args []string
-			for _, arg := range e.Args {
-				if !arg.Value.Nil() {
-					args = append(args, arg.Value.String())
-				}
-			}
-			ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
-		})()
+		// CDP-01 (design C+D, CONTEXT D-09): carry the HTTP identity natively via
+		// Chrome's Emulation domain instead of the per-request interceptor catch-all.
+		// Emulation.setUserAgentOverride has NO `enable` command, so this costs ZERO
+		// CDP footprint while Chrome itself emits coherent UA / Sec-Ch-Ua* /
+		// navigator.userAgentData (the FINGERPRINT-01/02 triple-agreement), letting a
+		// plain session run with neither Runtime, Network, nor Fetch enabled. The old
+		// always-on interceptor identity rule is removed (see updateInterceptorRules).
+		ctx.applyEmulationIdentity(page, &prof)
 
-		go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
-			ctx.stateLock.Lock()
-			defer ctx.stateLock.Unlock()
-			ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
-		})()
-		
-		// Setup godoll/network interceptor
-		ctx.interceptor = network.NewInterceptor(page)
-		ctx.updateInterceptorRules()
-		
-		if err := ctx.interceptor.Enable(); err != nil {
-			return nil, errors.Wrap(err, "failed to enable network interceptor")
+		page.EvalOnNewDocument(js.InjectedSnapShot)
+
+		// Console capture (CDP-01): the RuntimeConsoleAPICalled subscription forces
+		// Runtime.enable, so it is OPT-IN (default OFF). When off the subscription is
+		// never registered, so a plain session never enables Runtime. The `console`
+		// command requires the daemon spawned with --console-capture.
+		if boolVal(ctx.config.Stealth.ConsoleCapture, false) {
+			go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
+				ctx.stateLock.Lock()
+				defer ctx.stateLock.Unlock()
+				var args []string
+				for _, arg := range e.Args {
+					if !arg.Value.Nil() {
+						args = append(args, arg.Value.String())
+					}
+				}
+				ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+			})()
+		}
+
+		// Request capture (CDP-01): the NetworkRequestWillBeSent subscription forces
+		// Network.enable, so it is OPT-IN (default OFF). The `requests`/`request`
+		// commands require the daemon spawned with --request-capture.
+		if boolVal(ctx.config.Stealth.RequestCapture, false) {
+			go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
+				ctx.stateLock.Lock()
+				defer ctx.stateLock.Unlock()
+				ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+			})()
+		}
+
+		// The network interceptor (godoll Fetch.enable) is NOT created unconditionally
+		// here — it is lazily created on the first AddRoute (footprint follows the
+		// feature), so a session that never adds a mock route never enables Fetch.
+		// EXCEPTION: if mock routes already exist — a `route` issued before the first
+		// `goto`, or routes surviving a page recreate — re-establish the interceptor
+		// bound to THIS page so those routes become effective (CR fix: createPage no
+		// longer unconditionally rebuilds the interceptor, so a stale/closed-page
+		// interceptor was previously left behind). ctx.page is not assigned until the
+		// caller stores our return value, so pass the local `page` explicitly.
+		if len(ctx.routes) > 0 {
+			ctx.ensureInterceptorEnabled(page)
 		}
 	}
 	if err != nil {
@@ -600,14 +694,25 @@ func (ctx *Context) GetRequests() []string {
 	return ctx.requests
 }
 
+// updateInterceptorRules rebuilds the interceptor's rule set from the current
+// mock routes. The always-on identity catch-all rule was REMOVED in Phase 30
+// (CDP-01): header coherence now rides on Emulation.setUserAgentOverride (see
+// applyEmulationIdentity), which costs no CDP footprint. The interceptor exists
+// ONLY to serve mock routes now, so it carries only Mock rules; unmatched requests
+// fall through godoll's default replay (which preserves Chrome's Emulation-set
+// identity headers). No-op when the interceptor has not been lazily created yet.
+//
+// Intentional behavior change: the old catch-all also force-deleted X-Requested-With
+// (ModifiedHeaders[""]). That strip is dropped — Chrome never emits X-Requested-With
+// natively (WIRE-VERIFY confirmed it absent on the plain Emulation path), so there
+// is nothing to delete on the baseline; Emulation carries no header-deletion knob.
 func (ctx *Context) updateInterceptorRules() {
 	if ctx.interceptor == nil {
 		return
 	}
-	
+
 	ctx.interceptor.ClearRules()
-	
-	// Add mock routes first
+
 	for pattern, body := range ctx.routes {
 		ctx.interceptor.AddRule(network.InterceptRule{
 			URLPattern: pattern,
@@ -621,72 +726,56 @@ func (ctx *Context) updateInterceptorRules() {
 			},
 		})
 	}
-	
-	// Add evasion headers catch-all rule.
-	// Prefer the pinned active profile (built from cfg.Stealth in createPage) so
-	// the interceptor headers tell the SAME identity story as godoll's JS injection.
-	// Fall back to the random-fingerprint-derived profile, then DefaultProfile.
-	var prof *stealth.Profile
-	if ctx.profile != nil {
-		prof = ctx.profile
-	} else if fp := ctx.fingerprint; fp != nil {
-		p := stealth.FromFingerprint(fp)
-		prof = &p
-	} else {
-		def := stealth.DefaultProfile()
-		prof = &def
-	}
-	
-	headers := map[string]string{
-		"User-Agent": prof.UserAgent,
-		"Accept-Language": prof.AcceptLanguage,
-		"X-Requested-With": "", // This acts as a deletion since it overrides with empty
-	}
-	
-	if prof.SpoofClientHints {
-		var chPlatform string
-		switch prof.Platform {
-		case "Win32":
-			chPlatform = "\"Windows\""
-		case "MacIntel":
-			chPlatform = "\"macOS\""
-		default:
-			chPlatform = fmt.Sprintf("\"%s\"", prof.Platform)
-		}
-		// Derive the brand version from the active profile UA's `Chrome/<major>`
-		// token (parsed by parseChromeMajor's `Chrome/(\d+)` regexp) so the
-		// Sec-Ch-Ua header agrees with the UA and godoll's userAgentData brand
-		// version (the FINGERPRINT-02 triple-agreement). Reuse parseChromeMajor
-		// (same types package, from Plan 01) — ONE derivation path in rod-cli.
-		// Fall back to the prior default major when the UA has no Chrome token so
-		// behavior is preserved for empty/garbage UAs.
-		chMajor := defaultChromeMajor
-		if m, ok := parseChromeMajor(prof.UserAgent); ok {
-			chMajor = strconv.Itoa(m)
-		}
-		headers["Sec-Ch-Ua"] = fmt.Sprintf("\"Not A(Brand\";v=\"99\", \"Google Chrome\";v=\"%s\", \"Chromium\";v=\"%s\"", chMajor, chMajor)
-		headers["Sec-Ch-Ua-Mobile"] = "?0"
-		headers["Sec-Ch-Ua-Platform"] = chPlatform
-	}
-	
-	ctx.interceptor.AddRule(network.InterceptRule{
-		URLPattern: "*",
-		Action:     network.Continue,
-		ModifiedHeaders: headers,
-	})
 }
 
+// ensureInterceptorEnabled lazily creates + enables the network interceptor
+// (godoll Fetch.enable) bound to the given page and applies the current mock-route
+// rules, so the Fetch footprint follows the feature (CDP-01). No-op when the
+// interceptor already exists or page is nil. Caller MUST hold stateLock.
+//
+// page is passed explicitly because the two callers see different views of the
+// current page: AddRoute uses ctx.page (already assigned), but createPage runs
+// BEFORE its caller assigns ctx.page, so it must pass its freshly-created local.
+func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
+	if ctx.interceptor != nil || page == nil {
+		return
+	}
+	ic := network.NewInterceptor(page)
+	ctx.interceptor = ic
+	ctx.updateInterceptorRules()
+	if err := ic.Enable(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to enable network interceptor: %v\n", err)
+		ctx.interceptor = nil
+	}
+}
+
+// AddRoute registers a mock route, lazily creating + enabling the network
+// interceptor on first use (footprint follows the feature, CDP-01). A session that
+// never adds a route never enables Fetch. A route added BEFORE the first goto is
+// stored and activates when createPage re-establishes it on the new page.
 func (ctx *Context) AddRoute(pattern, body string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	ctx.routes[pattern] = body
+	if ctx.interceptor == nil {
+		ctx.ensureInterceptorEnabled(ctx.page)
+		return
+	}
 	ctx.updateInterceptorRules()
 }
 
+// RemoveRoute drops a mock route. When the last route is removed the interceptor
+// is disabled and discarded so Fetch interception stops (a later AddRoute lazily
+// recreates it), keeping the footprint scoped to the feature's active lifetime.
 func (ctx *Context) RemoveRoute(pattern string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	delete(ctx.routes, pattern)
+	if len(ctx.routes) == 0 && ctx.interceptor != nil {
+		ctx.interceptor.Disable()
+		ctx.interceptor = nil
+		return
+	}
 	ctx.updateInterceptorRules()
 }
 

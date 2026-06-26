@@ -229,15 +229,24 @@ func TestContext_CloseRemovesTempDir(t *testing.T) {
 	}
 }
 
-func TestContext_UpdateInterceptorRules_NoFingerprint(t *testing.T) {
-	// Exercise the DefaultProfile() branch (fingerprint == nil) of
-	// updateInterceptorRules without a real browser.
+func TestContext_UpdateInterceptorRules_NoCatchAll(t *testing.T) {
+	// Phase 30 (CDP-01): updateInterceptorRules no longer installs an identity
+	// catch-all rule (it moved to Emulation.setUserAgentOverride). With NO mock
+	// routes the rule set is therefore EMPTY — the interceptor exists only to serve
+	// mock routes now. With a route, exactly that mock rule appears.
 	ctx := NewContext(context.Background(), Config{})
 	ctx.interceptor = network.NewInterceptor(nil)
 	ctx.fingerprint = nil
+
 	ctx.updateInterceptorRules()
-	if len(ctx.interceptor.Rules()) == 0 {
-		t.Fatal("expected at least the catch-all rule")
+	if got := len(ctx.interceptor.Rules()); got != 0 {
+		t.Fatalf("expected 0 rules with no routes (catch-all removed), got %d", got)
+	}
+
+	ctx.routes = map[string]string{"**/*.png": "mocked"}
+	ctx.updateInterceptorRules()
+	if got := len(ctx.interceptor.Rules()); got != 1 {
+		t.Fatalf("expected exactly 1 mock rule, got %d", got)
 	}
 }
 
