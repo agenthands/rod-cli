@@ -1,14 +1,16 @@
-# Stealth Configuration Surface (v1.6)
+# Stealth Configuration Surface (v1.7)
 
 This is the contributor-facing reference for `rod-cli`'s configurable stealth
 surface: the config spine, the flag catalog, the per-session proxy, the
-fingerprint consistency model, the anti-fingerprint hardening toggles, and the
-human-behavior tuning knobs — including the honest constraints on what each can
-and cannot do.
+fingerprint consistency model, the anti-fingerprint hardening toggles, the
+advanced fingerprint-dimension toggles, the built-in profile library, the
+opt-in CDP-capture flags, and the human-behavior tuning knobs — including the
+honest constraints on what each can and cannot do.
 
 For the system-level picture see [../ARCHITECTURE.md](../ARCHITECTURE.md); for
 what the validation actually proves see
-[stealth-validation.md](stealth-validation.md).
+[stealth-validation.md](stealth-validation.md); for the per-domain CDP footprint
+behind the opt-in capture flags (§2) see [cdp-footprint.md](cdp-footprint.md).
 
 ---
 
@@ -164,8 +166,12 @@ offline harness baseline assertion.
 - **URL-embedded credentials are rejected loudly** (`user:pass@host` in the URL)
   — they would surface as a confusing 407, and Chrome removed them. Use
   `--proxy-auth`.
-- Auth is applied via CDP `Fetch.continueWithAuth`, so the credential never
-  reaches `--proxy-server` and never appears in argv.
+- Auth is handled **out-of-band** — the primary carrier is a local CONNECT relay
+  (godoll `StartProxyRelay`, which injects `Proxy-Authorization` on the upstream
+  CONNECT and points Chrome at the relay's credential-free URL); a CDP auth
+  handler (`SetupBrowserAuth` → go-rod `HandleAuth` → `Fetch.continueWithAuth`) is
+  also registered as a fallback. Either way the credential never reaches
+  `--proxy-server` and never appears in argv.
 
 The proxy is bound **per named session**, not as one global egress IP.
 
@@ -291,7 +297,7 @@ rod-cli --profile=windows-11-chrome goto …   # select by name
 |---|---|---|---|---|
 | `windows-11-chrome` | Windows NT 10.0 | `Win32` | 1920×1080 @1.0 | 8 / 8 GB |
 | `windows-11-desktop-1440p` | Windows NT 10.0 | `Win32` | 2560×1440 @1.0 | 16 / 8 GB |
-| `windows-10-chrome` | Windows NT 10.0 | `Win32` | 1920×1080 @1.0 | 8 / 8 GB |
+| `windows-10-chrome` | Windows NT 10.0 | `Win32` | 1920×1080 @1.0 | 12 / 8 GB |
 | `windows-10-laptop` | Windows NT 10.0 | `Win32` | 1366×768 @1.0 | 4 / 8 GB |
 | `macos-applesilicon-chrome` | Intel Mac OS X 10_15_7 | `MacIntel` | 2560×1600 @2.0 | 8 / 8 GB |
 | `macos-intel-chrome` | Intel Mac OS X 10_15_7 | `MacIntel` | 1920×1080 @1.0 | 8 / 8 GB |

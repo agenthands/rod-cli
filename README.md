@@ -18,6 +18,7 @@ Designed explicitly as a "Skill" for LLMs (Claude, Gemini, and custom autonomous
 - **[Architecture](ARCHITECTURE.md)**: Overview of the persistent daemon and stealth engine.
 - **[Stealth Configuration](docs/stealth-config.md)**: The configurable stealth surface — fingerprint pins, per-session proxy, hardening toggles, and humanize tuning, with their honest constraints.
 - **[Stealth Validation](docs/stealth-validation.md)**: What the offline harness deterministically proves vs the best-effort live ceiling — and the TLS/IP/CDP layers rod-cli cannot control (no "undetectable" guarantee).
+- **[CDP Footprint](docs/cdp-footprint.md)**: The per-domain Chrome DevTools Protocol footprint inventory — which CDP domains a session enables, when, and how the v1.7 baseline reduction keeps a plain session off Runtime/Network/Fetch.
 - **[Usage Guide](USAGE.md)**: Comprehensive CLI reference and examples.
 - **[Agent Skill Definition](skills/rod-cli/SKILL.md)**: The prompt context to supply to your LLM agent so it knows how to use the CLI.
 - **[Reference Guides](skills/rod-cli/references/)**: Advanced tutorials on request mocking, code evaluation, tab management, and more.

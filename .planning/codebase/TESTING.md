@@ -2,6 +2,7 @@
 
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
+**Refreshed:** 2026-06-26 (milestone v1.7 close)
 
 > The original map claimed "lack of test files / no CI." That is **stale and
 > wrong** — HEAD has ~40 `*_test.go` files and a blocking CI gate.
@@ -22,6 +23,21 @@
 - **Tier 2 — live, non-blocking** (`tests/detection_live_test.go`, `//go:build
   detection_live`): opt-in Cloudflare/DataDome/CreepJS smoke check; excluded from
   CI by the build tag; informational only (`t.Logf`/`t.Skip`, never `t.Fatal`).
+
+## v1.7 deterministic gates (offline, blocking)
+- **CDP footprint baseline** (`types/cdp_footprint_test.go`,
+  `TestCDPFootprintBaseline`): asserts a plain session records ZERO of
+  {Runtime, Network, Fetch} via the `GetEnabledCDPDomains` ledger, with positive
+  controls proving each opt-in feature records exactly its domain. Falsifiable
+  CDP-01 gate. SCOPE CAVEAT: covers rod-cli's instrumented enable-points, not raw
+  CDP wire traffic — the plugin binder path is uninstrumented (see CONCERNS #10).
+- **Wire-level identity** (`tests/network_evasion_test.go`,
+  `TestNetworkEvasionHeaders`): drives a plain `goto` and confirms the spoofed
+  `Sec-Ch-Ua`/UA/`Accept-Language` reach the outgoing wire under the Emulation
+  override (WIRE-VERIFY of the zero-footprint design).
+- **Built-in profile vetting** (`types/profiles_test.go`,
+  `TestBuiltinProfilesAreVetted`): runs EVERY embedded profile through the v1.6
+  consistency validator; an incoherent profile fails the build (PROF-02).
 
 ## Framework & Execution
 - Go's built-in `testing` package.

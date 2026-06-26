@@ -2,6 +2,23 @@
 
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close — author: codebase-archaeologist)
+**Refreshed:** 2026-06-26 (milestone v1.7 close — author: codebase-archaeologist)
+
+> **v1.7 (Complete Evasion Stack)** changed three things inside the same spine,
+> all in `types/context.go createPage`. (1) **CDP footprint reduction (Phase 30):**
+> console + request capture are now OPT-IN (`--console-capture`/`--request-capture`,
+> default OFF); the network interceptor is LAZY (created on first `AddRoute`); HTTP
+> identity coherence moved to the zero-enable `Emulation.setUserAgentOverride`
+> (`applyEmulationIdentity`); a per-session CDP-domain ledger
+> (`GetEnabledCDPDomains`) records footprint-adding enables, and a plain `goto`
+> enables NONE of Runtime/Network/Fetch. (2) **Profile library (Phase 32):** 6
+> embedded Chrome-only profiles (`types/profiles/*.json`); bare `--profile=<name>`
+> resolves a built-in first; `--profile=list`. (3) **Advanced evasion (Phase 33):**
+> activated godoll's dormant fingerprint dimensions via `em.SetFingerprint` +
+> `SetDimensionOptions`, gated by 4 new toggles (`--font-spoof`/`--media-devices-spoof`/
+> `--battery-spoof`/`--codec-spoof`, default ON). **Phase 31 (TLS spoofing) was
+> CANCELLED** — real-Chrome-only, NO TLS/JA3 spoofing (that lives in a separate
+> project, "munch"); the authentic-Chrome TLS handshake is treated as a strength.
 
 > NOTE: the original 2026-06-18 map described an MCP-server design (`tools/`,
 > `server.go`, `runner.go`, `mark3labs/mcp-go`). That is **stale** — the project
@@ -43,10 +60,22 @@ the browser alive between calls. It is built on `godoll` (a wrapper over
 
 4. **Context & types (`types/`)**
    - `context.go`: owns the `rod.Browser`/`rod.Page` lifecycle; builds the active
-     `stealth.Profile`, applies evasion, wires the network interceptor, threads
-     the per-session noise seed, and captures console/request logs.
+     `stealth.Profile`, applies evasion, threads the per-session noise seed. v1.7:
+     `createPage` now calls `em.SetFingerprint(OS-constrained, seeded fp)` +
+     `em.SetDimensionOptions(...)` to activate godoll's dimension injectors;
+     carries HTTP identity via `applyEmulationIdentity` (zero-enable Emulation
+     domain) instead of the old always-on Fetch catch-all; opt-in console/request
+     capture and a LAZY network interceptor (`ensureInterceptorEnabled`); and a
+     per-session CDP-domain ledger (`recordCDPDomainLocked` / `GetEnabledCDPDomains`,
+     keyed by `CDPDomainRuntime`/`Network`/`Fetch`).
    - `config.go`: the `Config` / `StealthConfig` / `StealthFlags` structures and
-     `ResolveStealth` — the single stealth resolver (see CONVENTIONS).
+     `ResolveStealth` — the single stealth resolver (see CONVENTIONS). v1.7 added
+     the `ConsoleCapture`/`RequestCapture` (default OFF) and `FontSpoof`/
+     `MediaDevicesSpoof`/`BatterySpoof`/`CodecSpoof` (default ON) `*bool` knobs.
+   - `profiles_embed.go` + `profiles/*.json` (v1.7, Phase 32): the embedded
+     Chrome-only profile library — `//go:embed profiles/*.json`,
+     `BuiltinProfileNames`, `LoadBuiltinProfile`, `isBuiltinProfile`. Built-in
+     resolution is wired into `ResolveStealth` via `loadSelectedProfile`.
    - `snapshot.go`, `logger.go`, `js/`: page snapshots, logging, injected JS.
 
 5. **Detection harness (`internal/detect/`)**

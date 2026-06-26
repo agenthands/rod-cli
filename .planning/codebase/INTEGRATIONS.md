@@ -2,6 +2,7 @@
 
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
+**Refreshed:** 2026-06-26 (milestone v1.7 close)
 
 > The original map described an MCP server (`mark3labs/mcp-go`, Stdio RPC). That
 > is **stale** — rod-cli is a CLI, not an MCP server, and does not depend on
@@ -13,9 +14,15 @@
   vendored locally (`replace => ../godoll`). rod-cli consumes `stealth`,
   `browser`, `network`, `fingerprint`, and `humanize`.
 - **Chrome DevTools Protocol (CDP)**: inherited via `go-rod`. Used for page
-  control, proxy auth (`Fetch.continueWithAuth`), and console/request logging
-  (`Runtime.enable` / `Network.enable` — see docs/cdp-footprint.md). Can also
-  attach to an existing browser via `--cdp-endpoint`.
+  control (`Page`/`Target`, irreducible), proxy auth (`Fetch.continueWithAuth`),
+  and — v1.7 — HTTP identity coherence via the zero-`enable`
+  `Emulation.setUserAgentOverride` (`applyEmulationIdentity`). Console/request
+  logging (`Runtime.enable` / `Network.enable`) are now OPT-IN
+  (`--console-capture`/`--request-capture`, default OFF) and the mock interceptor
+  (`Fetch.enable`) is lazy, so a plain session enables none of Runtime/Network/Fetch.
+  The daemon records a per-session domain-enable ledger (`GetEnabledCDPDomains`).
+  See docs/cdp-footprint.md. Can also attach to an existing browser via
+  `--cdp-endpoint`.
 - **LLM agents**: rod-cli is consumed as an agent "Skill" — each command is a
   one-shot shell invocation; agents call the binary directly (see
   `skills/rod-cli/SKILL.md`).

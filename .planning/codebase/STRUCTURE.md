@@ -2,6 +2,7 @@
 
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
+**Refreshed:** 2026-06-26 (milestone v1.7 close)
 
 > The original layout (`tools/`, `server.go`, `runner.go`) was stale; HEAD uses
 > `actions/`, `daemon/`, and `internal/`.
@@ -25,9 +26,22 @@
     `StartServer`.
 - `/types/`
   - `config.go`: `Config`, `StealthConfig`, `StealthFlags`, `ResolveStealth`, the
-    fingerprint + humanize validators, `DefaultConfig`, `LoadConfig`.
+    fingerprint + humanize validators, `DefaultConfig`, `LoadConfig`,
+    `loadSelectedProfile`/`profileLooksLikePath` (v1.7 built-in resolution),
+    `boolPtr`/`boolVal`. v1.7 fields: `ConsoleCapture`/`RequestCapture` (default
+    OFF), `FontSpoof`/`MediaDevicesSpoof`/`BatterySpoof`/`CodecSpoof` (default ON).
   - `context.go`: browser/page lifecycle, `profileFromStealth`, `createPage`,
-    `parseProxyConfig`, the network interceptor, console/request logging.
+    `parseProxyConfig`. v1.7: `applyEmulationIdentity` (zero-enable Emulation
+    identity), `osForPlatform`/`chPlatformFor`/`brandsForUA` (OS-coherent dimension
+    + CH derivation), the LAZY interceptor (`ensureInterceptorEnabled`,
+    `AddRoute`/`RemoveRoute`), the CDP-domain ledger (`recordCDPDomainLocked`,
+    `GetEnabledCDPDomains`, `CDPDomainRuntime`/`Network`/`Fetch` consts), opt-in
+    console/request capture.
+  - `profiles_embed.go` + `profiles/*.json` (v1.7, Phase 32): embedded Chrome-only
+    profile library (`//go:embed`); `BuiltinProfileNames`, `LoadBuiltinProfile`.
+    6 profiles: `windows-11-chrome`, `windows-11-desktop-1440p`,
+    `windows-10-chrome`, `windows-10-laptop`, `macos-applesilicon-chrome`,
+    `macos-intel-chrome`.
   - `snapshot.go`, `logger.go`; `/js/`: injected client-side JS (`*_raw.js` +
     minified `*.js`).
 - `/internal/detect/`
@@ -37,14 +51,23 @@
   - JS plugin engine: `engine.go`, `lifecycle.go`, `api.go`, `scanner/`.
 - `/utils/`, `/banner/`: helpers and the CLI startup banner.
 - `/tests/`: end-to-end + integration tests (drive the built binary), incl.
-  `detection_test.go` (offline Tier 1) and `detection_live_test.go` (`//go:build
-  detection_live`, Tier 2).
+  `detection_test.go` (offline Tier 1), `detection_live_test.go` (`//go:build
+  detection_live`, Tier 2), and `network_evasion_test.go`
+  (`TestNetworkEvasionHeaders` — the WIRE-VERIFY of the Emulation identity path).
+- v1.7 unit tests: `types/cdp_footprint_test.go` (`TestCDPFootprintBaseline` —
+  the falsifiable CDP-01 ledger gate) and `types/profiles_test.go`
+  (`TestBuiltinProfilesAreVetted` — the PROF-02 built-in vetting gate).
 - `/.github/workflows/`: `test.yml` (the blocking gate), `release*.yml`.
 
 ## Key Locations
 
 - **Stealth resolution (single funnel):** `types/config.go` `ResolveStealth`.
 - **Active identity build:** `types/context.go` `profileFromStealth` → `createPage`.
+- **HTTP identity (zero-CDP-enable):** `types/context.go` `applyEmulationIdentity`.
+- **CDP footprint ledger:** `types/context.go` `GetEnabledCDPDomains` /
+  `recordCDPDomainLocked`; baseline asserted by `types/cdp_footprint_test.go`.
+- **Built-in profiles:** `types/profiles_embed.go` (`LoadBuiltinProfile`,
+  `BuiltinProfileNames`) + `types/profiles/*.json`.
 - **Daemon spawn / protocol:** `daemon/daemon.go`.
 - **Detection harness + shared probe:** `internal/detect/` (`probe.js` =
   `detect.Probe`, shared with `actions/stealth_check.go`).

@@ -47,14 +47,23 @@ in at three points:
   wraps WebRTC. See §3.
 - **Network interception** — `godoll/network.NewInterceptor`. The daemon holds a
   user-defined route table (`AddRoute`/`RemoveRoute`/`GetRoutes`) applied
-  alongside the stealth layer so request mocking does not break evasion.
+  alongside the stealth layer so request mocking does not break evasion. As of
+  v1.7 the interceptor (and its CDP `Fetch.enable`) is created **lazily** on the
+  first mock route and torn down when the last is removed — a session that never
+  mocks a route never enables Fetch.
 - **Resilient actions** — `click`, `type`, `fill`, `scroll`, navigation, etc. in
   `actions/actions.go` use godoll's retry/auto-wait and the humanize helpers
   rather than raw `go-rod` primitives.
 
-Console (`Runtime.consoleAPICalled`) and request (`Network.requestWillBeSent`)
-logging are wired here too — which is why the CDP Runtime/Network domains are
-enabled, a footprint documented in [docs/cdp-footprint.md](docs/cdp-footprint.md).
+As of v1.7 (Phase 30, CDP footprint reduction) console (`Runtime.consoleAPICalled`)
+and request (`Network.requestWillBeSent`) logging are **opt-in** flags
+(`--console-capture` / `--request-capture`, default OFF), and HTTP↔JS identity
+coherence rides on Chrome's zero-enable `Emulation.setUserAgentOverride`. So a
+plain session (`goto` + `snapshot`, no capture flags, no mock routes, no plugins)
+enables **none** of the `Runtime`, `Network`, or `Fetch` CDP domains. The daemon
+records a per-session CDP domain-enable ledger (`Context.GetEnabledCDPDomains`)
+that the offline harness asserts is empty on the baseline. See the per-domain
+inventory in [docs/cdp-footprint.md](docs/cdp-footprint.md).
 
 ## 3. The Stealth Config Spine (v1.6)
 
@@ -84,9 +93,12 @@ Key properties, all grounded in `types/config.go` and `types/context.go`:
   `NewContext` freezes `Config`. A stealth flag only "sticks" for a session if it
   is present at spawn; passing one to an already-running session warns on stderr
   and is otherwise inert (close the session to re-apply).
-- **Precedence: CLI flag > profile file > built-in default.** A `--profile`
-  overlays a saved `stealth.Profile` JSON; explicit flags win over it; unset
-  fields fall to godoll's `DefaultProfile()`.
+- **Precedence: CLI flag > profile > built-in default.** A `--profile` overlays a
+  `stealth.Profile`; explicit flags win over it; unset fields fall to godoll's
+  `DefaultProfile()`. As of v1.7 (Phase 32) a **bare** `--profile=<name>` resolves
+  to an embedded built-in profile (`types/profiles/*.json`, `//go:embed`) first,
+  then to `~/.rod-cli/profiles/<name>.json`; an explicit path loads verbatim, and
+  `--profile=list` lists the built-ins.
 - **Single identity source of truth.** `profileFromStealth` builds the active
   `stealth.Profile` from the resolved `cfg.Stealth`; the UA is the derivation
   anchor (its Chrome major version drives Client-Hints + `userAgentData`; its OS
@@ -98,13 +110,19 @@ Key properties, all grounded in `types/config.go` and `types/context.go`:
   `--platform` contradicting the UA OS) or an out-of-range humanize value aborts
   the daemon with a clear error instead of shipping a mismatched lie or panicking
   per-keystroke deep inside a live session.
-- **Hardened by default.** WebRTC leak protection and stable canvas/WebGL/audio
-  noise are on by default (`*bool` fields so an explicit `false` in a config file
-  survives resolution rather than being re-baselined to true).
+- **Hardened by default.** WebRTC leak protection, stable canvas/WebGL/audio
+  noise, and (v1.7, Phase 33) the advanced fingerprint dimensions — fonts, media
+  devices, battery, codecs (`--font-spoof`/`--media-devices-spoof`/`--battery-spoof`/`--codec-spoof`)
+  — are all on by default (`*bool` fields so an explicit `false` in a config file
+  survives resolution rather than being re-baselined to true). The dimensions are
+  generated **constrained to the active profile's OS/locale** so they tell the
+  same OS story as the identity rather than an incoherent random draw.
 - **Credentials never hit argv.** `--proxy-auth` is passed to the daemon via the
   `ROD_CLI_PROXY_AUTH` environment variable (argv is world-readable via
   `/proc/<pid>/cmdline`); URL-embedded proxy credentials are rejected loudly and
-  proxy auth is performed via CDP `Fetch.continueWithAuth`, never URL-embedded.
+  proxy auth is handled out-of-band (a local CONNECT relay that injects
+  `Proxy-Authorization`, plus a CDP `Fetch.continueWithAuth`/`HandleAuth`
+  fallback), never via `--proxy-server` or argv.
 
 The full flag catalog, the proxy model, the fingerprint consistency rules, the
 hardening toggles, and the humanize-tuning knobs (with their honest constraints)
