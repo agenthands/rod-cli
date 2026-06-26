@@ -96,8 +96,9 @@
   // Mirror of internal/detect/probe.js (kept in sync by convention). See probe.js
   // for the per-signal rationale.
 
-  // fonts: measureText width signature. godoll's font injector is an observable
-  // no-op on widths, so this is informational/stable, not a toggle discriminator.
+  // fonts: measureText width signature. godoll's font injector adds per-session
+  // deterministic offsets — spoofed widths differ from native and are stable within
+  // a session. Asserted by TestFontSpoof (FONT-04/05/06).
   probe("fonts", function () {
     var c = document.createElement("canvas");
     var ctx = c.getContext("2d");
