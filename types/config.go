@@ -112,6 +112,33 @@ type StealthConfig struct {
 	// reason as WebRTCLeakProtection (nil = unset = resolve to the default true).
 	CanvasNoise *bool `yaml:"canvasNoise" json:"canvasNoise"`
 
+	// --- Phase 33: advanced fingerprint-dimension hardening toggles (EVAD-02) ---
+	//
+	// These four gate godoll's per-vector fingerprint-dimension injectors, activated
+	// in createPage via em.SetFingerprint(OS-constrained fp) + SetDimensionOptions.
+	// Each defaults ON (boolVal(x, true)); a toggle OFF skips that dimension's
+	// injection entirely so the vector reverts to the un-hardened browser default
+	// (provably effective). All four are *bool for the same round-trip reason as
+	// CanvasNoise (nil = unset = resolve to the default true; an explicit yaml/flag
+	// false must survive ResolveStealth). The injected values are coherent with the
+	// profile OS (FPWithOS) — never an unconstrained random draw on a pinned identity.
+
+	// FontSpoof enables coherent, OS-matched font-availability spoofing (godoll
+	// scriptMockFonts). Read via boolVal(cfg.Stealth.FontSpoof, true).
+	FontSpoof *bool `yaml:"fontSpoof" json:"fontSpoof"`
+
+	// MediaDevicesSpoof enables navigator.mediaDevices.enumerateDevices() spoofing
+	// (godoll scriptMockMediaDevices). Read via boolVal(cfg.Stealth.MediaDevicesSpoof, true).
+	MediaDevicesSpoof *bool `yaml:"mediaDevicesSpoof" json:"mediaDevicesSpoof"`
+
+	// BatterySpoof enables navigator.getBattery() spoofing (godoll scriptMockBattery).
+	// Read via boolVal(cfg.Stealth.BatterySpoof, true).
+	BatterySpoof *bool `yaml:"batterySpoof" json:"batterySpoof"`
+
+	// CodecSpoof enables media canPlayType / codec-support spoofing (godoll
+	// scriptMockCodecs). Read via boolVal(cfg.Stealth.CodecSpoof, true).
+	CodecSpoof *bool `yaml:"codecSpoof" json:"codecSpoof"`
+
 	// --- Phase 30: CDP-footprint opt-in capture toggles (CDP-01) ---
 	//
 	// These gate the two always-on CDP event subscriptions that previously forced
@@ -239,6 +266,16 @@ type StealthFlags struct {
 	// CanvasNoise is the --canvas-noise value; nil when unset (default-on). A
 	// *bool so "unset" is distinguishable from an explicit "--canvas-noise=false".
 	CanvasNoise *bool
+
+	// --- Phase 33: advanced fingerprint-dimension hardening flags (EVAD-02/03) ---
+	// FontSpoof / MediaDevicesSpoof / BatterySpoof / CodecSpoof are the
+	// --font-spoof / --media-devices-spoof / --battery-spoof / --codec-spoof values;
+	// nil when unset (default-on). A *bool so an explicit "--font-spoof=false" can
+	// override a profile/yaml-set true.
+	FontSpoof         *bool
+	MediaDevicesSpoof *bool
+	BatterySpoof      *bool
+	CodecSpoof        *bool
 
 	// --- Phase 30: CDP-footprint capture flags (CDP-01) ---
 	// ConsoleCapture / RequestCapture are the --console-capture / --request-capture
@@ -383,6 +420,30 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 		cfg.Stealth.CanvasNoise = flags.CanvasNoise
 	} else if cfg.Stealth.CanvasNoise == nil {
 		cfg.Stealth.CanvasNoise = boolPtr(true)
+	}
+
+	// Phase-33 advanced fingerprint-dimension toggles, same precedence + default-true
+	// shape as the Phase-27 hardening toggles: explicit --flag > yaml-loaded *bool
+	// (honored when non-nil, including an explicit false) > built-in default true.
+	if flags.FontSpoof != nil {
+		cfg.Stealth.FontSpoof = flags.FontSpoof
+	} else if cfg.Stealth.FontSpoof == nil {
+		cfg.Stealth.FontSpoof = boolPtr(true)
+	}
+	if flags.MediaDevicesSpoof != nil {
+		cfg.Stealth.MediaDevicesSpoof = flags.MediaDevicesSpoof
+	} else if cfg.Stealth.MediaDevicesSpoof == nil {
+		cfg.Stealth.MediaDevicesSpoof = boolPtr(true)
+	}
+	if flags.BatterySpoof != nil {
+		cfg.Stealth.BatterySpoof = flags.BatterySpoof
+	} else if cfg.Stealth.BatterySpoof == nil {
+		cfg.Stealth.BatterySpoof = boolPtr(true)
+	}
+	if flags.CodecSpoof != nil {
+		cfg.Stealth.CodecSpoof = flags.CodecSpoof
+	} else if cfg.Stealth.CodecSpoof == nil {
+		cfg.Stealth.CodecSpoof = boolPtr(true)
 	}
 
 	// Phase-30 CDP-footprint capture toggles, same precedence shape but defaulting
@@ -784,8 +845,16 @@ var (
 		NoSandbox:      false,
 		Proxy:          "",
 		// Hardened-by-default: a config loaded with zero StealthFlags still gets
-		// WebRTC leak protection and stable canvas/audio noise (Phase 27).
-		Stealth: StealthConfig{WebRTCLeakProtection: boolPtr(true), CanvasNoise: boolPtr(true)},
+		// WebRTC leak protection and stable canvas/audio noise (Phase 27) plus the
+		// Phase-33 fingerprint-dimension hardening (fonts/media-devices/battery/codecs).
+		Stealth: StealthConfig{
+			WebRTCLeakProtection: boolPtr(true),
+			CanvasNoise:          boolPtr(true),
+			FontSpoof:            boolPtr(true),
+			MediaDevicesSpoof:    boolPtr(true),
+			BatterySpoof:         boolPtr(true),
+			CodecSpoof:           boolPtr(true),
+		},
 		LoggerConfig:   DefaultLoggerConfig,
 		Mode:           Text,
 		Raw:            false,

@@ -57,6 +57,24 @@ func runDaemonServer(c *cli.Context) error {
 		v := c.Bool("canvas-noise")
 		stealthFlags.CanvasNoise = &v
 	}
+	// Phase-33 fingerprint-dimension toggles: capture as *bool only when explicitly
+	// set so an unset flag leaves the field nil = keep the default-true baseline.
+	if c.IsSet("font-spoof") {
+		v := c.Bool("font-spoof")
+		stealthFlags.FontSpoof = &v
+	}
+	if c.IsSet("media-devices-spoof") {
+		v := c.Bool("media-devices-spoof")
+		stealthFlags.MediaDevicesSpoof = &v
+	}
+	if c.IsSet("battery-spoof") {
+		v := c.Bool("battery-spoof")
+		stealthFlags.BatterySpoof = &v
+	}
+	if c.IsSet("codec-spoof") {
+		v := c.Bool("codec-spoof")
+		stealthFlags.CodecSpoof = &v
+	}
 	// Phase-30 CDP-footprint capture toggles: capture as *bool only when explicitly
 	// set so an unset flag leaves the field nil = keep the default-OFF baseline.
 	if c.IsSet("console-capture") {

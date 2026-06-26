@@ -142,6 +142,12 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	// set them so the daemon's *bool stays nil = keep-default-true otherwise.
 	if c.IsSet("webrtc-protection") { flags = append(flags, fmt.Sprintf("--webrtc-protection=%t", c.Bool("webrtc-protection"))) }
 	if c.IsSet("canvas-noise") { flags = append(flags, fmt.Sprintf("--canvas-noise=%t", c.Bool("canvas-noise"))) }
+	// Phase-33 fingerprint-dimension toggles default ON; forward ONLY when explicitly
+	// set so the daemon's *bool stays nil = keep-default-true otherwise.
+	if c.IsSet("font-spoof") { flags = append(flags, fmt.Sprintf("--font-spoof=%t", c.Bool("font-spoof"))) }
+	if c.IsSet("media-devices-spoof") { flags = append(flags, fmt.Sprintf("--media-devices-spoof=%t", c.Bool("media-devices-spoof"))) }
+	if c.IsSet("battery-spoof") { flags = append(flags, fmt.Sprintf("--battery-spoof=%t", c.Bool("battery-spoof"))) }
+	if c.IsSet("codec-spoof") { flags = append(flags, fmt.Sprintf("--codec-spoof=%t", c.Bool("codec-spoof"))) }
 	// Phase-30 CDP-footprint capture toggles default OFF; forward ONLY when the user
 	// explicitly set them so the daemon's *bool stays nil = keep-default-off otherwise.
 	if c.IsSet("console-capture") { flags = append(flags, fmt.Sprintf("--console-capture=%t", c.Bool("console-capture"))) }
@@ -176,6 +182,8 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	stealthRequested := c.String("proxy") != "" || c.String("proxy-auth") != "" || c.String("profile") != "" ||
 		c.String("user-agent") != "" || c.String("locale") != "" || c.String("timezone") != "" || c.String("platform") != "" ||
 		c.IsSet("webrtc-protection") || c.IsSet("canvas-noise") ||
+		c.IsSet("font-spoof") || c.IsSet("media-devices-spoof") ||
+		c.IsSet("battery-spoof") || c.IsSet("codec-spoof") ||
 		c.IsSet("typing-speed-min") || c.IsSet("typing-speed-max") || c.IsSet("typo-rate") ||
 		c.IsSet("mouse-tremor") || c.IsSet("mouse-steps") || c.IsSet("mouse-speed-min") ||
 		c.IsSet("mouse-speed-max") || c.IsSet("mouse-deviation") ||
@@ -239,6 +247,13 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "platform", Usage: "pin navigator.platform (e.g. Win32, MacIntel, Linux); auto-derived from the UA OS token when unset"},
 			&cli.BoolFlag{Name: "webrtc-protection", Usage: "Prevent WebRTC local-IP leaks (default on; --webrtc-protection=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "canvas-noise", Usage: "Apply stable-per-session canvas/WebGL/audio noise (default on; --canvas-noise=false to disable)", Value: true},
+			// Phase-33 advanced fingerprint-dimension hardening (EVAD-02/03). Each
+			// default ON; the injected values are coherent with the profile OS
+			// (Windows fonts on a Windows profile, etc.) and stable per session.
+			&cli.BoolFlag{Name: "font-spoof", Usage: "Spoof OS-coherent font availability (default on; --font-spoof=false to disable)", Value: true},
+			&cli.BoolFlag{Name: "media-devices-spoof", Usage: "Spoof navigator.mediaDevices.enumerateDevices() (default on; --media-devices-spoof=false to disable)", Value: true},
+			&cli.BoolFlag{Name: "battery-spoof", Usage: "Spoof navigator.getBattery() (default on; --battery-spoof=false to disable)", Value: true},
+			&cli.BoolFlag{Name: "codec-spoof", Usage: "Spoof media canPlayType / codec support (default on; --codec-spoof=false to disable)", Value: true},
 			// Phase-30 CDP-footprint capture toggles (CDP-01). Default OFF: a plain
 			// session enables neither Runtime nor Network. Enable at spawn to let the
 			// console / requests commands collect their logs. Resolved once per session.

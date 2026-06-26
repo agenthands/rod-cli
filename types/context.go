@@ -480,6 +480,37 @@ const defaultChromeMajor = "121"
 
 // profileFromStealth builds the active stealth.Profile by overlaying every
 // non-zero identity field of the resolved cfg.Stealth onto stealth.DefaultProfile.
+// osForPlatform maps a navigator.platform value to the godoll fingerprint OS key
+// (the FPWithOS constraint) so the generated fonts/codecs/media-devices are
+// COHERENT with the profile's OS — Windows fonts on a Windows profile, macOS on a
+// Mac profile (coherent-not-random lens). Matching is substring-based so platform
+// variants (e.g. "Linux x86_64", "Linux aarch64") still resolve to the right OS
+// key rather than falling through to the windows default inside the generator.
+// Mobile keys (android/ios) are tested BEFORE the generic linux/mac substrings so
+// an explicit android/ios platform token wins. NOTE the inherent limit: a genuine
+// Android navigator.platform is "Linux armv8l" and iPadOS reports "MacIntel" —
+// neither carries an android/ios token, so they resolve to linux/macos. That is
+// acceptable under the current desktop-Chrome-only scope (no mobile profile
+// exists); a mobile profile would need an explicit OS field, not platform
+// sniffing. An unknown/empty platform falls back to windows (the safe default).
+func osForPlatform(platform string) string {
+	p := strings.ToLower(platform)
+	switch {
+	case strings.Contains(p, "android"):
+		return "android"
+	case strings.Contains(p, "iphone"), strings.Contains(p, "ipad"), strings.Contains(p, "ios"):
+		return "ios"
+	case strings.HasPrefix(p, "win"):
+		return "windows"
+	case strings.Contains(p, "mac"):
+		return "macos"
+	case strings.Contains(p, "linux"):
+		return "linux"
+	default:
+		return "windows"
+	}
+}
+
 // The resolved cfg.Stealth (produced by ResolveStealth's UA-anchored derive +
 // coherence validation) is the single source of truth for the live page: this
 // profile drives godoll's evasion JS injection AND the rod-cli interceptor.
@@ -610,15 +641,6 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 	if page != nil {
 		// Apply stealth evasion
 		em := stealth.NewEvasionManager(page)
-		// Generate a random fingerprint ONLY for the dimensions godoll still needs
-		// from a Fingerprint (WebGL VideoCard etc.) — it is NOT the identity source.
-		fg := rodfingerprint.NewFingerprintGenerator(rodfingerprint.FPWithBrowserNames("chrome"))
-		fp, fpErr := fg.Generate()
-		if fpErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
-		} else if fp != nil {
-			ctx.fingerprint = fp
-		}
 		// Build the active stealth.Profile from the resolved cfg.Stealth: the
 		// config-pinned identity is the SINGLE source of truth that drives both
 		// godoll's evasion JS and rod-cli's interceptor (FINGERPRINT-01 wiring).
@@ -626,6 +648,46 @@ func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
 		// so the no-pin path is unchanged from the prior default.
 		prof := profileFromStealth(ctx.config.Stealth)
 		ctx.profile = &prof
+		// EVAD-01/02 (Phase 33): generate the godoll fingerprint CONSTRAINED to the
+		// profile's OS + locale so the dormant dimension injectors (fonts/media
+		// devices/codecs/battery/plugins) tell the SAME OS story as the profile —
+		// Windows fonts on a Windows profile, macOS fonts on a Mac profile. NEVER an
+		// unconstrained random draw on a pinned identity (the coherent-not-random
+		// lens: an incoherent dimension is a NEW tell, worse than not hardening).
+		// The generator is SEEDED with the per-session noiseSeed so a page recreated
+		// within this session reproduces identical dimensions (stability, EVAD
+		// criterion 4).
+		fpOpts := []rodfingerprint.Option{
+			rodfingerprint.FPWithBrowserNames("chrome"),
+			rodfingerprint.FPWithOS(osForPlatform(prof.Platform)),
+		}
+		if prof.Locale != "" {
+			fpOpts = append(fpOpts, rodfingerprint.FPWithLocales(prof.Locale))
+		}
+		fg := rodfingerprint.NewFingerprintGeneratorSeeded(int64(ctx.noiseSeed), fpOpts...)
+		fp, fpErr := fg.Generate()
+		if fpErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
+		} else if fp != nil {
+			ctx.fingerprint = fp
+			// Order matters: em.SetFingerprint derives a profile from the fp
+			// (FromFingerprint) and overwrites em.profile, so SetProfile MUST run
+			// AFTER it to restore the config-pinned identity as the source of truth.
+			// em.fingerprint stays set, which is what activates the dormant
+			// applyFingerprintDimensions path (skipped today because it was nil).
+			em.SetFingerprint(fp)
+			// EVAD-02 per-vector gating: a toggle OFF skips that dimension's injection
+			// entirely so the vector reverts to the un-hardened browser default
+			// (provably effective, not cosmetic). Each defaults ON. `plugins` rides
+			// the same godoll path (no separate toggle — see CONTEXT D-01).
+			em.SetDimensionOptions(stealth.DimensionOptions{
+				Fonts:        boolVal(ctx.config.Stealth.FontSpoof, true),
+				MediaDevices: boolVal(ctx.config.Stealth.MediaDevicesSpoof, true),
+				Battery:      boolVal(ctx.config.Stealth.BatterySpoof, true),
+				Codecs:       boolVal(ctx.config.Stealth.CodecSpoof, true),
+				Plugins:      true,
+			})
+		}
 		em.SetProfile(prof)
 		// HARDEN-02: thread the stable per-session noise seed before Apply() so the
 		// seeded canvas/audio scripts produce identical re-reads within the session.
