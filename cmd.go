@@ -9,9 +9,86 @@ import (
 
 	"github.com/agenthands/rod-cli/banner"
 	"github.com/agenthands/rod-cli/daemon"
+	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/urfave/cli/v2"
 )
+
+// profileListValue is the reserved --profile value that triggers built-in profile
+// discovery instead of selecting a profile. `--profile=list` never loads a profile
+// named "list" and never launches a daemon.
+const profileListValue = "list"
+
+// maybeHandleProfileList intercepts `--profile=list` and prints the built-in
+// profile library WITHOUT launching a daemon or loading any profile. It returns
+// true when it handled the request (the caller should then return nil). It honors
+// --raw (names only, one per line) and --json (a structured list), defaulting to a
+// concise human table — consistent with the project's quiet-output ethos.
+func maybeHandleProfileList(c *cli.Context) bool {
+	if c.String("profile") != profileListValue {
+		return false
+	}
+	names := types.BuiltinProfileNames()
+
+	if c.Bool("json") {
+		type profileInfo struct {
+			Name                string `json:"name"`
+			Platform            string `json:"platform"`
+			UserAgent           string `json:"userAgent"`
+			Screen              string `json:"screen"`
+			HardwareConcurrency int    `json:"hardwareConcurrency"`
+			DeviceMemory        int    `json:"deviceMemory"`
+		}
+		infos := make([]profileInfo, 0, len(names))
+		for _, n := range names {
+			p, ok, err := types.LoadBuiltinProfile(n)
+			if err != nil || !ok {
+				// A corrupt embedded build is the only way this fails (the 32-02 gate
+				// loads every built-in). Still surface the name so --json discovery
+				// agrees with --raw rather than silently hiding it.
+				infos = append(infos, profileInfo{Name: n, Screen: "unreadable"})
+				continue
+			}
+			infos = append(infos, profileInfo{
+				Name:                n,
+				Platform:            p.Platform,
+				UserAgent:           p.UserAgent,
+				Screen:              fmt.Sprintf("%dx%d", p.Screen.Width, p.Screen.Height),
+				HardwareConcurrency: p.HardwareConcurrency,
+				DeviceMemory:        p.DeviceMemory,
+			})
+		}
+		out, _ := json.Marshal(map[string]interface{}{"profiles": infos})
+		fmt.Println(string(out))
+		return true
+	}
+
+	if c.Bool("raw") {
+		for _, n := range names {
+			fmt.Println(n)
+		}
+		return true
+	}
+
+	// Human form: a concise aligned table (name + OS / screen / hardware).
+	width := 0
+	for _, n := range names {
+		if len(n) > width {
+			width = len(n)
+		}
+	}
+	for _, n := range names {
+		p, ok, err := types.LoadBuiltinProfile(n)
+		if err != nil || !ok {
+			fmt.Println(n)
+			continue
+		}
+		fmt.Printf("%-*s  %s, %dx%d, %d cores / %dGB\n",
+			width, n, p.Platform, p.Screen.Width, p.Screen.Height,
+			p.HardwareConcurrency, p.DeviceMemory)
+	}
+	return true
+}
 
 // daemonRunning reports whether the per-session daemon is already up by pinging
 // it. A nil error from the ping means the daemon answered.
@@ -33,6 +110,12 @@ func isJSONValue(msg string) bool {
 }
 
 func runClientCommand(c *cli.Context, req daemon.Request) error {
+	// `--profile=list` is a discovery request, not a session command: print the
+	// built-in library and exit WITHOUT spawning a daemon or loading a profile.
+	if maybeHandleProfileList(c) {
+		return nil
+	}
+
 	session := c.String("session")
 
 	// Format generic daemon-spawn flags from global cli args
@@ -149,7 +232,7 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
 			&cli.StringFlag{Name: "proxy", Usage: "route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port)"},
 			&cli.StringFlag{Name: "proxy-auth", Usage: "proxy credentials as user:pass (handled via CDP, never URL-embedded)"},
-			&cli.StringFlag{Name: "profile", Usage: "named stealth profile (name or path to a JSON profile file)"},
+			&cli.StringFlag{Name: "profile", Usage: "stealth profile: a built-in name (see --profile=list), a custom name resolved under ~/.rod-cli/profiles/, or a path to a JSON profile file"},
 			&cli.StringFlag{Name: "user-agent", Usage: "pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor)"},
 			&cli.StringFlag{Name: "locale", Usage: "pin the BCP-47 locale (e.g. en-US); derived from languages when unset"},
 			&cli.StringFlag{Name: "timezone", Usage: "pin the IANA timezone (e.g. America/New_York)"},
@@ -814,6 +897,10 @@ func getApp() *cli.App {
 			},
 		},
 		Action: func(c *cli.Context) error {
+			// `rod-cli --profile=list` (no subcommand) lists the built-in profiles.
+			if maybeHandleProfileList(c) {
+				return nil
+			}
 			if !c.Bool("no-banner") {
 				fmt.Println(banner.ShowBanner())
 			}

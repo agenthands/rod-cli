@@ -1,0 +1,15 @@
+{
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "platform": "Win32",
+  "acceptLanguage": "en-US,en;q=0.9",
+  "languages": ["en-US", "en"],
+  "timezone": "America/New_York",
+  "locale": "en-US",
+  "screen": {"width": 2560, "height": 1440, "deviceScaleFactor": 1.0},
+  "hardwareConcurrency": 16,
+  "deviceMemory": 8,
+  "vendor": "Google Inc.",
+  "spoofClientHints": true,
+  "spoofAudioContext": true,
+  "spoofCanvas": true
+}

@@ -49,8 +49,10 @@ type StealthConfig struct {
 	// `yaml:"-" json:"-"` tags keep it out of any config/state file on disk.
 	ProxyAuth string `yaml:"-" json:"-"`
 
-	// ProfilePath is the resolved path to the stealth.Profile JSON file selected
-	// via --profile. Empty when no profile was requested.
+	// ProfilePath records the resolved source of the stealth.Profile selected via
+	// --profile. Empty when no profile was requested. NOTE: for a built-in profile
+	// this is the sentinel "builtin:<name>" (NOT an openable filesystem path) —
+	// treat it as provenance, not a path to re-read.
 	ProfilePath string `yaml:"profilePath" json:"profilePath"`
 
 	// --- Phase 26: configurable fingerprint identity pins ---
@@ -285,6 +287,41 @@ func resolveProfilePath(profile string) string {
 	return filepath.Join("profiles", profile+".json")
 }
 
+// profileLooksLikePath reports whether a --profile value is an explicit path (it
+// contains a path separator or ends in .json) rather than a bare name. Explicit
+// paths load verbatim (custom profiles, PROF-04) and are NOT shadowed by a
+// same-named built-in; bare names resolve to a built-in first (D-02). Built-in
+// names are thus reserved identifiers for bare-name selection.
+func profileLooksLikePath(profile string) bool {
+	return strings.ContainsRune(profile, os.PathSeparator) ||
+		strings.ContainsRune(profile, '/') ||
+		strings.HasSuffix(profile, ".json")
+}
+
+// loadSelectedProfile resolves a --profile value to a stealth.Profile plus a label
+// recording where it came from (for cfg.Stealth.ProfilePath). Resolution order
+// (D-02): an explicit path (separator/.json) loads verbatim; otherwise a bare name
+// resolves to an embedded BUILT-IN first; otherwise it falls back to the existing
+// ~/.rod-cli/profiles/<name>.json user-dir path. A bad load at any tier is a LOUD
+// error (the caller aborts the daemon spawn) — never a silent default identity.
+func loadSelectedProfile(name string) (*stealth.Profile, string, error) {
+	if !profileLooksLikePath(name) {
+		prof, ok, err := LoadBuiltinProfile(name)
+		if err != nil {
+			return nil, "", err
+		}
+		if ok {
+			return prof, "builtin:" + name, nil
+		}
+	}
+	path := resolveProfilePath(name)
+	prof, err := stealth.LoadProfile(path)
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "load stealth profile %q", path)
+	}
+	return prof, path, nil
+}
+
 // ResolveStealth populates cfg.Stealth using the precedence
 //
 //	CLI flag > profile file > built-in default
@@ -305,14 +342,15 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	// the proxy fields default to empty (no proxy).
 	_ = stealth.DefaultProfile()
 
-	// Tier 2: profile file. A bad load is loud — do NOT swallow and fall back.
+	// Tier 2: profile (a built-in by name, or a profile file). A bad load is loud
+	// — do NOT swallow and fall back. A bare name resolves to an embedded built-in
+	// FIRST, then the existing user-dir path (D-02); an explicit path loads verbatim.
 	if flags.Profile != "" {
-		path := resolveProfilePath(flags.Profile)
-		prof, err := stealth.LoadProfile(path)
+		prof, label, err := loadSelectedProfile(flags.Profile)
 		if err != nil {
-			return errors.Wrapf(err, "load stealth profile %q", path)
+			return err
 		}
-		cfg.Stealth.ProfilePath = path
+		cfg.Stealth.ProfilePath = label
 		// Overlay the loaded profile's identity fields onto cfg.Stealth so the
 		// consistency validator (and downstream injectors) see one identity.
 		cfg.Stealth.UserAgent = prof.UserAgent
@@ -655,8 +693,12 @@ func validateHardwareAndScreen(s *StealthConfig) error {
 	if s.HardwareConcurrency != 0 && (s.HardwareConcurrency < 1 || s.HardwareConcurrency > 256) {
 		return errors.Errorf("implausible hardwareConcurrency %d — must be between 1 and 256", s.HardwareConcurrency)
 	}
-	if s.DeviceMemory != 0 && (s.DeviceMemory < 1 || s.DeviceMemory > 64) {
-		return errors.Errorf("implausible deviceMemory %d — must be between 1 and 64 (GB)", s.DeviceMemory)
+	// navigator.deviceMemory is quantized and UPPER-BOUNDED at 8 by the W3C Device
+	// Memory API (and the Sec-CH-Device-Memory client hint): real Chrome never
+	// reports more than 8, regardless of physical RAM. A value >8 is a synthetic
+	// fingerprint tell, so reject it here rather than ship a detectable lie.
+	if s.DeviceMemory != 0 && (s.DeviceMemory < 1 || s.DeviceMemory > 8) {
+		return errors.Errorf("implausible deviceMemory %d — must be between 1 and 8 (GB); navigator.deviceMemory is capped at 8 by the Device Memory API", s.DeviceMemory)
 	}
 	return nil
 }
