@@ -11,20 +11,23 @@ package cdpproxy
 
 import (
 	"encoding/json"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/go-rod/rod/lib/cdp"
 )
 
 // Proxy wraps a cdp.WebSocketable and logs all CDP traffic to an in-memory
-// ring buffer. In v1 (pass-through), Send and Read forward to the inner
-// WebSocketable unchanged — the proxy is transparent to go-rod and Chrome.
+// ring buffer. Send applies timing jitter (if configured) before forwarding;
+// Read normalizes Runtime.getProperties responses before logging.
 type Proxy struct {
 	inner cdp.WebSocketable
 
-	mu  sync.Mutex
-	log []CDPMessage
-	cap int // max log entries
+	mu          sync.Mutex
+	log         []CDPMessage
+	cap         int // max log entries
+	jitterMaxMs int // 0 = no jitter
 }
 
 // CDPMessage is a logged CDP protocol message with direction.
@@ -35,15 +38,26 @@ type CDPMessage struct {
 
 // New creates a pass-through proxy wrapping the given WebSocketable.
 // cap sets the maximum number of logged messages (ring buffer).
-func New(inner cdp.WebSocketable, cap int) *Proxy {
+// jitterMaxMs is the maximum random delay in ms before each Send (0 = no jitter).
+func New(inner cdp.WebSocketable, cap int, jitterMaxMs int) *Proxy {
 	if cap <= 0 {
 		cap = 256
 	}
-	return &Proxy{inner: inner, log: make([]CDPMessage, 0, cap), cap: cap}
+	return &Proxy{
+		inner:       inner,
+		log:         make([]CDPMessage, 0, cap),
+		cap:         cap,
+		jitterMaxMs: jitterMaxMs,
+	}
 }
 
-// Send forwards data to Chrome and logs it.
+// Send applies timing jitter (if configured), then forwards data to Chrome
+// and logs it. Jitter introduces a random 0..jitterMaxMs ms delay to break
+// characteristic CDP automation timing patterns.
 func (p *Proxy) Send(data []byte) error {
+	if p.jitterMaxMs > 0 {
+		time.Sleep(time.Duration(rand.Intn(p.jitterMaxMs)) * time.Millisecond)
+	}
 	p.logMessage("send", data)
 	return p.inner.Send(data)
 }

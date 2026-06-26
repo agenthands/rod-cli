@@ -241,6 +241,8 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		return actions.Snapshot(ctx)
 	case "stealth-check":
 		return actions.StealthCheck(ctx, req.Args["url"], req.Args["raw"] == "true", req.Args["json"] == "true")
+	case "cdp-traffic":
+		return actions.CDPTraffic(ctx, req.Args["json"] == "true")
 	case "screenshot":
 		return actions.Screenshot(ctx, req.Args["name"], req.Args["selector"], 0, 0)
 	case "pdf":

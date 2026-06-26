@@ -174,11 +174,16 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		SetBrowserPreferences(browser.NewBrowserOptions().StealthPreset())
 
 	// CDP-DEEP-01: optionally wrap the CDP WebSocket in a pass-through proxy
-	// for traffic logging and (future) Runtime normalization.
+	// for traffic logging, Runtime normalization, and timing jitter.
+	// --no-cdp-proxy bypasses even if --cdp-proxy is set.
 	var cdpProxyInstance *cdpproxy.Proxy
-	if boolVal(cfg.Stealth.CDPProxy, false) {
+	if boolVal(cfg.Stealth.CDPProxy, false) && !boolVal(cfg.Stealth.NoCDPProxy, false) {
+		jitterMs := 0
+		if cfg.Stealth.CDPJitterMs != nil {
+			jitterMs = *cfg.Stealth.CDPJitterMs
+		}
 		opts = opts.WithCDPWrapper(func(inner cdp.WebSocketable) cdp.WebSocketable {
-			cdpProxyInstance = cdpproxy.New(inner, 1024)
+			cdpProxyInstance = cdpproxy.New(inner, 1024, jitterMs)
 			return cdpProxyInstance
 		})
 	}
@@ -817,6 +822,11 @@ func (ctx *Context) GetRequests() []string {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	return ctx.requests
+}
+
+// GetCDPProxy returns the CDP proxy instance (nil if proxy is not enabled).
+func (ctx *Context) GetCDPProxy() *cdpproxy.Proxy {
+	return ctx.cdpProxy
 }
 
 // updateInterceptorRules rebuilds the interceptor's rule set from the current

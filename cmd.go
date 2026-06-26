@@ -165,6 +165,11 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	if c.IsSet("mouse-deviation") { flags = append(flags, "--mouse-deviation", fmt.Sprint(c.Float64("mouse-deviation"))) }
 	if c.IsSet("scroll-duration") { flags = append(flags, "--scroll-duration", fmt.Sprint(c.Int("scroll-duration"))) }
 	if c.IsSet("scroll-physics") { flags = append(flags, fmt.Sprintf("--scroll-physics=%t", c.Bool("scroll-physics"))) }
+	// CDP-DEEP-01 proxy flags forward ONLY when explicitly set so the
+	// daemon-side pointer stays nil (= keep-default-off).
+	if c.IsSet("cdp-proxy") { flags = append(flags, fmt.Sprintf("--cdp-proxy=%t", c.Bool("cdp-proxy"))) }
+	if c.IsSet("cdp-jitter-ms") { flags = append(flags, "--cdp-jitter-ms", fmt.Sprint(c.Int("cdp-jitter-ms"))) }
+	if c.IsSet("no-cdp-proxy") { flags = append(flags, fmt.Sprintf("--no-cdp-proxy=%t", c.Bool("no-cdp-proxy"))) }
 
 	// proxy-auth is a CREDENTIAL — it must NEVER enter the daemon argv (argv is
 	// world-readable via /proc/<pid>/cmdline and `ps`). Pass it out-of-band through
@@ -188,7 +193,8 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 		c.IsSet("mouse-tremor") || c.IsSet("mouse-steps") || c.IsSet("mouse-speed-min") ||
 		c.IsSet("mouse-speed-max") || c.IsSet("mouse-deviation") ||
 		c.IsSet("scroll-duration") || c.IsSet("scroll-physics") ||
-		c.IsSet("console-capture") || c.IsSet("request-capture")
+		c.IsSet("console-capture") || c.IsSet("request-capture") ||
+		c.IsSet("cdp-proxy") || c.IsSet("cdp-jitter-ms") || c.IsSet("no-cdp-proxy")
 	if stealthRequested && daemonRunning(session) {
 		fmt.Fprintf(os.Stderr, "warning: session %q is already running; stealth flags apply at session spawn — run `close` first to re-apply\n", session)
 	}
@@ -255,6 +261,8 @@ func getApp() *cli.App {
 			&cli.BoolFlag{Name: "battery-spoof", Usage: "Spoof navigator.getBattery() (default on; --battery-spoof=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "codec-spoof", Usage: "Spoof media canPlayType / codec support (default on; --codec-spoof=false to disable)", Value: true},
 			&cli.BoolFlag{Name: "cdp-proxy", Usage: "Enable the in-process CDP WebSocket proxy for traffic logging and normalization (default off)", Value: false},
+		&cli.IntFlag{Name: "cdp-jitter-ms", Usage: "Max random CDP command delay in ms (0=off, requires --cdp-proxy)", Value: 0},
+		&cli.BoolFlag{Name: "no-cdp-proxy", Usage: "Bypass the CDP proxy even if --cdp-proxy is set (escape hatch)", Value: false},
 			// Phase-30 CDP-footprint capture toggles (CDP-01). Default OFF: a plain
 			// session enables neither Runtime nor Network. Enable at spawn to let the
 			// console / requests commands collect their logs. Resolved once per session.
@@ -495,14 +503,19 @@ func getApp() *cli.App {
 				Name:  "stealth-check",
 				Usage: "Run per-signal stealth verdicts against the current page (or navigate to URL first)",
 				Action: func(c *cli.Context) error {
-					// url is OPTIONAL: navigate first only when given. Forward raw/json
-					// in Args (mirroring how `fill` forwards `submit`) so the daemon-side
-					// handler (Plan 04) can emit the --raw single-line vs --json vs human
-					// table form. runClientCommand reuses the daemon-spawn/flag-forward path.
 					url := c.Args().First()
 					return runClientCommand(c, daemon.Request{Command: "stealth-check", Args: map[string]string{
 						"url":  url,
 						"raw":  fmt.Sprint(c.Bool("raw")),
+						"json": fmt.Sprint(c.Bool("json")),
+					}})
+				},
+			},
+			{
+				Name:  "cdp-traffic",
+				Usage: "Print logged CDP protocol traffic from the proxy (requires --cdp-proxy)",
+				Action: func(c *cli.Context) error {
+					return runClientCommand(c, daemon.Request{Command: "cdp-traffic", Args: map[string]string{
 						"json": fmt.Sprint(c.Bool("json")),
 					}})
 				},

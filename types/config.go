@@ -132,6 +132,15 @@ type StealthConfig struct {
 	// baked in.
 	CDPProxy *bool `yaml:"cdpProxy" json:"cdpProxy"`
 
+	// CDPJitterMs sets the maximum random delay (ms) before each CDP Send()
+	// to break characteristic automation timing patterns. 0 = no jitter.
+	// Requires --cdp-proxy. Read via intVal(cfg.Stealth.CDPJitterMs, 0).
+	CDPJitterMs *int `yaml:"cdpJitterMs" json:"cdpJitterMs"`
+
+	// NoCDPProxy bypasses the CDP proxy even if --cdp-proxy is set.
+	// Provides a zero-risk deployment escape hatch.
+	NoCDPProxy *bool `yaml:"noCdpProxy" json:"noCdpProxy"`
+
 	// MediaDevicesSpoof enables navigator.mediaDevices.enumerateDevices() spoofing
 	// (godoll scriptMockMediaDevices). Read via boolVal(cfg.Stealth.MediaDevicesSpoof, true).
 	MediaDevicesSpoof *bool `yaml:"mediaDevicesSpoof" json:"mediaDevicesSpoof"`
