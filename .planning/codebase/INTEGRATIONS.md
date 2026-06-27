@@ -3,6 +3,7 @@
 **Mapped:** 2026-06-18
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
 **Refreshed:** 2026-06-26 (milestone v1.7 close)
+**Refreshed:** 2026-06-27 (milestone v2.2 close — author: codebase-archaeologist)
 
 > The original map described an MCP server (`mark3labs/mcp-go`, Stdio RPC). That
 > is **stale** — rod-cli is a CLI, not an MCP server, and does not depend on
@@ -26,6 +27,19 @@
 - **LLM agents**: rod-cli is consumed as an agent "Skill" — each command is a
   one-shot shell invocation; agents call the binary directly (see
   `skills/rod-cli/SKILL.md`).
+- **Pi (pi.dev)** — two integration paths (v2.2):
+  - **Agent Skill** (`skills/rod-cli/SKILL.md`): the shell-out path — Pi reads the
+    skill file and invokes rod-cli CLI commands directly. No npm dependency. The
+    zero-install fallback for Pi users who switch between assistants.
+  - **TypeScript Extension** (`extensions/pi/`): a first-class Pi extension
+    (`@agenthands/rod-cli-pi`). Uses `@earendil-works/pi-coding-agent` ExtensionAPI.
+    13 typed `browse_*` tools registered via `pi.registerTool()` with TypeBox-typed
+    schemas, prompt snippets, and usage guidelines. Shell-out via
+    `pi.exec("rod-cli", args)` — the extension is a thin typed wrapper over the CLI,
+    not an in-process browser control. Lifecycle hooks (`session_start` binary
+    verification, `session_shutdown` daemon cleanup on quit). Input validation
+    enforced client-side before shell-out (URL scheme, selector presence, eval size
+    limit). See `extensions/pi/README.md` for the full tool catalog.
 
 ## Interfaces & Data Flow
 

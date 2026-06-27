@@ -4,6 +4,7 @@
 **Refreshed:** 2026-06-25 (milestone v1.6 close)
 **Refreshed:** 2026-06-26 (milestone v1.7 close)
 **Refreshed:** 2026-06-26 (milestone v2.0 close — author: architect)
+**Refreshed:** 2026-06-27 (milestone v2.2 close — author: codebase-archaeologist)
 
 > The original layout (`tools/`, `server.go`, `runner.go`) was stale; HEAD uses
 > `actions/`, `daemon/`, and `internal/`.
@@ -67,6 +68,27 @@
 - v1.7 unit tests: `types/cdp_footprint_test.go` (`TestCDPFootprintBaseline` —
   the falsifiable CDP-01 ledger gate) and `types/profiles_test.go`
   (`TestBuiltinProfilesAreVetted` — the PROF-02 built-in vetting gate).
+- `/extensions/pi/` — v2.2 Pi TypeScript extension (separate stack: TypeScript, not Go)
+  - `src/index.ts`: extension factory — `export default function(pi)` sets pi reference,
+    finds rod-cli binary, registers lifecycle hooks and all 13 tools.
+  - `src/cli.ts`: binary resolution (`findRodCli`, three-tier), shell-out wrapper
+    (`execRodCli`, wraps `pi.exec("rod-cli", args)`), input validation (`validateInput`),
+    per-command timeout table (`TIMEOUTS`).
+  - `src/types.ts`: TypeBox schema (`SessionParam` — optional string, shared on every tool).
+  - `src/lifecycle.ts`: `session_start` / `session_shutdown` hooks — binary verification
+    and daemon cleanup.
+  - `src/tools/index.ts`: `registerAllCoreTools` / `registerAllExtendedTools` — splits
+    registration into two groups for traceability.
+  - `src/tools/*.ts`: 13 `browse_*` tools, each a `pi.registerTool({...})` call
+    mapping typed params to rod-cli args: `goto.ts`, `snapshot.ts`, `click.ts`, `type.ts`,
+    `eval.ts`, `screenshot.ts`, `wait.ts`, `tabs.ts`, `navigate.ts`, `scroll.ts`,
+    `cookies.ts`, `storage.ts`, `fill_form.ts`.
+  - `src/__tests__/`: `smoke.test.ts` (parse/export), `adversarial.test.ts`
+    (mock-based, 90+ tests), `integration.test.ts` (real binary + HTTP fixture).
+  - `package.json`: `@agenthands/rod-cli-pi` v0.1.0, peer-dep on
+    `@earendil-works/pi-coding-agent`, `typebox`, `@earendil-works/pi-ai`.
+  - `rod-mcp.yaml`: Pi MCP configuration (mode: text, headless: false).
+  - `README.md`: extension-level usage docs.
 - `/.github/workflows/`: `test.yml` (the blocking gate), `release*.yml`.
 
 ## Key Locations

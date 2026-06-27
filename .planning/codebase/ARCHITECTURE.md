@@ -5,6 +5,7 @@
 **Refreshed:** 2026-06-26 (milestone v1.7 close — author: codebase-archaeologist)
 **Refreshed:** 2026-06-26 (milestone v2.0 close — author: architect)
 **Refreshed:** 2026-06-27 (milestone v2.1 close — author: architect)
+**Refreshed:** 2026-06-27 (milestone v2.2 close — author: codebase-archaeologist)
 
 > **v1.7 (Complete Evasion Stack)** changed three things inside the same spine,
 > all in `types/context.go createPage`. (1) **CDP footprint reduction (Phase 30):**
@@ -113,6 +114,39 @@ the browser alive between calls. It is built on `godoll` (a wrapper over
      caveat about CDP payload data (`cmd.go:516`). Proxy integration tests
      in `tests/proxy_integration_test.go` assert traffic log contents and
      Runtime normalization via a self-contained cdpTell probe.
+
+8. **Pi Extension (`extensions/pi/`)** — v2.2
+   - TypeScript Pi extension (not Go). Ships as npm package `@agenthands/rod-cli-pi`.
+     Entry point: `extensions/pi/src/index.ts` — `export default function(pi: ExtensionAPI)`
+     sets internal pi reference, finds rod-cli binary, registers lifecycle hooks + 13 tools.
+   - **Binary resolution** (`cli.ts`, `findRodCli`): three-tier search at extension load
+     time — `ROD_CLI_PATH` > `PATH` > `$GOBIN` / `$HOME/go/bin`. Returns path or `null`
+     (caller handles not-found via user notification).
+   - **Shell-out wrapper** (`cli.ts`, `execRodCli`): wraps `pi.exec("rod-cli", args)` —
+     prepends `--raw`, validates input, applies per-command timeouts, throws on non-zero
+     exit. The single point of interaction with rod-cli.
+   - **Input validation** (`cli.ts`, `validateInput`): client-side enforcement before
+     shell-out — URL scheme (`http://`/`https://` only), CSS selector presence, eval
+     expression size cap (10KB), empty-text rejection for fill.
+   - **Per-command timeouts** (`cli.ts`, `TIMEOUTS`): mapped per subcommand — goto 60s,
+     screenshot/wait 30s, snapshot/click/fill/type/eval 15s, close/--version 5s.
+   - **13 browse_* tools** (`src/tools/*.ts`): registered via `pi.registerTool()` with
+     TypeBox-typed parameters, prompt snippets, and guidelines. Core (Phase 47-48):
+     `browse_goto`, `browse_snapshot`, `browse_click`, `browse_type`, `browse_eval`,
+     `browse_screenshot`, `browse_wait`. Extended (Phase 49): `browse_tabs`,
+     `browse_navigate`, `browse_scroll`, `browse_cookies`, `browse_storage`,
+     `browse_fill_form`.
+   - **Lifecycle hooks** (`lifecycle.ts`): `session_start` verifies binary via
+     `rod-cli --version`; `session_shutdown` runs `rod-cli close` only on
+     `reason: "quit"` (not reload/fork/resume).
+   - **Trust boundary**: extension runs in Pi agent process. Shell-out to rod-cli via
+     `pi.exec()` — the rod-cli binary is a separate OS process. Tool parameters validated
+     client-side before shell-out; rod-cli enforces server-side validation
+     (defense-in-depth). Thread via `--` separator between flags and user-provided values
+     (I6 injection protection for fill/type/eval args).
+   - **Testing**: 3 test files — `smoke.test.ts` (parse/export), `adversarial.test.ts`
+     (mock-based, 90+ tests), `integration.test.ts` (real binary + HTTP fixture;
+     runs only when rod-cli is in PATH).
 
 ## Data Flow
 
