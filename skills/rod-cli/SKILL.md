@@ -121,6 +121,17 @@ rod-cli --raw snapshot
 rod-cli --raw close
 ```
 
+## Pi Extension
+
+Pi users have two integration paths:
+
+- **Skill path:** Copy `skills/rod-cli/SKILL.md` to `~/.pi/agent/skills/rod-cli/` (the shell-out approach documented above).
+- **Extension path (recommended for Pi users):** Install the first-class Pi extension:
+  ```bash
+  pi install npm:@agenthands/rod-cli-pi
+  ```
+  The extension provides 13 typed browser tools with schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+
 ## Specific tasks
 
 For more detailed guides on advanced features, refer to the following documents:

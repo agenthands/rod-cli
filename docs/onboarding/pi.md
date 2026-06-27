@@ -48,6 +48,27 @@ rod-cli --version
 
 For heavier first-class integration, you can wrap rod-cli as a Pi TypeScript extension. This is optional polish — the skill-based shell-out path above is sufficient for all use cases. See Pi's extension documentation for details.
 
+## First-Class Extension (v2.2+)
+
+rod-cli now ships a first-class Pi TypeScript extension with typed tools, lifecycle hooks, and prompt guidance. This is the recommended path for Pi users.
+
+### Install
+
+```bash
+pi install npm:@agenthands/rod-cli-pi
+```
+
+### What you get
+
+- **13 typed browser tools** — `browse_goto`, `browse_snapshot`, `browse_click`, etc.
+- **Automatic daemon lifecycle** — browser starts on first use, cleans up on quit
+- **Named sessions** — `session` parameter on every tool for multi-browser workflows
+- **Token-efficient output** — markdown snapshots, not raw HTML
+
+The [Skill-based path](#install) (SKILL.md) remains available as a zero-install fallback for users who switch between assistants or prefer no npm dependencies.
+
+See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+
 ## References
 
 - [Pi documentation](https://pi.dev)
