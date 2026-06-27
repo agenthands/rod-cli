@@ -6,6 +6,12 @@ import { registerBrowseType } from "./type";
 import { registerBrowseEval } from "./eval";
 import { registerBrowseScreenshot } from "./screenshot";
 import { registerBrowseWait } from "./wait";
+import { registerBrowseTabs } from "./tabs";
+import { registerBrowseNavigate } from "./navigate";
+import { registerBrowseScroll } from "./scroll";
+import { registerBrowseCookies } from "./cookies";
+import { registerBrowseStorage } from "./storage";
+import { registerBrowseFillForm } from "./fill_form";
 
 export function registerAllCoreTools(pi: ExtensionAPI) {
   registerBrowseGoto(pi);
@@ -15,4 +21,13 @@ export function registerAllCoreTools(pi: ExtensionAPI) {
   registerBrowseEval(pi);
   registerBrowseScreenshot(pi);
   registerBrowseWait(pi);
+}
+
+export function registerAllExtendedTools(pi: ExtensionAPI) {
+  registerBrowseTabs(pi);
+  registerBrowseNavigate(pi);
+  registerBrowseScroll(pi);
+  registerBrowseCookies(pi);
+  registerBrowseStorage(pi);
+  registerBrowseFillForm(pi);
 }

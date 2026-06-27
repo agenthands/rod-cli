@@ -24,7 +24,7 @@ export function registerBrowseType(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["type", params.selector, params.text];
+      const args = ["type", "--", params.selector, params.text];
       if (params.session) args.unshift("-s", params.session);
       const result = await execRodCli(args, { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

@@ -96,6 +96,27 @@ describe("integration workflow", () => {
       ]);
       expect(r.stdout).toContain("true");
     });
+
+    it("tabs list works", async () => {
+      const r = await execRodCli(["tab-list"]);
+      expect(r.stdout).toBeDefined();
+    });
+
+    it("cookies get works", async () => {
+      const r = await execRodCli(["cookie-get"]);
+      expect(r.stdout).toBeDefined();
+    });
+
+    it("navigate reload works", async () => {
+      const r = await execRodCli(["reload"]);
+      expect(r.stdout).toBeDefined();
+    });
+
+    it("storage set+get works", async () => {
+      await execRodCli(["localstorage-set", "--", "test_key", "test_val"]);
+      const r = await execRodCli(["localstorage-get"]);
+      expect(r.stdout).toContain("test_key");
+    });
   });
 
   it("smoke: rod-cli is available or null", () => {

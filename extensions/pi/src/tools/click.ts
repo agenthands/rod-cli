@@ -29,7 +29,7 @@ export function registerBrowseClick(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, signal) {
       // rod-cli has separate click and dblclick commands (no --double flag)
-      const args = [params.doubleClick ? "dblclick" : "click", params.selector];
+      const args = [params.doubleClick ? "dblclick" : "click", "--", params.selector];
       if (params.session) args.unshift("-s", params.session);
       const result = await execRodCli(args, { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

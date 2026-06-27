@@ -26,7 +26,7 @@ export function registerBrowseEval(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["eval", params.expression];
+      const args = ["eval", "--", params.expression];
       if (params.session) args.unshift("-s", params.session);
       const result = await execRodCli(args, { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

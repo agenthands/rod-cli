@@ -37,7 +37,7 @@ async function waitForSelector(
 ): Promise<void> {
   const pollScript = JSON.stringify(selector);
   const deadline = Date.now() + timeoutMs;
-  const evalArgs = ["eval", `!!document.querySelector(${pollScript})`];
+  const evalArgs = ["eval", "--", `!!document.querySelector(${pollScript})`];
   if (session) evalArgs.unshift("-s", session);
 
   while (Date.now() < deadline) {

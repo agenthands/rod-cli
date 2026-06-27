@@ -22,7 +22,7 @@ export function registerBrowseGoto(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["goto", params.url];
+      const args = ["goto", "--", params.url];
       if (params.session) args.unshift("-s", params.session);
       const result = await execRodCli(args, { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
