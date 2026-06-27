@@ -34,6 +34,7 @@ function mockPi(overrides?: Record<string, unknown>): MockPi {
     on: vi.fn((event: string, handler: (...args: any[]) => any) => {
       (onHandlers[event] ??= []).push(handler);
     }),
+    registerTool: vi.fn(),
     // Escape hatch: fire a registered event handler
     _fire: async (event: string, ...args: any[]) => {
       for (const h of onHandlers[event] ?? []) {

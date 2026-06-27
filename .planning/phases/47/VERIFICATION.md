@@ -1,47 +1,56 @@
 ---
-author: architect (in-band verification)
+author: qa
 phase: 47
 verdict: passed
 verified_at: 2026-06-27
+evidence_tier: HIGH
+parent_artifacts:
+  - .planning/phases/47/PLAN.md
+  - .planning/phases/47/CONTEXT.md
+commit: c30a0c7
 ---
 
 # Phase 47 Verification — Extension Foundation + Lifecycle
 
-## Goal-backward assessment
+## Verdict: PASS — no gaps
 
-### FOUND-01: Package scaffold
-**Status: ✅ PASSED** — `package.json` has `"pi": { "extensions": ["./src/index.ts"] }`, `"type": "module"`, correct peerDeps (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-ai`, `typebox`). `tsconfig.json` has `noEmit: true`, strict mode with 7 strictness flags.
+All 7 requirements met (FOUND-01..05, LIFECYCLE-01..02). LIFECYCLE-03 verified by code review — factory is synchronous, session_start only runs `--version`. All 4 invariants preserved.
 
-### FOUND-02: ExtensionAPI entry point
-**Status: ✅ PASSED** — `src/index.ts` default export calls `setPi(pi)`, `findRodCli()`, and `registerLifecycle(pi, rodCliPath)` synchronously during load.
+## Evidence
 
-### FOUND-03: Binary discovery
-**Status: ✅ PASSED** — `findRodCli()` resolves: `ROD_CLI_PATH` → `PATH` (with `;` separator on Windows) → `$GOBIN`/`~/go/bin`. Windows support: `.exe` extension, `USERPROFILE`, `;` PATH. Uses `statSync` with `throwIfNoEntry: false`. Returns `null` (not throw) if binary not found.
+- `tsc --noEmit`: PASSED (zero errors, strict mode)
+- `vitest`: 107/107 passed (4 smoke + 103 adversarial), 375ms
+- `--raw` flag: confirmed registered as `cli.BoolFlag{Name: "raw"}` at `cmd.go:244`
+- Declaration bodies: all 10 files read and verified against PLAN
 
-### FOUND-04: Shell-out wrapper
-**Status: ✅ PASSED** — `execRodCli()` throws on non-zero exit (`if (result.code !== 0) throw new Error(...)`). `validateInput()` checks: goto URL format (http/https), click/fill/type non-empty selector, eval ≤10KB. Per-command timeout table covers goto/snapshot/click/fill/type/eval/screenshot/wait/close/version. AbortSignal propagated. `--raw` flag prepended for clean output.
+## By requirement
 
-### FOUND-05: Smoke test
-**Status: ✅ PASSED** — vitest config includes `src/__tests__/**/*.test.ts`. Smoke test has 4 tests: findRodCli resolves, SessionParam exported, registerLifecycle is function, default export is function.
-
-### LIFECYCLE-01: session_start
-**Status: ✅ PASSED** — Verifies binary via `rod-cli --version`, notifies user with version string. If binary missing: warns with install instructions. Does NOT start browser daemon.
-
-### LIFECYCLE-02: session_shutdown
-**Status: ✅ PASSED** — Uses correct event name `session_shutdown` (NOT `session_end`). Gates `rod-cli close` on `event.reason === "quit"` — does NOT close on reload/fork/resume. Best-effort (catch + ignore errors). Daemon's own PPID polling is the safety net.
-
-### LIFECYCLE-03: Lazy-start
-**Status: ✅ PASSED** — Extension factory never calls a browser-launch command. `session_start` only runs `--version`. The daemon will start implicitly on first `browse_goto` in Phase 48.
+| ID | Status | Notes |
+|---|---|---|
+| FOUND-01 | PASS | `"pi":{"extensions":["./src/index.ts"]}` + 3 peer deps present |
+| FOUND-02 | PASS | Default export: setPi + findRodCli + registerLifecycle, synchronous |
+| FOUND-03 | PASS | ROD_CLI_PATH → PATH → GOBIN; Windows `.exe`/`USERPROFILE`/`;` coded |
+| FOUND-04 | PASS | Per-command timeouts, input validation, throw-on-error, AbortSignal |
+| FOUND-05 | PASS | 4 smoke tests pass; module exports and binary resolution verified |
+| LIFECYCLE-01 | PASS | session_start verifies binary, notifies user, NO browser started |
+| LIFECYCLE-02 | PASS | session_shutdown, reason==="quit", best-effort close, never throws |
 
 ## Invariants
 
-| Invariant | Status |
-|-----------|--------|
-| I1: errors thrown, never `isError` | ✅ `throw new Error(...)` at line 120 |
-| I2: StringEnum for enums | ✅ Deferred to Phase 48 (no tools yet) |
-| I3: `session_shutdown` not `session_end` | ✅ Line 25 of lifecycle.ts |
-| I4: no browser at load | ✅ Factory + session_start are browser-free |
+| ID | Status | Check |
+|---|---|---|
+| I1 (error discipline) | PASS | execRodCli throws on non-zero; validateInput throws |
+| I2 (enum discipline) | PASS | Deferred to Phase 48 per CONTEXT — no enums yet |
+| I3 (hook names) | PASS | session_start + session_shutdown (NOT session_end) |
+| I4 (no browser at load) | PASS | Factory is synchronous; session_start only runs --version |
 
-## Verdict: passed
+## Engineer improvements vs PLAN
 
-All 8 postconditions met. All invariants preserved. Ready for Phase 48.
+1. Prepend `--raw` to execRodCli args — valid flag per cmd.go:244, ensures machine-parseable output
+2. `path.join` for cross-platform path building (PLAN used string interpolation)
+3. `tsconfig.json` adds 5 extra strictness flags
+4. `typebox` correctly placed in peerDependencies
+5. 103 adversarial boundary tests — zero defects reproduced
+6. `@types/node` and `typescript` added to devDependencies for tsc gate
+
+## Gaps: NONE

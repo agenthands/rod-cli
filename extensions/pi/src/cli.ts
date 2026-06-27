@@ -65,6 +65,30 @@ export function setPi(pi: ExtensionAPI) {
 }
 
 // ---------------------------------------------------------------------------
+// Subcommand detection — skips -s <value> and other flags so validation
+// and timeout lookup operate on the actual rod-cli subcommand.
+// ---------------------------------------------------------------------------
+
+function findSubcommand(args: string[]): number {
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (arg === undefined) break; // safety net for noUncheckedIndexedAccess
+    // Skip -s <name> and --session <name> (the value is never the subcommand)
+    if ((arg === "-s" || arg === "--session") && i + 1 < args.length) {
+      i += 2;
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      i++;
+      continue;
+    }
+    return i;
+  }
+  return -1;
+}
+
+// ---------------------------------------------------------------------------
 // Timeout table
 // ---------------------------------------------------------------------------
 const TIMEOUTS: Record<string, number> = {
@@ -83,7 +107,7 @@ const DEFAULT_TIMEOUT = 30_000;
 
 function timeoutFor(args: string[]): number {
   // Find the first non-flag argument -- that's the subcommand.
-  const cmdIndex = args.findIndex((a) => !a.startsWith("-"));
+  const cmdIndex = findSubcommand(args);
   if (cmdIndex >= 0) {
     const cmd = args[cmdIndex];
     if (cmd !== undefined) {
@@ -103,7 +127,7 @@ function timeoutFor(args: string[]): number {
 // ---------------------------------------------------------------------------
 
 function validateInput(args: string[]): void {
-  const cmdIndex = args.findIndex((a) => !a.startsWith("-"));
+  const cmdIndex = findSubcommand(args);
   if (cmdIndex < 0) return; // no subcommand, e.g. --version
   const cmd = args[cmdIndex];
   const rest = args.slice(cmdIndex + 1);
