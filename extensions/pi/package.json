@@ -1,0 +1,32 @@
+{
+  "name": "@agenthands/rod-cli-pi",
+  "version": "0.1.0",
+  "description": "Pi extension for rod-cli — native browser automation tools for the Pi coding agent",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "keywords": ["pi-package", "pi-extension", "browser-automation", "rod-cli"],
+  "files": [
+    "src/**/*.ts",
+    "!src/__tests__/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}

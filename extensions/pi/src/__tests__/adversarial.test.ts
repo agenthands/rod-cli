@@ -18,14 +18,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-// ---------------------------------------------------------------------------
-// Mock helpers
-// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MockPi = any;
 
 /** Create a minimal mock ExtensionAPI for execRodCli / lifecycle tests. */
-function mockPi(overrides?: Partial<ExtensionAPI>): ExtensionAPI {
+function mockPi(overrides?: Record<string, unknown>): MockPi {
   const exec = vi.fn().mockResolvedValue({ code: 0, stdout: "", stderr: "" });
   const notify = vi.fn();
   const onHandlers: Record<string, Array<(...args: any[]) => any>> = {};
@@ -352,14 +350,14 @@ describe("findRodCli — binary resolution", () => {
 // ---------------------------------------------------------------------------
 
 describe("execRodCli — input validation & timeout selection", () => {
-  let pi: ReturnType<typeof mockPi>;
+  let pi: MockPi;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     pi = mockPi();
     // Set the module-level _pi reference so execRodCli can find it
     const { setPi } = await import("../cli");
-    setPi(pi as unknown as ExtensionAPI);
+    setPi(pi as any);
   });
 
   // ==============================================================
@@ -368,8 +366,6 @@ describe("execRodCli — input validation & timeout selection", () => {
   // ==============================================================
 
   describe("validateInput (through execRodCli rejection before exec)", () => {
-    const NOT_CALLED = Symbol("exec should not have been called");
-
     it("rejects goto without URL", async () => {
       await expect(execRodCli([ "goto" ])).rejects.toThrow("goto requires a URL argument");
       expect(pi.exec).not.toHaveBeenCalled();
@@ -1061,7 +1057,7 @@ describe("fuzz: execRodCli totality — no input panics or hangs", () => {
   it("handles rapid successive calls", async () => {
     const pi = mockPi();
     const { setPi } = await import("../cli");
-    setPi(pi as unknown as ExtensionAPI);
+    setPi(pi as any);
 
     const results = await Promise.allSettled([
       execRodCli([ "goto", "https://a.com" ]),
@@ -1080,7 +1076,7 @@ describe("fuzz: execRodCli totality — no input panics or hangs", () => {
   it("handles args with only whitespace strings", async () => {
     const pi = mockPi();
     const { setPi } = await import("../cli");
-    setPi(pi as unknown as ExtensionAPI);
+    setPi(pi as any);
 
     // These are all unvalidated commands — should pass through
     await execRodCli([ "   " ]);
@@ -1090,7 +1086,7 @@ describe("fuzz: execRodCli totality — no input panics or hangs", () => {
   it("handles args with special shell characters", async () => {
     const pi = mockPi();
     const { setPi } = await import("../cli");
-    setPi(pi as unknown as ExtensionAPI);
+    setPi(pi as any);
 
     // Shell metacharacters in args — should be passed through literally
     // (pi.exec handles quoting)
@@ -1105,7 +1101,7 @@ describe("fuzz: execRodCli totality — no input panics or hangs", () => {
   it("handles args with null bytes in selector", async () => {
     const pi = mockPi();
     const { setPi } = await import("../cli");
-    setPi(pi as unknown as ExtensionAPI);
+    setPi(pi as any);
 
     // Null bytes in strings — should not crash
     await execRodCli([ "click", "div\0bad" ]);
