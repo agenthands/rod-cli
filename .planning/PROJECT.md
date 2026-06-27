@@ -18,34 +18,54 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 ## Current State
 
-rod-cli has completed its **v2.0 CDP-DEEP-01 Build** milestone (shipped 2026-06-26).
-Building on the Phase 39 research design, v2.0 shipped an in-process MITM WebSocket
-CDP proxy (`internal/cdpproxy/`) that sits between go-rod and Chrome's debugging
-WebSocket — providing pass-through traffic logging (ring buffer), Runtime.getProperties
-normalization (strips accessor `value` fields), configurable timing jitter, a
-`cdp-traffic` diagnostic command, and a `--no-cdp-proxy` bypass escape hatch.
-All gated behind `--cdp-proxy` (default OFF).
+rod-cli has completed its **v2.1 CDP Proxy Hardening & Diagnostics** milestone
+(shipped 2026-06-27, re-audited 2026-06-27). v2.1 closed the v2.0 carry-forward
+items (live-browser proxy integration tests, jitter soft-warning, cdp-traffic
+sensitivity caveat) and confirmed the font-spoof injector is already real (godoll
+`1d90494`), backed by the existing `TestFontSpoof` harness gate.
 
-Previous milestones: v1.7 reduced the CDP transport footprint (zero-enable baseline),
-shipped 6 Chrome-only device profiles, and activated godoll's dormant fingerprint
-dimensions. v1.8 closed the debt cleanup (toolchain bump, plugin-path CDP-ledger,
-font-spoof stub, 5-assistant onboarding docs). v1.9 closed hygiene items (backslash
-reject, json.Marshal platform) and produced the CDP-DEEP-01 research/design that
-v2.0 executed. **TLS fingerprint spoofing remains permanently out of scope** —
-rod-cli drives real Chrome, whose TLS/JA3 is authentic by construction.
+Previous milestones: v2.0 shipped the in-process MITM WebSocket CDP proxy
+(`internal/cdpproxy/` — pass-through logging, Runtime.getProperties normalization,
+timing jitter, `cdp-traffic` command, `--no-cdp-proxy` bypass). v1.7 reduced the
+CDP transport footprint (zero-enable baseline), shipped 6 Chrome-only device
+profiles, and activated godoll's dormant fingerprint dimensions. v1.8 closed debt
+cleanup. v1.9 closed hygiene items and produced the CDP-DEEP-01 research.
 
-## Current Milestone: v2.1 CDP Proxy Hardening & Diagnostics
+**TLS fingerprint spoofing remains permanently out of scope** — rod-cli drives
+real Chrome, whose TLS/JA3 is authentic by construction.
+
+## Current Milestone: v2.2 Pi Extension
+
+**Goal:** Build a first-class TypeScript Pi extension that wraps rod-cli's browser
+automation as native Pi tools — so a Pi coding agent discovers and drives a browser
+through rod-cli without manual shell commands.
+
+**Target features:**
+- TypeScript extension scaffold — package.json, tsconfig, ExtensionAPI entry point,
+  publishable as an npm package.
+- Core browser tools registered — `browse_goto`, `browse_snapshot`, `browse_click`,
+  `browse_type`, `browse_eval`, `browse_screenshot`, `browse_wait` — each with
+  TypeBox-typed parameters, prompt guidelines, and shell-out to rod-cli binary.
+- Daemon lifecycle management — auto-close on session end via `session_end` hook,
+  named-session support, PPID cleanup.
+- Token-efficient output — markdown snapshots by default, `--raw` passthrough.
+- Install guide + discoverability — README, verify-on-install instructions.
+- Integration smoke test — Pi invokes rod-cli tools against a fixture page.
+
+<details>
+<summary>Archived: v2.1 CDP Proxy Hardening & Diagnostics (Shipped 2026-06-27)</summary>
 
 **Goal:** Close the v2.0 carry-forward items (live-browser proxy test, jitter validation,
 cdp-traffic sensitivity warning) and the long-standing v1.7 font-spoof no-op.
 
-**Target features:**
-- Live-browser proxy integration test — start browser with `--cdp-proxy`, assert
-  `Traffic()` contents + `cdpTell` returns `"no-signal"` with `--console-capture`.
-- `--cdp-jitter-ms` soft-warning above 1000ms.
-- `cdp-traffic` help-text caveat about sensitive CDP payload exposure.
-- Real font spoofing — replace the godoll font-injector no-op with observable
-  font-list spoofing, harness-asserted on/off/stability.
+**Delivered (4 phases consolidated to 3):**
+- **Phase 43: Proxy Integration Test** — `TestProxyTraffic` (cdp-traffic JSON assertion)
+  and `TestProxyCdpTell` (live-page normalization probe)
+- **Phase 44: Jitter Validation + Sensitivity Warning** — stderr soft-warning when
+  `--cdp-jitter-ms > 1000`, cdp-traffic Usage sensitivity caveat
+- **Phase 45-46: Font Spoofing** — confirmed godoll injector already real (godoll
+  `1d90494`); existing `TestFontSpoof` covers FONT-04..07; detect.js comment updated
+</details>
 
 <details>
 <summary>Archived: v1.7 Complete Evasion Stack (Shipped 2026-06-26)</summary>
@@ -134,7 +154,7 @@ cdp-traffic sensitivity warning) and the long-standing v1.7 font-spoof no-op.
 - ✓ [STEALTH-02] Replace inline `go-rod` browser initialization with `godoll.NewBrowser()`. - delivered v1.3, validated v1.6
 
 ### Active
-- See **Current Milestone: v1.6** target features. Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
+- See **Current Milestone: v2.2** target features. Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
 
 ### Out of Scope
 
@@ -176,4 +196,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 — v1.8 milestone started (Debt Cleanup & Coding-Assistant Onboarding). v1.7 complete and archived.*
+*Last updated: 2026-06-27 — v2.2 milestone started (Pi Extension). v2.1 complete and archived.*

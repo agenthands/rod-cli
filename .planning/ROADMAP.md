@@ -11,7 +11,10 @@
 - ✅ **v1.6 Proven & Configurable Stealth** — Phases 24–29 (shipped 2026-06-25) ([archive](milestones/v1.6-ROADMAP.md))
 - ✅ **v1.7 Complete Evasion Stack** — Phases 30, 32, 33 (shipped 2026-06-26; Phase 31/TLS cancelled — real-Chrome-only) ([archive](milestones/v1.7-ROADMAP.md))
 - ✅ **v1.8 Debt Cleanup & Coding-Assistant Onboarding** — Phases 34–37 (shipped 2026-06-26)
-- 🔨 **v1.9 godoll Hygiene & CDP-DEEP-01 Research** — Phases 38–39 (in progress)
+- ✅ **v1.9 godoll Hygiene & CDP-DEEP-01 Research** — Phases 38–39 (shipped 2026-06-26)
+- ✅ **v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy** — Phases 40–42 (shipped 2026-06-26)
+- ✅ **v2.1 CDP Proxy Hardening & Diagnostics** — Phases 43–46 (shipped 2026-06-27)
+- 🔨 **v2.2 Pi Extension** — Phases 47–50 (in progress)
 
 Full per-phase detail for each shipped milestone lives under `.planning/milestones/`.
 
@@ -494,3 +497,82 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   3. ✅ Harness asserts `--font-spoof=false` restores genuine host font behavior.
 
 **Plans**: 0 (folded — see Phase 45)
+
+### 🔨 v2.2 Pi Extension (In Progress)
+
+**Milestone Goal:** Build a first-class TypeScript Pi extension that wraps rod-cli's browser automation as native Pi tools — so a Pi coding agent discovers and drives a browser through rod-cli without manual shell commands. Zero Go code changes; pure TypeScript under `extensions/pi/`.
+
+- [ ] **Phase 47: Extension Foundation + Lifecycle** — npm scaffold, ExtensionAPI entry point, cross-platform binary discovery, `execRodCli` wrapper with input validation, smoke test + `session_start`/`session_shutdown` lifecycle hooks (FOUND-01..05, LIFECYCLE-01..03)
+- [ ] **Phase 48: Core Browser Tools + Integration Test** — 7 table-stakes tools: `browse_goto`, `browse_snapshot`, `browse_click`, `browse_type`, `browse_eval`, `browse_screenshot`, `browse_wait` + automated integration test against fixture page (TOOLS-01..07, INTEG-01)
+- [ ] **Phase 49: Extended Tools** — 6 extended tools: `browse_tabs`, `browse_navigate`, `browse_scroll`, `browse_cookies`, `browse_storage` (localStorage + sessionStorage), `browse_fill_form` (TOOLS-08..13)
+- [ ] **Phase 50: Documentation & Discoverability** — README with install guide, skill-vs-extension comparison, cross-links to SKILL.md + pi.md docs, top-level README index (DOCS-01..04)
+
+### Phase 47: Extension Foundation + Lifecycle
+
+**Goal**: Ship a loadable Pi extension skeleton — npm package with correct `pi.extensions` metadata, TypeScript config (`noEmit: true`), ExtensionAPI entry point that resolves the rod-cli binary and registers lifecycle hooks. The extension loads without error in Pi; `session_start` verifies the binary; `session_shutdown` cleans up the daemon on quit. No tools yet — this is the verified foundation.
+
+**Depends on**: Nothing (greenfield extension)
+**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, LIFECYCLE-01, LIFECYCLE-02, LIFECYCLE-03
+**Success Criteria** (what must be TRUE):
+
+  1. `extensions/pi/package.json` has `"pi": { "extensions": ["./src/index.ts"] }` and `tsconfig.json` has `"noEmit": true`. The three peer dependencies (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-ai`, `typebox`) are declared. (FOUND-01)
+  2. `src/index.ts` exports a default function that receives `ExtensionAPI`, resolves the rod-cli binary path, registers `session_start` and `session_shutdown` hooks, and registers the `execRodCli` wrapper — all synchronously during load. (FOUND-02)
+  3. `findRodCli()` resolves: `ROD_CLI_PATH` env → `PATH` → `$GOBIN`/`~/go/bin`, with Windows support (`.exe` extension, `;` PATH separator, `USERPROFILE`). Result cached. (FOUND-03)
+  4. `execRodCli(args, opts)` wraps `pi.exec("rod-cli", [...args])` with per-command timeouts, input validation (URL format, selector non-empty, expression ≤10KB, reject-empty-required), throws on non-zero exit, and propagates AbortSignal. (FOUND-04)
+  5. Vitest smoke test verifies extension loads, `findRodCli()` resolves or returns null gracefully. (FOUND-05)
+  6. `session_start` hook notifies user of rod-cli version (or warns if missing). Does NOT start the browser daemon. `session_shutdown` hook runs `rod-cli close` gated on `event.reason === "quit"`. Uses the canonical event name `session_shutdown` (NOT `session_end`). (LIFECYCLE-01, LIFECYCLE-02)
+  7. Lifecycle integration tests (actual daemon start/stop) are explicitly deferred to Phase 48 — Phase 47 verifies hooks are REGISTERED and the binary is resolved. (LIFECYCLE-03 verified in Phase 48)
+
+**Plans**: TBD
+
+### Phase 48: Core Browser Tools + Integration Test
+
+**Goal**: Ship the 7 table-stakes browser tools so a Pi agent can navigate, read, click, type, evaluate JS, screenshot, and wait — plus an automated integration test that exercises the full workflow against a fixture page. This is the MVP vertical slice: a Pi user can browse the web through rod-cli.
+
+**Depends on**: Phase 47 (needs `execRodCli` wrapper, binary resolution, lifecycle hooks)
+**Requirements**: TOOLS-01, TOOLS-02, TOOLS-03, TOOLS-04, TOOLS-05, TOOLS-06, TOOLS-07, INTEG-01
+**Success Criteria** (what must be TRUE):
+
+  1. `browse_goto` navigates to a URL; the first call implicitly starts the browser daemon (rod-cli's `EnsureDaemon`). Subsequent calls reuse the same daemon. Optional `session` param for named sessions. (TOOLS-01)
+  2. `browse_snapshot` returns token-efficient accessibility-tree markdown, truncated to 50KB/2000 lines. Optional `selector` to scope to element. (TOOLS-02)
+  3. `browse_click` clicks an element by CSS selector, with optional `doubleClick`. (TOOLS-03)
+  4. `browse_type` types text with humanized keystrokes, mapping 1:1 to `rod-cli type`. `browse_fill_form` (Phase 49) handles instant fill+submit. (TOOLS-04)
+  5. `browse_eval` evaluates JavaScript (max 10KB expression), returns result truncated to 50KB. (TOOLS-05)
+  6. `browse_screenshot` captures a screenshot with optional `selector`/`fullPage`/`format: "png"|"jpeg"`. (TOOLS-06)
+  7. `browse_wait` waits for a selector to appear or a fixed duration. (TOOLS-07)
+  8. All tools use `StringEnum` from `@earendil-works/pi-ai` (never `Type.Enum`), include `promptGuidelines` naming the tool explicitly, and throw on error (never return `isError`).
+  9. The integration test (INTEG-01) starts a loopback fixture page, runs the full workflow (goto → snapshot → click → type → eval → screenshot → wait → close), asserts correct output, and verifies daemon cleanup.
+
+**Plans**: TBD
+
+### Phase 49: Extended Tools
+
+**Goal**: Ship the 6 extended tools completing the browser automation surface — tab management, page navigation, scrolling, cookie management, localStorage/sessionStorage, and form filling.
+
+**Depends on**: Phase 48 (same tool pattern, same `execRodCli` wrapper)
+**Requirements**: TOOLS-08, TOOLS-09, TOOLS-10, TOOLS-11, TOOLS-12, TOOLS-13
+**Success Criteria** (what must be TRUE):
+
+  1. `browse_tabs` manages browser tabs via `action: "list"|"new"|"close"|"select"`. (TOOLS-08)
+  2. `browse_navigate` navigates page history via `action: "reload"|"back"|"forward"`. (TOOLS-09)
+  3. `browse_scroll` scrolls the page or a specific element by direction/distance. (TOOLS-10)
+  4. `browse_cookies` manages cookies via `action: "get"|"set"|"delete"|"clear"`. (TOOLS-11)
+  5. `browse_storage` manages localStorage AND sessionStorage via `storageType: "local"|"session"`. (TOOLS-12)
+  6. `browse_fill_form` fills form fields instantly using `rod-cli fill`, with optional `submit` (press Enter after fill). Maps 1:1 to the `fill` command. (TOOLS-13)
+
+**Plans**: TBD
+
+### Phase 50: Documentation & Discoverability
+
+**Goal**: Ship complete documentation so Pi users discover, install, and use the extension — with clear guidance on when to use the extension vs the existing Agent Skill.
+
+**Depends on**: Phase 49 (docs reference the full tool catalog)
+**Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04
+**Success Criteria** (what must be TRUE):
+
+  1. `extensions/pi/README.md` has install instructions (`go install` + `pi install`), prerequisites, tool catalog with descriptions, and a verify-on-install step. (DOCS-01)
+  2. README includes a skill-vs-extension comparison table. Both paths supported; neither deprecated. (DOCS-02)
+  3. `docs/onboarding/pi.md` updated to reference the extension as the richer path. `skills/rod-cli/SKILL.md` updated to mention the extension for Pi users. (DOCS-03)
+  4. `extensions/pi/` added to the top-level README's docs index. (DOCS-04)
+
+**Plans**: TBD
