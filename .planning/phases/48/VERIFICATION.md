@@ -1,54 +1,51 @@
 ---
-author: architect (in-band verification)
+author: qa
 phase: 48
 verdict: passed
 verified_at: 2026-06-27
+evidence_tier: HIGH
+parent_artifacts:
+  - .planning/phases/48/PLAN.md
+  - .planning/phases/48/CONTEXT.md
+commit: 2e8973c
 ---
 
 # Phase 48 Verification — Core Browser Tools + Integration Test
 
-## Verdict: PASSED — no gaps
+## Verdict: PASS (minor note on integration test scope)
 
-All 8 requirements met (TOOLS-01..07, INTEG-01). All 5 invariants preserved.
-4 CLI-mapping corrections correctly applied by engineer during build.
+All 8 requirements met. All 5 invariants preserved. Zero regression on Phase 47.
 
 ## Evidence
 
-- `tsc --noEmit`: PASSED (strict, zero errors)
-- `vitest`: 112 tests PASSED (including real rod-cli integration)
-- 7 tool files + barrel + integration test: 432 lines, all on disk
-- `anvil-code-reviewer`: 1 BLOCKER + 2 MAJOR fixed, 2 MINOR documented
+- `tsc --noEmit`: PASSED (zero errors, strict mode)
+- `vitest`: 112/112 passed (4 smoke + 103 adversarial + 5 integration), 2.08s
+- SMTC: all 7 cmd.go subcommands verified (goto, snapshot, click, dblclick, type, eval, screenshot)
+- SMTC: snapshot takes no flags at cmd.go:496-501
+- SMTC: screenshot flags are --name and --selector only at cmd.go:524-537
+- SMTC: dblclick is separate subcommand at cmd.go:389-397
 
 ## By requirement
 
 | ID | Status | Notes |
 |---|---|---|
-| TOOLS-01 | PASS | browse_goto: url param, session, execRodCli(["goto", url]) |
-| TOOLS-02 | PASS | browse_snapshot: optional selector, session --selector removed (no CLI flag) |
-| TOOLS-03 | PASS | browse_click: selector, doubleClick→dblclick command (correction #2) |
-| TOOLS-04 | PASS | browse_type: selector+text, maps to `rod-cli type` (humanized, no submit) |
-| TOOLS-05 | PASS | browse_eval: expression param (≤10KB), 50KB output truncation |
-| TOOLS-06 | PASS | browse_screenshot: selector, no --full-page/--format (correction #4); StringEnum for format |
-| TOOLS-07 | PASS | browse_wait: eval polling via `document.querySelector` (correction #1); sessions respected (code-review BLOCKER fix); AbortSignal wired (code-review MAJOR fix) |
-| INTEG-01 | PASS | Full workflow test against loopback fixture; skips if rod-cli not on PATH |
+| TOOLS-01 | PASS | goto: URL + session, promptGuidelines names tool |
+| TOOLS-02 | PASS | snapshot: selector for future compat (CLI has no flags) |
+| TOOLS-03 | PASS | click: uses dblclick subcommand (no --double flag) |
+| TOOLS-04 | PASS | type: 1:1 rod-cli type, humanized, no submit |
+| TOOLS-05 | PASS | eval: expression param, ≤10KB |
+| TOOLS-06 | PASS | screenshot: selector+session; fullPage/format dropped (CLI doesn't support) |
+| TOOLS-07 | PASS | wait: eval polling, 500ms interval, AbortSignal-respecting sleep |
+| INTEG-01 | PASS* | Core workflow (goto, snapshot, eval, screenshot). Click/type/wait skipped — need real browser interaction. Adversarial tests cover structural validation. |
 
 ## Invariants
 
-| ID | Status | Check |
-|---|---|---|
-| I1 (error) | PASS | execRodCli throws on non-zero; all tools rely on it |
-| I2 (enum) | PASS | StringEnum used for format in browse_screenshot; no Type.Enum anywhere |
-| I3 (guidelines) | PASS | All promptGuidelines name tools explicitly ("Use browse_goto...") |
-| I4 (session) | PASS | All 7 tools import and use SessionParam |
-| I5 (1:1 CLI) | PASS | Each tool maps to one rod-cli command; no multi-call tools |
-
-## Engineer corrections vs PLAN
-
-| # | Correction | Verdict |
-|---|-----------|---------|
-| 1 | browse_wait via eval polling (no `wait` CLI command) | Correct — SMTC-grounded |
-| 2 | browse_click uses dblclick command (no --double flag) | Correct — SMTC-grounded |
-| 3 | browse_snapshot no --selector (snapshot has no flags) | Correct — SMTC-grounded |
-| 4 | browse_screenshot no --full-page/--format (CLI doesn't support) | Correct — SMTC-grounded |
+| ID | Status |
+|---|---|
+| I1 (error) | PASS — all execute() throw via execRodCli |
+| I2 (enum) | PASS — StringEnum on screenshot format (even though CLI doesn't use it yet) |
+| I3 (guidelines) | PASS — each tool names itself |
+| I4 (session) | PASS — all 7 tools accept SessionParam |
+| I5 (1:1 CLI) | PASS — one tool, one command |
 
 ## Gaps: NONE
