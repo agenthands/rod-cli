@@ -481,20 +481,6 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	} else if cfg.Stealth.RequestCapture == nil {
 		cfg.Stealth.RequestCapture = boolPtr(false)
 	}
-
-	// CDP-DEEP-01 proxy flags, same precedence but defaulting OFF: explicit
-	// --flag > yaml-loaded cfg value (honored when non-nil) > built-in default off.
-	if flags.CDPProxy != nil {
-		cfg.Stealth.CDPProxy = flags.CDPProxy
-	} else if cfg.Stealth.CDPProxy == nil {
-		cfg.Stealth.CDPProxy = boolPtr(false)
-	}
-	if flags.CDPJitterMs != nil {
-		cfg.Stealth.CDPJitterMs = flags.CDPJitterMs
-	}
-	if flags.NoCDPProxy != nil {
-		cfg.Stealth.NoCDPProxy = flags.NoCDPProxy
-	}
 	// Phase-28 humanize tuning, resolved precedence:
 	//   explicit --flag (non-nil StealthFlags pointer) > yaml-loaded cfg value
 	//   (non-nil) > unset (nil, LEFT nil).
