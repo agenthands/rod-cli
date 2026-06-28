@@ -13,16 +13,28 @@ import (
 // runCli is a helper to run the compiled binary
 func runCli(args ...string) (string, error) {
 	absPath, _ := filepath.Abs("../rod-cli")
-	// Prepend global flags
-	args = append([]string{"--no-banner"}, args...)
-	cmd := exec.Command(absPath, args...)
+	// In urfave/cli v2, flags after the command name are parsed as
+	// command-local flags. Global flags (--json, --raw, --no-banner)
+	// must appear BEFORE the command. Extract them from anywhere in
+	// the arg list and place them at the front.
+	var globals, rest []string
+	for _, a := range args {
+		if a == "--json" || a == "--raw" {
+			globals = append(globals, a)
+		} else {
+			rest = append(rest, a)
+		}
+	}
+	finalArgs := append([]string{"--no-banner"}, globals...)
+	finalArgs = append(finalArgs, rest...)
+	cmd := exec.Command(absPath, finalArgs...)
 	cmd.Dir = ".."
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	err := cmd.Run()
-	if len(args) > 0 && args[0] == "close" || (len(args) > 1 && args[1] == "close") {
-		time.Sleep(1 * time.Second) // Wait for daemon to fully exit
+	if len(rest) > 0 && rest[0] == "close" {
+		time.Sleep(1 * time.Second)
 	}
 	return out.String(), err
 }

@@ -281,6 +281,7 @@ func getApp() *cli.App {
 			&cli.Float64Flag{Name: "mouse-deviation", Usage: "Mouse-path randomness factor 0.0-1.0"},
 			&cli.IntFlag{Name: "scroll-duration", Usage: "Base scroll animation duration in ms"},
 			&cli.BoolFlag{Name: "scroll-physics", Usage: "Use physics-based (eased) scrolling (godoll default; cannot be disabled via flag in v1.6)"},
+			&cli.IntFlag{Name: "ppid", Hidden: true, Usage: "parent process ID for daemon mode"},
 		},
 		Commands: []*cli.Command{
 			{
