@@ -8,38 +8,27 @@ proxy: ""
 stealth:
     proxy: ""
     profilePath: ""
-    # Identity pin — matches Chimera's dynamic_fingerprint block.
-    # ResolveStealth derives Platform from the UA OS token, Locale from
-    # Languages[0], and Client-Hints brand versions from the Chrome major
-    # version. Set all three for a coherent fingerprint; leave any empty
-    # to derive it from the UA anchor.
-    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-    locale: "en-US"
-    timezone: "America/Chicago"
-    platform: "Linux x86_64"
-    acceptLanguage: "en-US,en;q=0.9"
-    languages: ["en-US", "en"]
-    hardwareConcurrency: 8
-    deviceMemory: 8
-    vendor: "Google Inc."
-    # spoofClientHints MUST be true for a coherent fingerprint — without it
-    # Sec-Ch-Ua headers and navigator.userAgentData.brands are empty, which
-    # is itself a detection tell. Matches Chimera's randomize_fingerprint.
-    spoofClientHints: true
-    # Hardening toggles (Chimera's evade_webrtc + dynamic_fingerprint equivalents)
+    userAgent: ""
+    locale: ""
+    timezone: ""
+    platform: ""
+    acceptLanguage: ""
+    languages: []
+    hardwareConcurrency: 0
+    deviceMemory: 0
+    vendor: ""
+    spoofClientHints: false
     webRTCLeakProtection: true
     canvasNoise: true
     fontSpoof: true
-    mediaDevicesSpoof: true
-    batterySpoof: true
-    codecSpoof: true
-    # Interactive browsing: default OFF (spawn with --console-capture / --request-capture)
     cdpProxy: null
     cdpJitterMs: null
     noCdpProxy: null
+    mediaDevicesSpoof: true
+    batterySpoof: true
+    codecSpoof: true
     consoleCapture: null
     requestCapture: null
-    # Humanize tuning — nil = use godoll defaults (good enough default)
     typingSpeedMin: null
     typingSpeedMax: null
     typoRate: null
@@ -50,11 +39,10 @@ stealth:
     mouseDeviation: null
     scrollDuration: null
     scrollPhysics: null
-    # Screen — matches Chimera's browser block (1280×960)
     screen:
-        width: 1280
-        height: 960
-        deviceScaleFactor: 1.0
+        width: 0
+        height: 0
+        deviceScaleFactor: 0
 loggerConfig:
     loggerLevel: info
     loggerFileName: ./log/server.log
