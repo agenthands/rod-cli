@@ -5,6 +5,11 @@ headless: false
 browserTempDir: ./rod/browser
 noSandbox: false
 proxy: ""
+# Zero/empty identity pins below = UNSET (no spoofing for that field).
+# The browser reports real values. To ship a hardened fingerprint, set
+# explicit values here or use --profile=<name> at spawn (see §4/§8 of
+# docs/stealth-config.md).
+
 stealth:
     proxy: ""
     profilePath: ""

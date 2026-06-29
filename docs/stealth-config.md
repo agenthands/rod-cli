@@ -213,6 +213,21 @@ both godoll's evasion JS and rod-cli's interceptor. Notable behavior:
 - `timezone` ↔ proxy-geo is **warn-only** (a stderr line), never a hard failure —
   geo-IP resolution needs network access and would break the offline harness.
 
+
+**Zero / empty = unset (no spoofing for that field).** The identity pins
+(`Screen`, `UserAgent`, `HardwareConcurrency`, `DeviceMemory`, `Vendor`,
+`Languages`, `AcceptLanguage`) all follow one rule: a zero value or an empty
+string means *"derive from the actual browser"*, not "default to a hardened
+value." A `rod-cli.yaml` with `screen: {width: 0, height: 0}` and no
+`userAgent` produces a **raw fingerprint** — the browser reports real host
+screen geometry, real OS, and the stock Chromium UA. This is deliberate: zero
+is the absence of spoofing, not a default identity.
+
+To ship a hardened fingerprint you MUST set the identity pins explicitly —
+either in `rod-cli.yaml`, via `--user-agent`/`--profile` CLI flags, or through
+a built-in profile (§8). Start from a built-in (`--profile=windows-11-chrome`)
+for a vetted, coherent baseline.
+
 All of these fail at daemon spawn (a returned error `main.go` surfaces), not
 mid-session.
 
