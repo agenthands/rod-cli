@@ -166,6 +166,13 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "apply proxy to launcher")
 		}
+		// Chrome bypasses the proxy for loopback hosts (localhost/127.0.0.1/[::1])
+		// by default, so traffic to a local target never traverses --proxy-server.
+		// "<-loopback>" removes loopback from the implicit bypass list, forcing
+		// local targets through the proxy. Required for an in-process MITM proxy to
+		// observe traffic to a local app (e.g. a containerized scan target);
+		// harmless for remote proxies/targets.
+		browserLauncher.Set("proxy-bypass-list", "<-loopback>")
 	}
 
 	// Create godoll options and apply stealth preset
