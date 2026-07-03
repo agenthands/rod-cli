@@ -81,7 +81,7 @@ func TestMainErrorPlain(t *testing.T) {
 // TestMainSuccess covers main()'s happy path (app.Run returns nil).
 func TestMainSuccess(t *testing.T) {
 	clearPortFiles(t)
-	out, err := runMainSubprocess(t, "--no-banner")
+	out, err := runMainSubprocess(t)
 	if err != nil {
 		t.Fatalf("expected success, got err %v out %s", err, out)
 	}
@@ -146,7 +146,7 @@ func runApp(args ...string) error {
 // global flags and surface in --help.
 func TestStealthFlagsInHelp(t *testing.T) {
 	out := captureStdout(t, func() {
-		if err := runApp("--no-banner"); err != nil {
+		if err := runApp(); err != nil {
 			t.Errorf("help failed: %v", err)
 		}
 	})
@@ -347,7 +347,7 @@ func TestSessionsListsLive(t *testing.T) {
 
 func TestHelpWithBanner(t *testing.T) {
 	out := captureStdout(t, func() {
-		if err := runApp(); err != nil {
+		if err := runApp("--banner"); err != nil {
 			t.Errorf("default action failed: %v", err)
 		}
 	})
@@ -358,7 +358,7 @@ func TestHelpWithBanner(t *testing.T) {
 
 func TestHelpNoBanner(t *testing.T) {
 	out := captureStdout(t, func() {
-		if err := runApp("--no-banner"); err != nil {
+		if err := runApp(); err != nil {
 			t.Errorf("default action failed: %v", err)
 		}
 	})

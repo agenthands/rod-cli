@@ -239,7 +239,7 @@ func getApp() *cli.App {
 			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "config file path"},
 			&cli.StringFlag{Name: "cdp-endpoint", Aliases: []string{"cdp"}, Usage: "control browser by cdp"},
 			&cli.BoolFlag{Name: "headless", Aliases: []string{"hl"}, Usage: "enable headless"},
-			&cli.BoolFlag{Name: "no-banner", Aliases: []string{"nb"}, Usage: "disable show banner"},
+			&cli.BoolFlag{Name: "banner", Aliases: []string{"b"}, Usage: "show startup banner (default off)"},
 			&cli.BoolFlag{Name: "vision", Aliases: []string{"vs"}, Usage: "support vision LLM"},
 			&cli.BoolFlag{Name: "raw", Usage: "output raw results"},
 			&cli.BoolFlag{Name: "json", Usage: "output structured json"},
@@ -931,7 +931,7 @@ func getApp() *cli.App {
 			if maybeHandleProfileList(c) {
 				return nil
 			}
-			if !c.Bool("no-banner") {
+			if c.Bool("banner") {
 				fmt.Println(banner.ShowBanner())
 			}
 			return cli.ShowAppHelp(c)

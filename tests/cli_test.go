@@ -14,18 +14,29 @@ import (
 func runCli(args ...string) (string, error) {
 	absPath, _ := filepath.Abs("../rod-cli")
 	// In urfave/cli v2, flags after the command name are parsed as
-	// command-local flags. Global flags (--json, --raw, --no-banner)
-	// must appear BEFORE the command. Extract them from anywhere in
-	// the arg list and place them at the front.
+	// command-local flags. Global flags (--json, --raw, --banner, --headless)
+	// must appear BEFORE the command. Extract them from anywhere in the arg list
+	// and place them at the front.
 	var globals, rest []string
+	hasHeadlessFlag := false
 	for _, a := range args {
 		if a == "--json" || a == "--raw" {
 			globals = append(globals, a)
-		} else {
-			rest = append(rest, a)
+			continue
 		}
+		if a == "--headless" || a == "--hl" || strings.HasPrefix(a, "--headless=") || strings.HasPrefix(a, "--hl=") {
+			hasHeadlessFlag = true
+		}
+		rest = append(rest, a)
 	}
-	finalArgs := append([]string{"--no-banner"}, globals...)
+	// Default to HEADLESS so the e2e suite never pops a visible Chrome window on a
+	// workstation with a display — headless is the blocking CI gate; headful is an
+	// opt-in (ROD_HEADFUL=1, or an explicit --headless=false which is respected
+	// here). The flag is honored at daemon spawn (EnsureDaemon forwards it).
+	if !hasHeadlessFlag && os.Getenv("ROD_HEADFUL") != "1" {
+		globals = append(globals, "--headless")
+	}
+	finalArgs := append([]string{}, globals...)
 	finalArgs = append(finalArgs, rest...)
 	cmd := exec.Command(absPath, finalArgs...)
 	cmd.Dir = ".."

@@ -82,9 +82,9 @@ All three subcommands are thin clients over the daemon. `cmd.go` builds a `daemo
 
 ## Output and the startup banner
 
-`rod-cli` prints a decorative startup banner, but only when standard output is an interactive terminal. When you pipe the output, redirect it to a file, or call `rod-cli` from a script or an LLM/agent, the banner is suppressed automatically so the command's output stays clean and token-efficient — e.g. `rod-cli plugin run getFindings | jq` yields only the JSON.
+`rod-cli` never prints the decorative startup banner by default — including bare `rod-cli` with no subcommand — so piped/scripted/LLM-agent output stays clean and token-efficient (e.g. `rod-cli plugin run getFindings | jq` yields only the JSON).
 
-To suppress the banner explicitly in any context (including an interactive shell), use any of the global flags `--raw` (raw result only), `--no-banner` / `--nb`, or `--json` (structured JSON). The plugin examples in this documentation assume clean output; in an interactive terminal, add `--raw` if you want to drop the banner.
+To show the banner (bare invocation only; subcommands like `plugin run` never print it), pass the global flag `--banner` / `-b`.
 
 ## See Also
 
