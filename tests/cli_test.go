@@ -13,10 +13,11 @@ import (
 // runCli is a helper to run the compiled binary
 func runCli(args ...string) (string, error) {
 	absPath, _ := filepath.Abs("../rod-cli")
-	// In urfave/cli v2, flags after the command name are parsed as
-	// command-local flags. Global flags (--json, --raw, --banner, --headless)
-	// must appear BEFORE the command. Extract them from anywhere in the arg list
-	// and place them at the front.
+	// rod-cli itself now reorders global flags (reorderGlobalFlags, cmd.go) so
+	// they work regardless of position. This helper still front-loads --json/
+	// --raw/--headless purely to compute rest[0] (the real subcommand token)
+	// reliably for the close-delay check below, and to inject the headless
+	// default at a stable position — not to work around a parsing bug anymore.
 	var globals, rest []string
 	hasHeadlessFlag := false
 	for _, a := range args {

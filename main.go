@@ -168,7 +168,8 @@ func runDaemonServer(c *cli.Context) error {
 
 func main() {
 	app := getApp()
-	if err := app.Run(os.Args); err != nil {
+	args := reorderGlobalFlags(app, os.Args)
+	if err := app.Run(args); err != nil {
 		isJson := false
 		for _, arg := range os.Args {
 			if arg == "--json" {

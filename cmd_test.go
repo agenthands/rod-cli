@@ -135,10 +135,13 @@ func captureStderr(t *testing.T, fn func()) string {
 	return <-done
 }
 
-// runApp builds a fresh app and runs it with the given args (rod-cli prepended).
+// runApp builds a fresh app and runs it with the given args (rod-cli
+// prepended), routed through reorderGlobalFlags exactly like main() — so
+// these in-process tests exercise the same argv-shaping the real binary
+// applies, regardless of where callers place global flags.
 func runApp(args ...string) error {
 	app := getApp()
-	full := append([]string{"rod-cli"}, args...)
+	full := reorderGlobalFlags(app, append([]string{"rod-cli"}, args...))
 	return app.Run(full)
 }
 
@@ -340,6 +343,103 @@ func TestSessionsListsLive(t *testing.T) {
 	})
 	if !strings.Contains(out, "Active sessions:") || !strings.Contains(out, session) {
 		t.Fatalf("expected active session %s listed, got: %s", session, out)
+	}
+}
+
+// --- reorderGlobalFlags (global-flag-after-subcommand fix) ---
+
+func TestReorderGlobalFlags(t *testing.T) {
+	app := getApp()
+	cases := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{
+			name: "already ordered is untouched",
+			in:   []string{"rod-cli", "--raw", "goto", "https://example.com"},
+			want: []string{"rod-cli", "--raw", "goto", "https://example.com"},
+		},
+		{
+			name: "bool flag after subcommand is hoisted",
+			in:   []string{"rod-cli", "sessions", "--raw"},
+			want: []string{"rod-cli", "--raw", "sessions"},
+		},
+		{
+			name: "value flag and its value are hoisted together",
+			in:   []string{"rod-cli", "goto", "https://example.com", "-s", "admin"},
+			want: []string{"rod-cli", "-s", "admin", "goto", "https://example.com"},
+		},
+		{
+			name: "inline equals form needs no extra token",
+			in:   []string{"rod-cli", "goto", "--session=admin", "https://example.com"},
+			want: []string{"rod-cli", "--session=admin", "goto", "https://example.com"},
+		},
+		{
+			name: "mixed pre and post placement both hoist",
+			in:   []string{"rod-cli", "--raw", "sessions", "--json"},
+			want: []string{"rod-cli", "--raw", "--json", "sessions"},
+		},
+		{
+			name: "unknown local command flag stays put",
+			in:   []string{"rod-cli", "fill", "ref", "text", "--submit"},
+			want: []string{"rod-cli", "fill", "ref", "text", "--submit"},
+		},
+		{
+			name: "double-dash terminator stops reordering",
+			in:   []string{"rod-cli", "eval", "--", "--raw"},
+			want: []string{"rod-cli", "eval", "--", "--raw"},
+		},
+		{
+			name: "negative-number-shaped arg is left alone",
+			in:   []string{"rod-cli", "mousemove", "-10", "20"},
+			want: []string{"rod-cli", "mousemove", "-10", "20"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := reorderGlobalFlags(app, tc.in)
+			if strings.Join(got, " ") != strings.Join(tc.want, " ") {
+				t.Errorf("reorderGlobalFlags(%v) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestSessionsRawFlagAfterSubcommand is the exact regression case for the
+// urfave/cli v2 ordering pitfall: --raw placed AFTER the subcommand used to
+// fail with "flag provided but not defined: -raw" because the sessions
+// Command declares no local Flags. reorderGlobalFlags now hoists it before
+// app.Run ever sees argv, so ordering is irrelevant.
+func TestSessionsRawFlagAfterSubcommand(t *testing.T) {
+	clearPortFiles(t)
+	out := captureStdout(t, func() {
+		if err := runApp("sessions", "--raw"); err != nil {
+			t.Errorf("sessions --raw (post-subcommand) failed: %v", err)
+		}
+	})
+	if !strings.Contains(out, "No active sessions") {
+		t.Fatalf("expected 'No active sessions', got: %s", out)
+	}
+}
+
+// TestSessionsJSONFlagAfterSubcommand goes further than the raw case above:
+// it confirms the hoisted flag's VALUE actually resolves through the
+// Context (c.Bool("json") == true drives the JSON-formatting branch), not
+// just that parsing no longer errors.
+func TestSessionsJSONFlagAfterSubcommand(t *testing.T) {
+	clearPortFiles(t)
+	out := captureStdout(t, func() {
+		if err := runApp("sessions", "--json"); err != nil {
+			t.Errorf("sessions --json (post-subcommand) failed: %v", err)
+		}
+	})
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out)), &m); err != nil {
+		t.Fatalf("expected JSON output even with --json after the subcommand, got %q (err %v)", out, err)
+	}
+	if _, ok := m["sessions"]; !ok {
+		t.Fatalf("expected 'sessions' key in json: %v", m)
 	}
 }
 

@@ -229,6 +229,85 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	return nil
 }
 
+// reorderGlobalFlags rewrites argv so every top-level flag declared on
+// app.Flags — by name or alias, wherever it appears — is moved before the
+// first non-flag argument (the subcommand name). urfave/cli v2 has no notion
+// of a "persistent" flag (unlike its v3 successor): global flags are only
+// recognized while argv is walked BEFORE a subcommand is resolved, so
+// `rod-cli sessions --raw` fails with "flag provided but not defined: -raw"
+// even though `rod-cli --raw sessions` works — the sessions Command's own
+// (empty) FlagSet never sees --raw. Agents and users naturally place flags in
+// either order, so this pre-pass makes ordering irrelevant for every
+// App-level flag, without duplicating that flag list onto all 50+ commands.
+//
+// A bare "--" terminator stops reordering: everything from that point on is
+// passed through untouched, per the POSIX end-of-flags convention.
+func reorderGlobalFlags(app *cli.App, args []string) []string {
+	if len(args) == 0 {
+		return args
+	}
+
+	takesValue := make(map[string]bool, len(app.Flags)*2)
+	for _, f := range app.Flags {
+		tv := false
+		if dgf, ok := f.(cli.DocGenerationFlag); ok {
+			tv = dgf.TakesValue()
+		}
+		for _, name := range f.Names() {
+			takesValue[name] = tv
+		}
+	}
+
+	global := make([]string, 0, len(args))
+	rest := make([]string, 0, len(args))
+
+	for i := 1; i < len(args); i++ {
+		tok := args[i]
+
+		if tok == "--" {
+			rest = append(rest, args[i:]...)
+			break
+		}
+
+		name, hasValue := globalFlagName(tok)
+		tv, known := takesValue[name]
+		if name == "" || !known {
+			rest = append(rest, tok)
+			continue
+		}
+
+		global = append(global, tok)
+		if tv && !hasValue && i+1 < len(args) {
+			i++
+			global = append(global, args[i])
+		}
+	}
+
+	out := make([]string, 0, len(args))
+	out = append(out, args[0])
+	out = append(out, global...)
+	out = append(out, rest...)
+	return out
+}
+
+// globalFlagName strips leading dashes and any "=value" suffix from a flag
+// token. Returns "" for a token that isn't flag-shaped: no leading '-', or a
+// bare "-" standing in for stdin (a common convention this must not treat as
+// an (unknown, single-character-named) flag).
+func globalFlagName(tok string) (name string, hasValue bool) {
+	if len(tok) < 2 || tok[0] != '-' {
+		return "", false
+	}
+	trimmed := strings.TrimLeft(tok, "-")
+	if trimmed == "" {
+		return "", false
+	}
+	if eq := strings.IndexByte(trimmed, '='); eq >= 0 {
+		return trimmed[:eq], true
+	}
+	return trimmed, false
+}
+
 func getApp() *cli.App {
 	return &cli.App{
 		Name:        "rod-cli",
