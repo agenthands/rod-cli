@@ -22,7 +22,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 ## Commands
 
 ### Global Options
-- `--json` / `--raw`: Suppress banners and output clean JSON or raw text.
+- `--json` / `--raw`: Structured JSON or raw-value output. The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
 - `-s, --session`: Specify a named session string.
 
 ### Setup
