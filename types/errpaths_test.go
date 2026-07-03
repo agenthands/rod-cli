@@ -50,6 +50,35 @@ func TestBuildSnapshot_EvalError(t *testing.T) {
 	}
 }
 
+// TestBuildSnapshot_EvalTransientThenSucceeds proves captureSnapshotWithFrames
+// survives the exact failure mode hit against real ad-interstitial sites:
+// document.body transiently null right after navigation (a mid-document
+// teardown/rebuild racing Navigate's bounded, best-effort DOM-settle wait),
+// so the first eval attempt(s) fail and a later one succeeds once the race
+// clears. Before the bounded retry in captureSnapshotWithFrames, this was a
+// hard, unrecoverable failure on the very first eval.
+func TestBuildSnapshot_EvalTransientThenSucceeds(t *testing.T) {
+	_, page := navFixture(t)
+
+	origEval := pageEval
+	attempts := 0
+	pageEval = func(p *rod.Page, js string, args ...any) (*proto.RuntimeRemoteObject, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, fmt.Errorf("TypeError: Cannot read properties of null (reading 'nodeType')")
+		}
+		return origEval(p, js, args...)
+	}
+	defer func() { pageEval = origEval }()
+
+	if _, err := BuildSnapshot(page); err != nil {
+		t.Fatalf("expected retry to recover from transient eval failures, got: %v", err)
+	}
+	if attempts != 3 {
+		t.Fatalf("expected exactly 3 eval attempts (2 transient failures + 1 success), got %d", attempts)
+	}
+}
+
 func TestBuildSnapshot_UnmarshalError(t *testing.T) {
 	_, page := navFixture(t)
 

@@ -2,15 +2,17 @@ package types
 
 import (
 	"fmt"
-	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/proto"
+	"github.com/agenthands/godoll/retry"
 	"github.com/agenthands/rod-cli/types/js"
 	"github.com/agenthands/rod-cli/utils"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // seams for testing: indirections through which production calls are routed so
@@ -74,11 +76,32 @@ func (s *Snapshot) String() string {
 	return s.textSnapshot
 }
 
+// snapshotEvalMaxRetries/snapshotEvalRetryDelay bound how many times the
+// AriaSnapshot eval is retried after a transient failure. Navigate's
+// post-navigation DOM-settle wait (defaultWaitStableTimeout, actions.go) is
+// bounded and best-effort — a slow, ad-interstitial-laden page (observed live:
+// a client-side "portal opens in 20s" gate) can outlast it, so a snapshot
+// issued right after navigation can race a moment where document.body is
+// transiently null (a mid-navigation document teardown/rebuild), crashing the
+// eval with a TypeError before it ever reaches ariaSnapshot()'s null-element
+// guard. A short bounded retry absorbs that race; a genuinely broken page
+// (detached target, closed browser) still fails, just after a bounded extra
+// wait.
+const (
+	snapshotEvalMaxRetries = 3
+	snapshotEvalRetryDelay = 200 * time.Millisecond
+)
+
 func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page) (*yaml.Node, error) {
 	s.frames = append(s.frames, p)
 	frameIndex := len(s.frames) - 1
 
-	rawSnapshot, err := pageEval(p, js.AriaSnapshot, "document.body", "({ref: true})")
+	var rawSnapshot *proto.RuntimeRemoteObject
+	err := retry.Retry(func() error {
+		var evalErr error
+		rawSnapshot, evalErr = pageEval(p, js.AriaSnapshot, "document.body", "({ref: true})")
+		return evalErr
+	}, retry.WithMaxRetries(snapshotEvalMaxRetries), retry.WithExponentialBackoff(), retry.WithDelay(snapshotEvalRetryDelay))
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed, frame index: %d", frameIndex)
 	}
