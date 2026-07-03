@@ -26,8 +26,9 @@ rod-cli eval "() => this.click()" e8
 
 ## Extracting Data
 
-You can use standard DOM APIs to extract complex data structures and pipe them into your agent via `--raw`.
+You can use standard DOM APIs to extract complex data structures. `eval`'s result is always prefixed with `Evaluate code successfully with result: ` (neither `--raw` nor `--json` strips it — `--json` just re-wraps the same prefixed string inside `{"result": "…"}`), so strip the prefix before parsing:
 
 ```bash
-rod-cli --raw eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))"
+rod-cli eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))" \
+  | sed -n 's/^Evaluate code successfully with result: //p'
 ```

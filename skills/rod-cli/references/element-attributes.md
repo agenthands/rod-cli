@@ -25,8 +25,8 @@ rod-cli eval "() => this.getAttribute('data-testid')" e5
 rod-cli eval "() => this.getAttribute('aria-expanded')" e2
 ```
 
-## Raw Output
-When passing the result to another script, use the `--raw` flag so you only get the value without the surrounding snapshot text:
+## Extracting just the value
+`eval`'s result is always prefixed with `Evaluate code successfully with result: ` — no flag strips this (`--raw` is a no-op for `eval`; `--json` just re-wraps the same prefixed string inside `{"result": "…"}`). To pipe just the value into another script, strip the prefix yourself:
 ```bash
-rod-cli --raw eval "el => el.href" e12
+rod-cli eval "el => el.href" e12 | sed -n 's/^Evaluate code successfully with result: //p'
 ```

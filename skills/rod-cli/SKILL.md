@@ -22,7 +22,9 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 ## Commands
 
 ### Global Options
-- `--json` / `--raw`: Structured JSON or raw-value output. The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
+- `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
+- `--raw`: Only changes output for two commands — `install` (suppresses the "Downloading…" progress line) and `stealth-check` (single-line PASS/FAIL instead of a table). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — don't add it reflexively.
+- The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
 - `-s, --session`: Specify a named session string.
 
 ### Setup
@@ -105,20 +107,20 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 
 ```bash
 # Navigate to the site
-rod-cli --raw goto https://example.com
+rod-cli goto https://example.com
 
 # Verify running sessions
-rod-cli --raw sessions
+rod-cli sessions
 
 # Interact
-rod-cli --raw fill "#search-input" "go-rod automation" --submit
-rod-cli --raw click "#submit-button"
+rod-cli fill "#search-input" "go-rod automation" --submit
+rod-cli click "#submit-button"
 
 # Extract state
-rod-cli --raw snapshot
+rod-cli snapshot
 
 # Teardown
-rod-cli --raw close
+rod-cli close
 ```
 
 ## Pi Extension

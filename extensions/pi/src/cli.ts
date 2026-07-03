@@ -178,7 +178,11 @@ export interface ExecOptions {
 /**
  * Execute rod-cli with the given arguments via pi.exec().
  *
- * - Prepends `--raw` for clean machine-readable output.
+ * - Prepends `--raw` (harmless: a no-op for every command this extension
+ *   issues — goto/eval/click/etc. all ignore it identically to bare output;
+ *   it only changes anything for `install`/`stealth-check`, which this
+ *   extension never calls. Kept for forward-compat should either land in
+ *   the typed tool surface later, not because it currently does anything).
  * - Applies per-command timeouts (see TIMEOUTS table).
  * - Validates inputs before execution.
  * - Throws on non-zero exit status.
