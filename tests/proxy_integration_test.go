@@ -114,6 +114,15 @@ func TestProxyCdpTell(t *testing.T) {
 		t.Logf("eval returned error (may be expected): %v", err)
 	}
 
+	// The `eval` command wraps its value in "Evaluate code successfully with
+	// result: <value>" (actions.Evaluate); strip that prefix to get the probe's
+	// raw return, exactly as detection_test.go's evalDetect does. The probe
+	// returns "no-signal" when the CDP-proxy Runtime normalization suppressed the
+	// stack getter, "stack-getter-fired" otherwise.
+	const evalResultPrefix = "Evaluate code successfully with result:"
+	if i := strings.Index(result, evalResultPrefix); i >= 0 {
+		result = result[i+len(evalResultPrefix):]
+	}
 	result = strings.TrimSpace(result)
 	if result != "no-signal" {
 		t.Errorf("cdpTell probe expected 'no-signal' with proxy normalization, got: %q", result)

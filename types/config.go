@@ -481,6 +481,22 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	} else if cfg.Stealth.RequestCapture == nil {
 		cfg.Stealth.RequestCapture = boolPtr(false)
 	}
+	// CDP-DEEP-01 proxy toggles, same precedence shape: explicit --flag (non-nil
+	// StealthFlags pointer) > yaml-loaded cfg value (non-nil) > unset (nil). Left
+	// nil when unset — consumers default via boolVal(cfg.Stealth.CDPProxy, false)
+	// / intVal(cfg.Stealth.CDPJitterMs, 0), so nil resolves to OFF. Without this
+	// overlay the --cdp-proxy flag never reaches cfg.Stealth and the CDP proxy
+	// silently never enables (CONCERNS landmine #1: flag → forward → capture →
+	// resolve; the resolve step was missing).
+	if flags.CDPProxy != nil {
+		cfg.Stealth.CDPProxy = flags.CDPProxy
+	}
+	if flags.CDPJitterMs != nil {
+		cfg.Stealth.CDPJitterMs = flags.CDPJitterMs
+	}
+	if flags.NoCDPProxy != nil {
+		cfg.Stealth.NoCDPProxy = flags.NoCDPProxy
+	}
 	// Phase-28 humanize tuning, resolved precedence:
 	//   explicit --flag (non-nil StealthFlags pointer) > yaml-loaded cfg value
 	//   (non-nil) > unset (nil, LEFT nil).

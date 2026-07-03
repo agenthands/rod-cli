@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/agenthands/godoll/humanize"
@@ -22,6 +23,16 @@ import (
 const (
 	defaultWaitStableDur = 1 * time.Second
 	defaultDomDiff       = 0.2
+	// defaultNavigateTimeout bounds a single page.Navigate attempt. A target that
+	// connects but never finishes loading (e.g. a stalled proxy CONNECT tunnel, a
+	// hung server) must never hang the daemon forever — a CLI command must always
+	// return. On timeout the navigation is treated as best-effort (the request was
+	// issued; proceed with whatever loaded), mirroring the crawler's bounded-wait
+	// philosophy. Generous enough that a normal slow page never trips it.
+	defaultNavigateTimeout = 30 * time.Second
+	// defaultWaitStableTimeout bounds the post-navigation DOM-settle so a page
+	// that never stops mutating (or never loads) cannot hang the command either.
+	defaultWaitStableTimeout = 15 * time.Second
 )
 
 // seams for testing — overridden in *_test.go to exercise otherwise-unreachable
@@ -141,13 +152,27 @@ func Navigate(ctx *types.Context, url string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "Failed to navigate to %s", url)
 	}
+	// Each Navigate attempt is bounded so a target that connects but never
+	// finishes (stalled proxy tunnel, hung server) cannot hang the daemon. A
+	// deadline-exceeded attempt is NOT retried (retrying an unresponsive target
+	// just multiplies the wait) and is treated as best-effort success — the
+	// navigation was issued; proceed with whatever is loaded. Genuine transient
+	// errors still retry.
 	err = retry.Retry(func() error {
-		return page.Navigate(url)
+		nerr := page.Timeout(defaultNavigateTimeout).Navigate(url)
+		if errors.Is(nerr, context.DeadlineExceeded) {
+			return nil // best-effort: stop retrying, proceed
+		}
+		return nerr
 	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(time.Second))
 	if err != nil {
 		return "", errors.Wrapf(err, "Failed to navigate to %s", url)
 	}
-	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	// Bounded DOM-settle: a page that never quiesces (or never loads) must not
+	// hang the command; best-effort, discard the timeout.
+	_ = rod.Try(func() {
+		page.Timeout(defaultWaitStableTimeout).WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
+	})
 	return fmt.Sprintf("Navigated to %s", url), nil
 }
 

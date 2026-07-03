@@ -85,6 +85,22 @@ func runDaemonServer(c *cli.Context) error {
 		v := c.Bool("request-capture")
 		stealthFlags.RequestCapture = &v
 	}
+	// CDP-DEEP-01 proxy toggles: capture only when explicitly set on the daemon
+	// argv, so an unset flag stays nil (= keep the default-OFF baseline). Without
+	// this the forwarded --cdp-proxy never reaches StealthFlags and the CDP proxy
+	// silently never enables (CONCERNS landmine #1: forward → CAPTURE → resolve).
+	if c.IsSet("cdp-proxy") {
+		v := c.Bool("cdp-proxy")
+		stealthFlags.CDPProxy = &v
+	}
+	if c.IsSet("cdp-jitter-ms") {
+		v := c.Int("cdp-jitter-ms")
+		stealthFlags.CDPJitterMs = &v
+	}
+	if c.IsSet("no-cdp-proxy") {
+		v := c.Bool("no-cdp-proxy")
+		stealthFlags.NoCDPProxy = &v
+	}
 	// Phase-28 humanize tuning: capture each as a non-nil pointer ONLY when the
 	// flag is set on the daemon argv, so an unset knob stays nil (= emit no godoll
 	// option = byte-for-byte default behavior).
