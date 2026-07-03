@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime/coverage"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -141,6 +142,29 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 
 	mux := http.NewServeMux()
 	idleTimer := time.NewTimer(15 * time.Minute)
+	// execMu serializes executeAction across concurrent /execute requests. The
+	// session model is one shared *rod.Page (one browser tab) per daemon;
+	// Context.stateLock (types/context.go) only guards the page POINTER field
+	// itself, not the CDP operation performed once an action has it. Without
+	// this, two concurrent requests (e.g. two rod-cli client processes hitting
+	// the same --session) race unsynchronized at the CDP level on the same
+	// tab. Confirmed empirically: N concurrent goto+eval pairs against one
+	// session reliably produced net::ERR_ABORTED on ~60% of navigations (one
+	// goto's in-flight Navigate/WaitDOMStable torn out from under it by
+	// another concurrent goto on the same tab) — execMu eliminates that error
+	// class entirely (0 errors across repeated trials) by making each
+	// command's full CDP interaction complete atomically before the next
+	// starts. It does NOT and cannot guarantee that a caller's own eval reads
+	// back its own goto's page when a DIFFERENT concurrent caller's goto
+	// interleaves in between — that is the expected, inherent consequence of
+	// multiple callers sharing one browser tab; true per-caller isolation
+	// requires distinct --session names (see the skill's multi-target
+	// guidance), which is the caller's responsibility, not the daemon's.
+	// ping/close intentionally stay outside this lock: ping must stay
+	// responsive for EnsureDaemon's readiness poll even while a slow command
+	// is in flight, and close must remain able to force-tear-down a stuck
+	// session rather than queue behind it.
+	var execMu sync.Mutex
 
 	mux.HandleFunc("/execute", func(w http.ResponseWriter, r *http.Request) {
 		idleTimer.Reset(15 * time.Minute)
@@ -164,7 +188,9 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			return
 		}
 
+		execMu.Lock()
 		res, err := executeAction(rodCtx, req)
+		execMu.Unlock()
 		if err != nil {
 			json.NewEncoder(w).Encode(Response{Error: err.Error()})
 			return

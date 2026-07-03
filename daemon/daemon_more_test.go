@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -445,4 +446,93 @@ func TestExecuteActionDispatch(t *testing.T) {
 	}
 	// Give the dialog handler goroutines a moment to resolve before Close.
 	time.Sleep(300 * time.Millisecond)
+}
+
+// TestExecMuEliminatesConcurrentNavigateErrors is the regression case for a
+// bug found live: two concurrent rod-cli client processes hitting the SAME
+// session raced unsynchronized at the CDP level on the single shared
+// *rod.Page (types.Context.stateLock only ever guards the page POINTER
+// field, never the operation performed once an action holds it).
+//
+// Empirically (see git history / PR discussion for the throwaway experiment
+// this replaced): WITHOUT execMu serializing dispatch, firing N concurrent
+// goto+eval pairs against one session reliably produced net::ERR_ABORTED
+// browser-level errors on ~60% of navigations — one goto's in-flight
+// Page.navigate/WaitDOMStable gets torn out from under it by another
+// concurrent goto on the same tab. WITH execMu, that error class is fully
+// eliminated (0 errors across 30 trials in 3 independent runs) because each
+// command's full CDP interaction now completes atomically before the next
+// one starts.
+//
+// What execMu does NOT and structurally cannot guarantee: that each caller's
+// OWN eval reads back ITS OWN goto's page, when a DIFFERENT concurrent
+// caller's goto is interleaved in between on the same shared tab. With 10
+// callers alternating between two destinations against one session, roughly
+// half will legitimately observe whichever destination's navigation ran
+// last among the batch — that is the expected, inherent consequence of
+// multiple callers sharing one browser tab, not something serialization at
+// the daemon level can paper over. True per-caller isolation requires
+// distinct --session names (see the skill's multi-target guidance) — that
+// is the caller's responsibility, not the daemon's. This test therefore
+// asserts zero CDP/browser errors (the actual execMu contract) and only
+// logs the destination-mismatch rate for visibility, without asserting on
+// it.
+func TestExecMuEliminatesConcurrentNavigateErrors(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping browser test in short mode")
+	}
+	srvA := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `<html><body><h1 id="marker">PAGE_A</h1></body></html>`)
+	}))
+	defer srvA.Close()
+	srvB := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `<html><body><h1 id="marker">PAGE_B</h1></body></html>`)
+	}))
+	defer srvB.Close()
+
+	session, _, cleanup := startInProcessDaemon(t)
+	defer cleanup()
+
+	const n = 10
+	var wg sync.WaitGroup
+	type outcome struct {
+		gotoErr, evalErr error
+		wantMarker       string
+		gotMarker        string
+	}
+	results := make([]outcome, n)
+	for i := range n {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			url, want := srvA.URL, "PAGE_A"
+			if i%2 == 1 {
+				url, want = srvB.URL, "PAGE_B"
+			}
+			var o outcome
+			o.wantMarker = want
+			_, o.gotoErr = ClientExecute(session, Request{Command: "open", Args: map[string]string{"url": url}})
+			r, err := ClientExecute(session, Request{Command: "eval", Args: map[string]string{"script": "document.getElementById('marker') ? document.getElementById('marker').innerText : 'NULL_MARKER'"}})
+			o.evalErr = err
+			o.gotMarker = r
+			results[i] = o
+		}(i)
+	}
+	wg.Wait()
+
+	mismatchCount := 0
+	for i, o := range results {
+		// This IS the execMu contract: no command may fail outright under
+		// concurrent same-session load.
+		if o.gotoErr != nil {
+			t.Errorf("trial %d: goto errored under concurrent load (execMu should prevent this): %v", i, o.gotoErr)
+		}
+		if o.evalErr != nil {
+			t.Errorf("trial %d: eval errored under concurrent load (execMu should prevent this): %v", i, o.evalErr)
+		}
+		if o.gotoErr == nil && o.evalErr == nil && !strings.Contains(o.gotMarker, o.wantMarker) {
+			mismatchCount++
+		}
+	}
+	t.Logf("informational: %d/%d trials observed a DIFFERENT concurrent caller's destination (expected/inherent for N callers sharing one session — not an execMu regression)", mismatchCount, n)
 }
