@@ -12,7 +12,17 @@ function createRealPiExec() {
   const pi: any = {
     exec: (cmd: string, args: string[], opts?: { signal?: AbortSignal; timeout?: number }) => {
       return new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-        execFile(cmd, args, {
+        // Force headless for the test run so this suite never pops a visible
+        // Chrome window on a workstation with a display — matching the Go
+        // test suite's own established convention (tests/cli_test.go's
+        // runCli: "headless is the blocking CI gate; headful is opt-in").
+        // Load-bearing, not cosmetic: confirmed live that headful mode on a
+        // Wayland desktop can hang rod.Page.Screenshot's CDP
+        // Page.captureScreenshot call indefinitely (waiting on a compositor
+        // frame that never arrives), which this suite's screenshot test
+        // would otherwise flake on any non-CI machine with a real display.
+        const headlessArgs = args.includes("--headless") ? args : ["--headless", ...args];
+        execFile(cmd, headlessArgs, {
           timeout: opts?.timeout ?? 30000,
           signal: opts?.signal,
           windowsHide: true,
