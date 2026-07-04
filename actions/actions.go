@@ -33,6 +33,17 @@ const (
 	// defaultWaitStableTimeout bounds the post-navigation DOM-settle so a page
 	// that never stops mutating (or never loads) cannot hang the command either.
 	defaultWaitStableTimeout = 15 * time.Second
+	// defaultCaptureTimeout bounds Screenshot and Pdf's underlying CDP calls
+	// (Page.captureScreenshot / Page.printToPDF). Unlike Navigate, neither
+	// carried a timeout — confirmed live: rod.Page.Screenshot hung
+	// indefinitely (>20s, verified via a SIGQUIT goroutine dump blocked
+	// inside the CDP client waiting on an unresponsive browser) after a
+	// normal goto+eval sequence, with no crash and no bound. Pdf shares the
+	// identical unguarded shape (same seam-wrapper pattern, same rendering
+	// CDP round-trip class) so gets the same bound preemptively. Generous
+	// enough that a normal capture — typically well under a second — never
+	// trips it.
+	defaultCaptureTimeout = 30 * time.Second
 )
 
 // seams for testing — overridden in *_test.go to exercise otherwise-unreachable
@@ -324,7 +335,7 @@ func Screenshot(ctx *types.Context, name string, selector string, width, height 
 	req := &proto.PageCaptureScreenshot{
 		Format: proto.PageCaptureScreenshotFormatPng,
 	}
-	bin, err := pageScreenshot(page, false, req)
+	bin, err := pageScreenshot(page.Timeout(defaultCaptureTimeout), false, req)
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to screenshot")
 	}
@@ -547,7 +558,7 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	pdf, err := pagePDF(page, &proto.PagePrintToPDF{})
+	pdf, err := pagePDF(page.Timeout(defaultCaptureTimeout), &proto.PagePrintToPDF{})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to generate pdf")
 	}
