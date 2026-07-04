@@ -1006,11 +1006,24 @@ func TestAdvancedEvasionDimensions(t *testing.T) {
 
 	// --- TOGGLE-OFF (independence / effectiveness) ---------------------------
 
-	// With --media-devices-spoof=false the dimension must NOT be injected, so the
-	// vector reverts to the un-hardened headless default — a reading that differs
-	// from the ON (mocked) signature. Proves the toggle is effective, not cosmetic.
+	// With --media-devices-spoof=false the dimension must NOT be injected, so
+	// navigator.mediaDevices.enumerateDevices reverts to the browser's real,
+	// native implementation. Proves the toggle is effective, not cosmetic.
+	//
+	// NOTE: this used to compare coarse "count:kinds" signatures (ON vs OFF),
+	// which is unreliable — godoll's mock always injects exactly 1
+	// audioinput+1 audiooutput+1 videoinput, and a real headless Chrome on a
+	// host with virtual/software media devices (PipeWire/PulseAudio virtual
+	// sink+source, a virtual camera module, ...) can coincidentally expose
+	// that exact same shape. Verified live on this machine: the REAL,
+	// unspoofed enumerateDevices() reports
+	// ["audioinput","videoinput","audiooutput"] — byte-identical to the
+	// mock's signature — making the old assertion flake independent of
+	// whether the toggle actually worked. Assert the mechanism directly
+	// instead: an overridden enumerateDevices stringifies to its JS override
+	// source; the browser's real implementation always stringifies to
+	// "[native code]", regardless of what devices the host happens to have.
 	t.Run("media_devices_toggle_off_reverts", func(t *testing.T) {
-		onSig := evalDetect(t, "mediaDevices")
 		runCli("close")
 		if _, err := runCli("--media-devices-spoof=false", "goto", ds.URL()); err != nil {
 			t.Fatalf("goto with --media-devices-spoof=false failed: %v", err)
@@ -1018,10 +1031,13 @@ func TestAdvancedEvasionDimensions(t *testing.T) {
 		waitForDetectReady(t)
 		defer restoreDefaultDaemon(t, ds.URL())
 
-		offSig := evalDetect(t, "mediaDevices")
-		if offSig == onSig {
-			t.Errorf("media-devices-spoof toggle is INEFFECTIVE: ON and OFF signatures "+
-				"identical (%q) — the off path still injected the mocked device set", onSig)
+		out, err := runCli("eval", "() => navigator.mediaDevices.enumerateDevices.toString()")
+		if err != nil {
+			t.Fatalf("eval enumerateDevices.toString() failed: %v", err)
+		}
+		if !strings.Contains(out, "[native code]") {
+			t.Errorf("media-devices-spoof=false did not revert enumerateDevices to the "+
+				"native implementation (still overridden): %q", out)
 		}
 	})
 }
