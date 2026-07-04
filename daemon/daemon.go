@@ -11,14 +11,23 @@ import (
 	"path/filepath"
 	"runtime/coverage"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/agenthands/rod-cli/actions"
 	"github.com/agenthands/rod-cli/types"
+	"github.com/charmbracelet/log"
 )
+
+// execAcquireTimeout bounds how long a new /execute request waits to acquire
+// execSem (StartServer) before failing fast with a "session may be stuck"
+// error, rather than queuing forever behind a command that never releases
+// it. 60s is generous above the worst-case legitimate chain in actions.go
+// (defaultNavigateTimeout 30s + defaultWaitStableTimeout 15s = 45s) so a
+// normal slow command never trips it. A var (not const), like the seam
+// vars in actions.go, so tests can shrink it for a fast, deterministic
+// check instead of waiting out a real 60s.
+var execAcquireTimeout = 60 * time.Second
 
 // exitDaemon terminates the daemon process. If the binary was built with
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
@@ -142,17 +151,19 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 
 	mux := http.NewServeMux()
 	idleTimer := time.NewTimer(15 * time.Minute)
-	// execMu serializes executeAction across concurrent /execute requests. The
-	// session model is one shared *rod.Page (one browser tab) per daemon;
-	// Context.stateLock (types/context.go) only guards the page POINTER field
-	// itself, not the CDP operation performed once an action has it. Without
-	// this, two concurrent requests (e.g. two rod-cli client processes hitting
-	// the same --session) race unsynchronized at the CDP level on the same
-	// tab. Confirmed empirically: N concurrent goto+eval pairs against one
+	// execSem serializes executeAction across concurrent /execute requests,
+	// as a 1-buffered channel acting as a mutex WITH a bounded acquire
+	// timeout (sync.Mutex has none). The session model is one shared
+	// *rod.Page (one browser tab) per daemon; Context.stateLock
+	// (types/context.go) only guards the page POINTER field itself, not the
+	// CDP operation performed once an action has it. Without serialization,
+	// two concurrent requests (e.g. two rod-cli client processes hitting the
+	// same --session) race unsynchronized at the CDP level on the same tab.
+	// Confirmed empirically: N concurrent goto+eval pairs against one
 	// session reliably produced net::ERR_ABORTED on ~60% of navigations (one
 	// goto's in-flight Navigate/WaitDOMStable torn out from under it by
-	// another concurrent goto on the same tab) — execMu eliminates that error
-	// class entirely (0 errors across repeated trials) by making each
+	// another concurrent goto on the same tab) — serializing eliminates that
+	// error class entirely (0 errors across repeated trials) by making each
 	// command's full CDP interaction complete atomically before the next
 	// starts. It does NOT and cannot guarantee that a caller's own eval reads
 	// back its own goto's page when a DIFFERENT concurrent caller's goto
@@ -160,11 +171,32 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 	// multiple callers sharing one browser tab; true per-caller isolation
 	// requires distinct --session names (see the skill's multi-target
 	// guidance), which is the caller's responsibility, not the daemon's.
-	// ping/close intentionally stay outside this lock: ping must stay
+	//
+	// The bounded acquire timeout defends a distinct, also-confirmed-live
+	// failure: none of the ~25 seam-wrapped go-rod calls in actions.go carry
+	// a page.Timeout() the way Navigate does (defaultNavigateTimeout) —
+	// e.g. actions.Screenshot -> rod.Page.Screenshot's CDP
+	// Page.captureScreenshot round-trip can hang indefinitely waiting on an
+	// unresponsive browser (reproduced: >20s, confirmed via SIGQUIT
+	// goroutine dump blocked inside rod's CDP client). A plain sync.Mutex
+	// here would let that one hang turn into a PERMANENTLY wedged session —
+	// every subsequent command queuing forever behind a lock that never
+	// releases, which is strictly worse than the pre-serialization
+	// interleaving risk it replaced. execAcquireTimeout bounds the wait so a
+	// new command fails fast with a clear error instead, matching the
+	// daemon's existing bounded-wait philosophy
+	// (defaultNavigateTimeout/defaultWaitStableTimeout in actions.go). It
+	// does NOT cancel the stuck command itself — that needs per-action CDP
+	// timeouts, a larger, separate fix across actions.go. `close` still
+	// bypasses this semaphore entirely and can always force-reset a wedged
+	// session.
+	//
+	// ping/close intentionally stay outside this semaphore: ping must stay
 	// responsive for EnsureDaemon's readiness poll even while a slow command
 	// is in flight, and close must remain able to force-tear-down a stuck
 	// session rather than queue behind it.
-	var execMu sync.Mutex
+	execSem := make(chan struct{}, 1)
+	execSem <- struct{}{}
 
 	mux.HandleFunc("/execute", func(w http.ResponseWriter, r *http.Request) {
 		idleTimer.Reset(15 * time.Minute)
@@ -188,14 +220,20 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			return
 		}
 
-		execMu.Lock()
-		res, err := executeAction(rodCtx, req)
-		execMu.Unlock()
-		if err != nil {
-			json.NewEncoder(w).Encode(Response{Error: err.Error()})
-			return
+		select {
+		case <-execSem:
+			res, err := executeAction(rodCtx, req)
+			execSem <- struct{}{}
+			if err != nil {
+				json.NewEncoder(w).Encode(Response{Error: err.Error()})
+				return
+			}
+			json.NewEncoder(w).Encode(Response{Result: res})
+		case <-time.After(execAcquireTimeout):
+			json.NewEncoder(w).Encode(Response{Error: fmt.Sprintf(
+				"a previous command has not completed after %s; the session may be stuck on an unresponsive browser call — run `close` to force-reset it",
+				execAcquireTimeout)})
 		}
-		json.NewEncoder(w).Encode(Response{Result: res})
 	})
 
 	go func() {

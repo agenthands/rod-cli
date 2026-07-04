@@ -536,3 +536,70 @@ func TestExecMuEliminatesConcurrentNavigateErrors(t *testing.T) {
 	}
 	t.Logf("informational: %d/%d trials observed a DIFFERENT concurrent caller's destination (expected/inherent for N callers sharing one session — not an execMu regression)", mismatchCount, n)
 }
+
+// TestExecAcquireTimeoutBoundsAHungCommand is the regression case for a bug
+// found live while verifying the execSem serialization fix:
+// actions.Screenshot (and ~25 other seam-wrapped go-rod calls in
+// actions.go, unlike Navigate) carry no page.Timeout(), so a CDP call that
+// never gets a response from the browser (reproduced live: rod.Page.
+// Screenshot's Page.captureScreenshot round-trip hung >20s, confirmed via a
+// SIGQUIT goroutine dump blocked inside the CDP client) hangs the whole
+// request indefinitely. With a plain sync.Mutex serializing dispatch, that
+// single hang would wedge the ENTIRE session PERMANENTLY — every
+// subsequent command queuing forever behind a lock that never releases,
+// strictly worse than the pre-serialization interleaving risk it replaced.
+// execAcquireTimeout bounds the wait instead.
+//
+// A real browser hang isn't practical to wait out in a test, so this
+// simulates one deterministically: a synchronous JS busy-wait longer than a
+// shrunk execAcquireTimeout stands in for "a command that never returns
+// within the bound" — from the daemon's perspective the two are
+// indistinguishable, it only ever observes "has the semaphore been
+// released yet".
+func TestExecAcquireTimeoutBoundsAHungCommand(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping browser test in short mode")
+	}
+	srv := newPageServer()
+	defer srv.Close()
+
+	session, _, cleanup := startInProcessDaemon(t)
+	defer cleanup()
+
+	if _, err := ClientExecute(session, Request{Command: "open", Args: map[string]string{"url": srv.URL}}); err != nil {
+		t.Fatalf("open failed: %v", err)
+	}
+
+	orig := execAcquireTimeout
+	execAcquireTimeout = 1500 * time.Millisecond
+	defer func() { execAcquireTimeout = orig }()
+
+	// Command A: a busy-wait comfortably longer than the shrunk timeout,
+	// standing in for a hung CDP call. Fired fire-and-forget in the
+	// background — the point under test is only that it does NOT block the
+	// daemon from answering B; A's own eventual result is irrelevant (it may
+	// even error if test cleanup closes the browser out from under it).
+	const busyMs = 4000
+	script := fmt.Sprintf("() => { const s = Date.now(); while (Date.now() - s < %d) {} return 'done'; }", busyMs)
+	go func() {
+		_, _ = ClientExecute(session, Request{Command: "eval", Args: map[string]string{"script": script}})
+	}()
+	time.Sleep(300 * time.Millisecond) // let A actually acquire execSem first
+
+	start := time.Now()
+	_, err := ClientExecute(session, Request{Command: "eval", Args: map[string]string{"script": "1+1"}})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected command B to fail with a session-busy error while A is still running, got success")
+	}
+	if !strings.Contains(err.Error(), "previous command has not completed") {
+		t.Fatalf("expected the bounded-acquire-timeout error, got: %v", err)
+	}
+	// B must fail close to execAcquireTimeout (not immediately — proving it
+	// actually waited — and not anywhere near busyMs, proving it didn't just
+	// wait for A).
+	if elapsed < execAcquireTimeout || elapsed > execAcquireTimeout+2*time.Second {
+		t.Fatalf("expected B to fail around execAcquireTimeout (%v), took %v", execAcquireTimeout, elapsed)
+	}
+}
