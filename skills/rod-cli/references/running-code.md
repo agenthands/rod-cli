@@ -11,18 +11,17 @@ rod-cli eval "performance.timing.navigationStart"
 ```
 
 ## Targeting Specific Elements
-If you want to evaluate code against a specific element you found in the snapshot, provide the element reference (e.g. `e5`) as the second argument. The script is evaluated with `this` bound to the DOM element.
+If you want to evaluate code against a specific element you found in the snapshot, provide the element reference as the second argument. This ref is the exact `[ref=…]` token printed by `rod-cli snapshot` next to each element (e.g. `s1e5`) — copy it verbatim. Refs are scoped to the snapshot that produced them: they change on every navigation/reload and whenever the page's DOM changes significantly, so re-run `snapshot` to get a fresh ref if one stops resolving. The script is evaluated with `this` bound to the DOM element.
 
 ```bash
 # Get text content of an element
-rod-cli eval "() => this.textContent" e5
+rod-cli eval "() => this.textContent" s1e5
 
 # Modify an element's style
-rod-cli eval "() => { this.style.border = '2px solid red' }" e2
-
-# Trigger a custom click event if normal clicking fails
-rod-cli eval "() => this.click()" e8
+rod-cli eval "() => { this.style.border = '2px solid red' }" s1e2
 ```
+
+A failing `click <ref-or-selector>` (or `fill`/`type`/etc.) almost always means the ref is stale or the CSS selector no longer matches — re-run `snapshot` for a fresh ref, or re-check the selector. Do **not** work around it with `eval "() => this.click()"`: that dispatches an untrusted, non-humanized synthetic click (`event.isTrusted === false`), defeating this tool's stealth/humanization design. Use the native `click`/`fill`/`type`/etc. commands for interaction; reserve `eval` for reading and extracting page data.
 
 ## Extracting Data
 

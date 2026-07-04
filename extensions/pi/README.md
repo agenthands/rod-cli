@@ -37,8 +37,8 @@ pi install ./extensions/pi
 |------|-------------|----------------|
 | `browse_goto` | Navigate to a URL | url (required), session |
 | `browse_snapshot` | Accessibility-tree markdown snapshot | selector (optional), session |
-| `browse_click` | Click element by CSS selector | selector (required), doubleClick (optional), session |
-| `browse_type` | Type text with humanized keystroke timing | selector (required), text (required), session |
+| `browse_click` | Click element by CSS selector or snapshot ref | selector (required: CSS selector or `[ref=...]` from browse_snapshot), doubleClick (optional), session |
+| `browse_type` | Type text with humanized keystroke timing | selector (required: CSS selector or `[ref=...]` from browse_snapshot), text (required), session |
 | `browse_eval` | Evaluate JavaScript on the page (max 10KB) | expression (required), session |
 | `browse_screenshot` | Capture a screenshot of the page or element | selector (optional), session |
 | `browse_wait` | Wait for a selector to appear or a fixed duration | selector (optional), timeout (optional), session |
@@ -47,9 +47,13 @@ pi install ./extensions/pi
 | `browse_scroll` | Scroll the page viewport | direction (down/up), distance, selector, session |
 | `browse_cookies` | Manage browser cookies | action (get/set/delete/clear), name, value, session |
 | `browse_storage` | Manage localStorage and sessionStorage | action (get/set/delete/clear), storageType (local/session), key, value, session |
-| `browse_fill_form` | Fill form fields instantly (with optional submit) | selector (required), text (required), submit (optional), session |
+| `browse_fill_form` | Fill form fields instantly (with optional submit) | selector (required: CSS selector or `[ref=...]` from browse_snapshot), text (required), submit (optional), session |
 
 All tools accept an optional `session` parameter for multi-browser/multi-identity workflows.
+
+`browse_click`, `browse_type`, and `browse_fill_form` accept either a plain CSS selector (e.g. `#submit-btn`, works immediately, no snapshot needed) or a ref token copied verbatim from the most recent `browse_snapshot`'s `[ref=sNeM]` annotation (e.g. `s1e5`).
+
+**Prefer native actions over `browse_eval` for interaction.** `browse_click`/`browse_type`/`browse_fill_form` dispatch real, trusted, humanized input (mouse tremor/speed, typing cadence); `browse_eval`-driven interaction (`el.click()`, setting `.value`) produces untrusted synthetic events with no humanization, defeating rod-cli's stealth design. Reserve `browse_eval` for reading page state/data.
 
 ## Skill vs Extension
 

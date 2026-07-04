@@ -1127,16 +1127,34 @@ class SnapshotEngine {
     }
 
     queryAll(selector) {
+        // IMPORTANT: every "not found" branch below returns [] (an empty
+        // array), never null/undefined. go-rod's Page.ElementByJS treats a
+        // returned JS `null` as "not rendered yet, keep polling" and retries
+        // against this page's context, which for a daemon-held page has no
+        // deadline -- so `null` here does not fail, it hangs forever. An
+        // empty array is a definitive "no element", so the CDP round-trip
+        // fails fast and the bounded Go-level retry (getElementByRef, 3
+        // attempts with backoff) owns the retry policy instead.
         const match = selector.match(/^s(\d+)e(\d+)$/);
-        if (!match)
-            return [];
-        const [, generation, eleId] = match;
-        if (this._lastAriaSnapshot?.generation !== +generation)
-            return [];
+        if (match) {
+            const [, generation, eleId] = match;
+            if (this._lastAriaSnapshot?.generation !== +generation)
+                return [];
 
-        const queryRes = this._lastAriaSnapshot?.elements?.get(+eleId);
+            const queryRes = this._lastAriaSnapshot?.elements?.get(+eleId);
 
-        return queryRes && queryRes.isConnected ? [queryRes][0] : null;
+            return queryRes && queryRes.isConnected ? [queryRes][0] : [];
+        }
+        // Not a snapshot ref (e.g. "s1e5") -- fall back to treating the string
+        // as a plain CSS selector against the live document. This is what lets
+        // click/fill/type/etc. work without a prior `snapshot` call, and is the
+        // contract already assumed by QueryEleByAria's Go test, the CLI docs,
+        // and the Pi extension tool schemas.
+        try {
+            return document.querySelector(selector) || [];
+        } catch (e) {
+            return [];
+        }
     }
 
 

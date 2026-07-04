@@ -94,6 +94,7 @@ var (
 	pageMouseDown        = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Down(btn, clicks) }
 	pageMouseUp          = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Up(btn, clicks) }
 	ioReadAll            = io.ReadAll
+	queryElementDirect   = utils.QueryEleByAria
 )
 
 // --- Phase 28: humanize tuning option builders (HUMANIZE-01) ---
@@ -359,14 +360,24 @@ func Snapshot(ctx *types.Context) (string, error) {
 }
 
 func getElementByRef(ctx *types.Context, ref string) (*rod.Element, error) {
-	snapshot, err := ctx.LatestSnapshot()
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get latest snapshot (try running snapshot first)")
-	}
 	var element *rod.Element
-	err = retry.Retry(func() error {
+	err := retry.Retry(func() error {
 		var inErr error
-		element, inErr = snapshot.LocatorInFrame(ref)
+		if snapshot, snapErr := ctx.LatestSnapshot(); snapErr == nil {
+			element, inErr = snapshot.LocatorInFrame(ref)
+			return inErr
+		}
+		// No snapshot taken yet in this session -- fall back to resolving ref
+		// directly against the current page. A bare "sNeM" snapshot ref is
+		// meaningless without the JS-side snapshot state a prior `snapshot`
+		// call establishes, and correctly still fails as "not found" below;
+		// a plain CSS selector resolves fine, so click/fill/type/etc. work
+		// standalone with no snapshot dependency.
+		page, pageErr := ctx.ControlledPage()
+		if pageErr != nil {
+			return pageErr
+		}
+		element, inErr = queryElementDirect(page, ref)
 		return inErr
 	}, retry.WithMaxRetries(3), retry.WithExponentialBackoff(), retry.WithDelay(500*time.Millisecond))
 

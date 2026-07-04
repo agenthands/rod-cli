@@ -7,10 +7,10 @@ For a standard `<input type="file">`, you can use the `upload` command. You must
 
 ```bash
 # Upload a single file
-rod-cli upload e22 "/tmp/resume.pdf"
+rod-cli upload s1e22 "/tmp/resume.pdf"
 
 # Upload multiple files (if the input supports it, separate with commas)
-rod-cli upload e22 "/tmp/image1.png,/tmp/image2.png"
+rod-cli upload s1e22 "/tmp/image1.png,/tmp/image2.png"
 ```
 
 ## Drag and Drop Interfaces
@@ -18,13 +18,13 @@ Modern web applications often use "Dropzones" instead of standard file inputs. T
 
 ```bash
 # Drop a file directly onto a Dropzone element
-rod-cli drop e45 --path="/tmp/avatar.jpg"
+rod-cli drop s1e45 --path="/tmp/avatar.jpg"
 ```
 
 ## Element-to-Element Dragging
 If you need to drag one DOM element and drop it onto another DOM element (e.g., reordering a list, or moving a card on a Kanban board), use the `drag` command.
 
 ```bash
-# Drag element e10 and drop it onto element e15
-rod-cli drag e10 e15
+# Drag element s1e10 and drop it onto element s1e15
+rod-cli drag s1e10 s1e15
 ```

@@ -3,7 +3,7 @@
 `rod-cli` is fundamentally built around a persistent background daemon architecture. It does NOT boot a new browser for every command, which would be incredibly slow. Instead, it re-uses sessions.
 
 ## The Default Session
-If you just run `rod-cli open https://example.com`, it automatically spawns the default background daemon if it isn't running, and uses it. Future commands like `rod-cli click e5` implicitly connect to this same daemon.
+If you just run `rod-cli open https://example.com`, it automatically spawns the default background daemon if it isn't running, and uses it. Future commands like `rod-cli click "#submit"` (or `rod-cli click s1e5` using a snapshot ref) implicitly connect to this same daemon.
 
 ## Multiplexing Named Sessions
 

@@ -19,6 +19,12 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
    - `rod-cli -s=admin goto http://...`
    - `rod-cli -s=guest goto http://...`
 
+3. **Element Targeting**: Every command below that takes `[selector]` (`click`, `dblclick`, `type`, `fill`, `select`, `check`, `uncheck`, `hover`, `upload`, `drag`, `drop`, `highlight`) accepts **either**:
+   - a plain **CSS selector** (e.g. `#submit-button`, `.nav-link`) — resolves immediately, even before any `snapshot` call, or
+   - an opaque **snapshot ref** — the literal token from a `[ref=sNeM]` annotation printed by `rod-cli snapshot` (e.g. `s1e5`), copied verbatim. Use a ref when no stable CSS selector exists, or to disambiguate elements. Refs are tied to the snapshot generation that produced them — re-run `snapshot` for a fresh ref if the DOM changes and the old ref stops resolving.
+
+4. **Prefer Native Actions over `eval`**: Use `click`/`fill`/`type`/`hover`/`check`/`uncheck`/`select`/etc. to interact with the page — not `eval`. These commands dispatch real, trusted, humanized input: genuine CDP mouse movement (tunable tremor/speed/deviation) and per-keystroke typing cadence, which this tool's stealth design depends on. Simulating interaction via `eval` (`el.click()`, setting `.value` directly, dispatching synthetic events) produces untrusted (`event.isTrusted === false`) events with none of that humanization; checking `isTrusted` on interaction events is a standard headless-detection technique, making eval-driven interaction a strong, trivially-checked bot signal. Reserve `eval` for reading/extracting page state — attributes, computed values, JSON data — never for acting on the page.
+
 ## Commands
 
 ### Global Options
@@ -42,6 +48,8 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli tab-close [index]`: Close a browser tab.
 
 ### Interaction
+`[selector]` below accepts a CSS selector or a snapshot ref — see **Element Targeting** in Core Concepts above.
+
 - `rod-cli click [selector]`: Click an element.
 - `rod-cli dblclick [selector]`: Double-click an element.
 - `rod-cli type [selector] [text]`: Type sequentially into an element.
@@ -80,7 +88,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli sessionstorage-clear`: Clear sessionStorage.
 
 ### Observability & Debugging
-- `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking).
+- `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking). Accepts the same CSS-selector-or-snapshot-ref `[selector]` as the Interaction commands above.
 - `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
 - `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
 - `rod-cli console`: List browser console messages.
@@ -93,7 +101,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli request [index]`: Show details for a specific request.
 
 ### Evaluation & Export
-- `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context.
+- `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context. Use it for reading/extracting page state (attributes, computed values, JSON data) — prefer the Interaction commands above (`click`, `fill`, `type`, etc.) for anything that acts on the page; see **Prefer Native Actions over `eval`** in Core Concepts.
 - `rod-cli snapshot`: Return the token-efficient Markdown representation of the DOM.
 - `rod-cli screenshot --name [name]`: Capture a PNG of the viewport.
 - `rod-cli pdf --name [name]`: Export the page as a PDF.

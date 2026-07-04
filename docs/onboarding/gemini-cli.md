@@ -19,10 +19,15 @@ task involving web browsing, scraping, form interaction, or page evaluation.
 
 ### When to use rod-cli
 - Browsing web pages: `rod-cli goto <url>`
-- Reading page content: `rod-cli snapshot` (token-efficient DOM tree)
-- Clicking elements: `rod-cli click <ref>`
-- Filling forms: `rod-cli fill <selector> <value> --submit`
-- Running JavaScript: `rod-cli eval <script>`
+- Reading page content: `rod-cli snapshot` (token-efficient DOM tree, prints
+  each element's `[ref=s1e5]`-style ref)
+- Clicking elements: `rod-cli click <ref-or-selector>` — a CSS selector
+  (`#id`, `.class`) or a ref copied verbatim from `snapshot` output
+- Filling forms: `rod-cli fill <ref-or-selector> <value> --submit`
+- Running JavaScript: `rod-cli eval <script>` (for reading page state/data —
+  prefer `click`/`fill`/`type`/`hover` for interaction; they dispatch real,
+  trusted, humanized input, while an eval-driven `el.click()` fires an
+  untrusted synthetic event that is easy for a site to detect)
 - Taking screenshots: `rod-cli screenshot`
 
 ### Important
