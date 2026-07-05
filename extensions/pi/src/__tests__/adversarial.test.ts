@@ -101,22 +101,29 @@ describe("registerLifecycle — hook registration", () => {
 
       expect(pi.exec).toHaveBeenCalledWith("rod-cli", ["--version"], { timeout: 5000 });
       expect(pi.ui.notify).toHaveBeenCalledWith(
-        "rod-cli rod-cli v1.0.0 ready",
+        "rod-cli v1.0.0 ready",
         "info",
       );
     });
 
-    it("notifies warning when --version fails", async () => {
+    it("notifies ready (info), not a warning, when the --version probe throws", async () => {
       const pi = mockPi();
       pi.exec.mockRejectedValueOnce(new Error("exec failed"));
 
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
       await pi._fire("session_start", {}, { ui: pi.ui });
 
-      expect(pi.ui.notify).toHaveBeenCalledWith(
-        expect.stringContaining("--version failed"),
-        "warning",
-      );
+      expect(pi.ui.notify).toHaveBeenCalledWith("rod-cli ready", "info");
+    });
+
+    it("notifies ready (info), not the usage dump, when --version exits non-zero", async () => {
+      const pi = mockPi();
+      pi.exec.mockResolvedValueOnce({ code: 1, stdout: "Incorrect Usage: flag provided but not defined: -version", stderr: "" });
+
+      registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
+      await pi._fire("session_start", {}, { ui: pi.ui });
+
+      expect(pi.ui.notify).toHaveBeenCalledWith("rod-cli ready", "info");
     });
   });
 

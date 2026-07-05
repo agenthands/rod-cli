@@ -10,16 +10,16 @@ export function registerLifecycle(pi: ExtensionAPI, rodCliPath: string | null) {
       return;
     }
 
+    // Binary exists (findRodCli confirmed it). Best-effort version enrichment;
+    // a version-probe failure is not an install problem, so never warn here.
+    let msg = "rod-cli ready";
     try {
       const result = await pi.exec("rod-cli", ["--version"], { timeout: 5000 });
-      const version = result.stdout.trim() || "unknown";
-      ctx.ui.notify(`rod-cli ${version} ready`, "info");
+      if (result.code === 0 && result.stdout.trim()) msg = `${result.stdout.trim()} ready`;
     } catch {
-      ctx.ui.notify(
-        "rod-cli found but --version failed. Check your installation.",
-        "warning",
-      );
+      /* binary presence already confirmed */
     }
+    ctx.ui.notify(msg, "info");
   });
 
   pi.on("session_shutdown", async (event) => {

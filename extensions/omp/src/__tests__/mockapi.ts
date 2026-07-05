@@ -52,7 +52,8 @@ export function createMockApi(opts?: { execCode?: number }): MockApiState & { ap
     },
     exec(_cmd: string, args: string[], _opts?: unknown) {
       state.execCalls.push(args);
-      return Promise.resolve({ stdout: "ok", stderr: "", code: opts?.execCode ?? 0, killed: false });
+      const stdout = args.includes("--version") ? "rod-cli version 0.0.0-test" : "ok";
+      return Promise.resolve({ stdout, stderr: "", code: opts?.execCode ?? 0, killed: false });
     },
     logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
   } as unknown as ExtensionAPI;

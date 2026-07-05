@@ -7,17 +7,16 @@ export function registerLifecycle(pi: ExtensionAPI, rodCliPath: string | null) {
       ctx.ui.notify("rod-cli not found. Install: go install github.com/agenthands/rod-cli@latest", "warning");
       return;
     }
+    // Binary exists (findRodCli confirmed it). Best-effort version enrichment;
+    // a version-probe failure is not an install problem, so never warn here.
+    let msg = "rod-cli ready";
     try {
       const result = await pi.exec(bin, ["--version"], { timeout: 5000 });
-      if (result.code === 0) {
-        ctx.ui.notify(`rod-cli ${result.stdout.trim() || "unknown"} ready`, "info");
-      } else {
-        // OMP's pi.exec resolves on non-zero; a missing/failed --version must not be reported as "ready".
-        ctx.ui.notify("rod-cli found but --version failed. Check your installation.", "warning");
-      }
+      if (result.code === 0 && result.stdout.trim()) msg = `${result.stdout.trim()} ready`;
     } catch {
-      ctx.ui.notify("rod-cli found but --version failed. Check your installation.", "warning");
+      /* binary presence already confirmed */
     }
+    ctx.ui.notify(msg, "info");
   });
   pi.on("session_shutdown", async () => {
     // Ungated + idempotent: OMP's session_shutdown carries no reason.

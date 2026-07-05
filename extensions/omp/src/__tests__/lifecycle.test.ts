@@ -19,16 +19,17 @@ describe("lifecycle", () => {
     expect(infoNotify!.msg).toMatch(/rod-cli.*ready/);
   });
 
-  it("session_start notifies warning (not info) when --version exits non-zero", async () => {
+  it("session_start notifies ready (info), not a warning/usage-dump, when --version exits non-zero", async () => {
     const mock = createMockApi({ execCode: 1 });
     extension(mock.api);
 
     await mock.fire("session_start");
 
-    const warnNotify = mock.notifications.find((n) => n.level === "warning");
-    expect(warnNotify).toBeDefined();
     const infoNotify = mock.notifications.find((n) => n.level === "info");
-    expect(infoNotify).toBeUndefined();
+    expect(infoNotify).toBeDefined();
+    expect(infoNotify!.msg).toBe("rod-cli ready");
+    const warnNotify = mock.notifications.find((n) => n.level === "warning");
+    expect(warnNotify).toBeUndefined();
   });
 
   it("session_shutdown fires close unconditionally", async () => {
