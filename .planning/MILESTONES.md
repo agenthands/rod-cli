@@ -1,5 +1,71 @@
 # Milestones
 
+## v2.2 Pi Extension (Shipped: 2026-06-27)
+
+**Phases completed:** 4 phases (47–50), 4 plans
+
+**Key accomplishments:**
+
+- First-class TypeScript Pi extension under `extensions/pi/` (`@agenthands/rod-cli-pi`) wrapping rod-cli as 13 native `browse_*` tools (goto, snapshot, click, type, eval, screenshot, wait, tabs, navigate, scroll, cookies, storage, fill_form) — TypeBox-typed parameters, `promptGuidelines`, shell-out via `pi.exec()`. Zero Go changes.
+- Lifecycle hooks: `session_start` verifies the binary (`--version`, read-only), `session_shutdown` closes the daemon best-effort gated on `reason === "quit"`; lazy daemon start on first `browse_goto`.
+- Hardened: `--` argv-injection separator on all 13 tools, input validation (URL/selector/expression caps), per-command timeouts, AbortSignal propagation.
+- 116 tests (4 smoke + 103 adversarial + 9 integration, vitest); `tsc --noEmit` strict clean. Independent security review PASSED (no gaps, no tech-debt).
+- **Not yet published to npm** — that is v2.3's job.
+
+See `.planning/v2.2-MILESTONE-AUDIT.md`, `.planning/v2.2-SECURITY.md`, `.planning/milestones/v2.2-REQUIREMENTS.md`.
+
+---
+
+## v2.1 CDP Proxy Hardening & Diagnostics (Shipped: 2026-06-27)
+
+**Phases completed:** 4 phases (43–46; consolidated to 3)
+
+**Key accomplishments:**
+
+- `TestProxyTraffic` (cdp-traffic JSON assertion) + `TestProxyCdpTell` (live-page Runtime normalization probe) — closed the v2.0 carry-forward live-browser proxy integration tests.
+- `--cdp-jitter-ms` sanity validation with a stderr soft-warning above 1000ms; `cdp-traffic` help gained a sensitivity caveat.
+- Confirmed the godoll font-spoof injector is already real (godoll `1d90494`), covered by the existing `TestFontSpoof` harness gate.
+
+See `.planning/v2.1-MILESTONE-AUDIT.md`.
+
+---
+
+## v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy (Shipped: 2026-06-26)
+
+**Phases completed:** 3 phases (40–42)
+
+**Key accomplishments:**
+
+- In-process MITM CDP WebSocket proxy (`internal/cdpproxy/`) implementing `cdp.WebSocketable`: pass-through with an in-memory ring buffer, wired into browser launch behind `--cdp-proxy` (default OFF).
+- `Runtime.getProperties` response normalization to suppress getter-triggering accessor descriptors when Runtime is enabled (opt-in via `--console-capture`/plugins).
+- Configurable timing jitter on CDP dispatch + a `rod-cli cdp-traffic` diagnostic command reading the ring buffer.
+
+See `.planning/v2.0-MILESTONE-AUDIT.md`, `.planning/v2.0-SECURITY.md`.
+
+---
+
+## v1.9 godoll Hygiene & CDP-DEEP-01 Research (Shipped: 2026-06-26)
+
+**Phases completed:** 2 phases (38–39)
+
+**Key accomplishments:**
+
+- Closed the two remaining v1.7 security-review hygiene items — F2 (backslash added to rod-cli's reject list, defense-in-depth) and F4 (godoll `EnableRequestInterception` now `json.Marshal`s platform).
+- CDP-DEEP-01 research & design: evaluated browser-patching vs MITM/alternate-transport vs patched-DevTools-endpoint against Chrome's detection surface; produced the grounded recommendation + executable PLAN that seeded v2.0.
+
+---
+
+## v1.8 Debt Cleanup & Coding-Assistant Onboarding (Shipped: 2026-06-26)
+
+**Phases completed:** 4 phases (34–37)
+
+**Key accomplishments:**
+
+- Toolchain bump + vuln gate (Phase 34): pinned the Go toolchain, aligned CI/release, cleared the 13 stdlib vulns fixed in go1.26.1, gated against regression (govulncheck in CI).
+- Plugin-path CDP-ledger closure (Phase 35): CDP domains enabled lazily via the plugin lifecycle path are now observed by the per-session ledger the v1.7 footprint guarantees depend on.
+- Font-spoofing work (Phase 36) and coding-assistant onboarding docs (Phase 37): authoritative install + agent-skill docs for the five major coding assistants via the agent-skill → shell-out path (no MCP), README-discoverable.
+
+---
 ## v1.7 Complete Evasion Stack (Shipped: 2026-06-26)
 
 **Phases completed:** 3 phases, 7 plans (Phase 31 / TLS cancelled — real-Chrome-only)

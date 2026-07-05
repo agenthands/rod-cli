@@ -18,39 +18,55 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 
 ## Current State
 
-rod-cli has completed its **v2.1 CDP Proxy Hardening & Diagnostics** milestone
-(shipped 2026-06-27, re-audited 2026-06-27). v2.1 closed the v2.0 carry-forward
-items (live-browser proxy integration tests, jitter soft-warning, cdp-traffic
-sensitivity caveat) and confirmed the font-spoof injector is already real (godoll
-`1d90494`), backed by the existing `TestFontSpoof` harness gate.
+rod-cli has completed its **v2.2 Pi Extension** milestone (shipped 2026-06-27,
+close commit `e90b5d4`, audit + security review PASSED). v2.2 delivered a
+first-class TypeScript Pi extension (`extensions/pi/`, `@agenthands/rod-cli-pi`)
+wrapping rod-cli as 13 native `browse_*` tools with lifecycle hooks, argv-injection
+hardening, and 116 tests. The extension is **not yet published to npm** and is
+consumed by OMP only through a local `omp plugin link` symlink.
 
-Previous milestones: v2.0 shipped the in-process MITM WebSocket CDP proxy
-(`internal/cdpproxy/` — pass-through logging, Runtime.getProperties normalization,
-timing jitter, `cdp-traffic` command, `--no-cdp-proxy` bypass). v1.7 reduced the
-CDP transport footprint (zero-enable baseline), shipped 6 Chrome-only device
-profiles, and activated godoll's dormant fingerprint dimensions. v1.8 closed debt
-cleanup. v1.9 closed hygiene items and produced the CDP-DEEP-01 research.
+Previous milestones: v2.1 hardened the CDP proxy + diagnostics; v2.0 shipped the
+in-process MITM WebSocket CDP proxy (`internal/cdpproxy/`); v1.7–v1.9 built and
+proved the stealth/evasion stack and closed hygiene/debt; earlier milestones built
+the CLI, godoll migration, plugin architecture, and docs.
 
 **TLS fingerprint spoofing remains permanently out of scope** — rod-cli drives
 real Chrome, whose TLS/JA3 is authentic by construction.
 
-## Current Milestone: v2.2 Pi Extension
+## Current Milestone: v2.3 Distribution & Publishing
+
+**Goal:** Make the browser-automation extension actually consumable — publish the
+Pi extension to npm, and build/test/publish a native OMP extension (OMP is the
+primary coding agent) — on a shared, host-agnostic core with a CI-driven release
+pipeline.
+
+**Target features:**
+- Shared runtime-agnostic core (binary discovery, `execRodCli`, input validation,
+  timeouts, per-tool argv builders) consumed by both host adapters — no logic
+  duplication, no drift.
+- `@agenthands/rod-cli-pi` made publish-ready and shipped to npm (public scoped
+  package, LICENSE, verified tarball, working `pi install npm:…`).
+- `@agenthands/rod-cli-omp` — a native OMP extension (`@oh-my-pi/pi-coding-agent`,
+  `omp.extensions` manifest, injected `pi.zod`/`pi.typebox` schemas, `bun:test`),
+  all 13 `browse_*` tools + lifecycle, installable via `omp plugin install`.
+- CI extended to typecheck + test both packages; auto-publish on an `ext-v*` tag
+  with `NPM_TOKEN`; extension semver independent of the Go binary `v*` tags.
+- Documentation: corrected install paths, Pi-vs-OMP-vs-Skill guidance, discoverable
+  from the README.
+
+<details>
+<summary>Archived: v2.2 Pi Extension (Shipped 2026-06-27)</summary>
 
 **Goal:** Build a first-class TypeScript Pi extension that wraps rod-cli's browser
 automation as native Pi tools — so a Pi coding agent discovers and drives a browser
 through rod-cli without manual shell commands.
 
-**Target features:**
-- TypeScript extension scaffold — package.json, tsconfig, ExtensionAPI entry point,
-  publishable as an npm package.
-- Core browser tools registered — `browse_goto`, `browse_snapshot`, `browse_click`,
-  `browse_type`, `browse_eval`, `browse_screenshot`, `browse_wait` — each with
-  TypeBox-typed parameters, prompt guidelines, and shell-out to rod-cli binary.
-- Daemon lifecycle management — auto-close on session end via `session_end` hook,
-  named-session support, PPID cleanup.
-- Token-efficient output — markdown snapshots by default, `--raw` passthrough.
-- Install guide + discoverability — README, verify-on-install instructions.
-- Integration smoke test — Pi invokes rod-cli tools against a fixture page.
+**Delivered (4 phases, 47–50):** npm scaffold + binary discovery + `pi.exec` wrapper +
+lifecycle hooks (Phase 47); 7 core `browse_*` tools + integration test (Phase 48);
+6 extended tools + argv-injection `--` backfill (Phase 49); README + skill-vs-extension
+docs + cross-links (Phase 50). 13 tools, 116 tests, `tsc --noEmit` strict clean, security
+review PASSED. Zero Go changes. Not yet on npm — that is v2.3's job.
+</details>
 
 <details>
 <summary>Archived: v2.1 CDP Proxy Hardening & Diagnostics (Shipped 2026-06-27)</summary>
@@ -154,7 +170,7 @@ cdp-traffic sensitivity warning) and the long-standing v1.7 font-spoof no-op.
 - ✓ [STEALTH-02] Replace inline `go-rod` browser initialization with `godoll.NewBrowser()`. - delivered v1.3, validated v1.6
 
 ### Active
-- See **Current Milestone: v2.2** target features. Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
+- See **Current Milestone: v2.3** target features. Detailed REQ-IDs live in `.planning/REQUIREMENTS.md`.
 
 ### Out of Scope
 
@@ -177,6 +193,7 @@ The project currently exists as an MCP server (`rod-mcp`). The goal is to transf
 |----------|-----------|---------|
 | Transform from MCP Server to CLI | Allows usage both as an interactive CLI and an automated LLM skill, providing a more versatile developer experience. | ✅ Complete |
 | Integrate godoll stealth | Prevent modern bot detection systems from blocking rod-cli sessions. | ✅ Wired v1.3; proven & extended v1.6 |
+| Ship extensions as shared-core + 2 thin adapters | One host-agnostic core; per-host adapters differ only in scope/schema/test runner — DRY, no drift, both npm-publishable. | 🔨 v2.3 |
 
 ## Evolution
 
@@ -196,4 +213,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-27 — v2.2 milestone started (Pi Extension). v2.1 complete and archived.*
+*Last updated: 2026-07-05 — v2.3 milestone started (Distribution & Publishing). v2.2 (Pi Extension) complete and archived.*

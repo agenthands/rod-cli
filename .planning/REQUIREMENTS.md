@@ -1,83 +1,77 @@
-# Requirements — v2.2 Pi Extension
+# Requirements — v2.3 Distribution & Publishing
 
-**Milestone goal:** Build a first-class TypeScript Pi extension that wraps rod-cli's browser automation as native Pi tools — so a Pi coding agent discovers and drives a browser through rod-cli without manual shell commands.
+**Milestone goal:** Make rod-cli's browser-automation extension actually consumable — publish the Pi extension to npm, and build/test/publish a native OMP extension (OMP is the primary coding agent) — on a shared, host-agnostic core with a CI-driven release pipeline.
 
-**Grounding:** rod-cli already ships a Pi Agent Skill (`skills/rod-cli/SKILL.md`, `docs/onboarding/pi.md`). This milestone upgrades that to a native TypeScript extension with typed tools, lifecycle hooks, and proper LLM prompt guidance. No Go code changes — the extension is pure TypeScript and communicates with rod-cli via `pi.exec()`.
+**Grounding (current state, verified 2026-07-05):**
+- `extensions/pi/` (`@agenthands/rod-cli-pi` v0.1.0) exists with 13 `browse_*` tools + 116 vitest tests, but is **not on npm** (`npm view` → 404). Its README's `pi install npm:@agenthands/rod-cli-pi` would fail.
+- OMP runs the Pi extension today only via a local `omp plugin link` symlink (`~/.omp/plugins/node_modules/@agenthands/rod-cli-pi → extensions/pi`) backed by a full local `node_modules`. No OMP-scoped package exists.
+- The Pi extension's `ExtensionAPI` import is type-only (erased), but 5 enum tools runtime-import `StringEnum` from `@earendil-works/pi-ai` + `Type` from `typebox` — OMP's host dropped `StringEnum` and prefers injected `pi.zod`/`pi.typebox`.
+- No `LICENSE` file exists (yet `package.json` lists it in `files`). CI is Go-only: no TS typecheck/test, no npm-publish job. Go releases use `v*` tags via goreleaser.
+
+**Architecture decision (locked):** shared runtime-agnostic **core** + **two thin host adapters** (`@agenthands/rod-cli-pi`, `@agenthands/rod-cli-omp`). Adapters differ only in host scope, schema library, and test runner.
 
 ---
 
-## v2.2 Requirements
+## v2.3 Requirements
 
-### Extension Foundation (FOUND)
+### Shared Core (CORE)
 
-- [ ] **FOUND-01:** npm package scaffold — `package.json` with `"pi": { "extensions": ["./src/index.ts"] }`, `tsconfig.json` with `"noEmit": true`, and the three peer dependencies (`@earendil-works/pi-coding-agent`, `@earendil-works/pi-ai`, `typebox`). The extension lives under `extensions/pi/`.
-- [ ] **FOUND-02:** ExtensionAPI entry point — `src/index.ts` exports a default function that receives `ExtensionAPI`, resolves the rod-cli binary path, and registers all tools + lifecycle hooks synchronously during load.
-- [ ] **FOUND-03:** Binary discovery — `findRodCli()` resolves the rod-cli binary at extension load via `ROD_CLI_PATH` env → `PATH` → `$GOBIN`/`~/go/bin`, with cross-platform support (`.exe` on Windows, `;` PATH separator, `USERPROFILE`). Cache the result; notify user on `session_start` if missing.
-- [ ] **FOUND-04:** Shell-out wrapper — `execRodCli(args, opts)` wraps `pi.exec("rod-cli", [...args])` with per-command timeouts (60s goto, 15s snapshot/click/type/eval, 30s screenshot/wait, 5s close/version), error handling (throw on non-zero exit, never return `isError`), AbortSignal propagation, and input validation (URL format check, selector non-empty sanity, expression length cap ≤10KB, reject empty required params).
-- [ ] **FOUND-05:** Integration smoke test — a `vitest`-based test in `src/__tests__/smoke.test.ts` verifies the extension loads without error and `findRodCli()` resolves or returns null gracefully.
+- [ ] **CORE-01:** A runtime-agnostic core module owns binary discovery (`findRodCli`), the shell-out wrapper (`execRodCli`, accepting an injected `exec` function + `AbortSignal`), input validation, the per-subcommand timeout table, subcommand detection, and one argv-builder per `browse_*` tool. It has **zero host-package imports** and **zero schema-library runtime imports** — `typebox`/`StringEnum`/`pi.zod` appear only in adapters.
+- [ ] **CORE-02:** The core is unit-tested in isolation from any host: argv builders for all 13 tools (including enum, positional, and `--` separator handling), input-validation caps (URL/selector/expression), timeout resolution, and binary-discovery fallback — with no `pi` object required.
 
-### Core Browser Tools (TOOLS)
+### Pi Extension (PI)
 
-All tools use the flat `browse_` prefix (Pi ecosystem convention), accept an optional `session` param for named sessions, use `StringEnum` from `@earendil-works/pi-ai` for enum parameters (never `Type.Enum` — incompatible with Google API), and include `promptGuidelines` naming the tool explicitly.
+- [ ] **PI-01:** `@agenthands/rod-cli-pi` is refactored to consume the shared core; its adapter owns only the TypeBox/`StringEnum` parameter schemas and `pi.registerTool` wiring. Behavior is unchanged — the existing 116 vitest tests and `tsc --noEmit` stay green.
+- [ ] **PI-02:** The Pi `package.json` is publish-ready: `publishConfig.access: "public"`, `repository`, `homepage`, `bugs`, `engines`, an accurate `files` list, and a real `LICENSE` (MIT) file included in the package.
+- [ ] **PI-03:** `npm pack` of `@agenthands/rod-cli-pi` produces a tarball a fresh consumer can install and load with **no reliance on the repo's local `node_modules`**; once published, `pi install npm:@agenthands/rod-cli-pi` resolves the package and registers all 13 tools.
 
-- [ ] **TOOLS-01:** `browse_goto` — navigate to a URL. Implicitly starts the browser daemon on first call (rod-cli's existing `EnsureDaemon`). Parameters: `url` (string, required), `session` (string, optional).
-- [ ] **TOOLS-02:** `browse_snapshot` — capture a token-efficient accessibility-tree markdown snapshot of the current page. Output truncated to 50KB/2000 lines (Pi's default ceiling). Parameters: `selector` (string, optional — scope to element), `session` (string, optional).
-- [ ] **TOOLS-03:** `browse_click` — click an element by CSS selector. Parameters: `selector` (string, required), `doubleClick` (boolean, optional, default false), `session` (string, optional).
-- [ ] **TOOLS-04:** `browse_type` — type text with humanized typing (sequential keystrokes, ~50-250ms per character). Maps 1:1 to `rod-cli type <sel> <text>`. Parameters: `selector` (string, required), `text` (string, required), `session` (string, optional). Does NOT submit — use `browse_press_key` or `browse_fill_form` for form submission.
-- [ ] **TOOLS-05:** `browse_eval` — evaluate JavaScript on the page. Escape hatch for data extraction. Parameters: `expression` (string, required, max 10KB), `session` (string, optional). Output truncated to 50KB.
-- [ ] **TOOLS-06:** `browse_screenshot` — capture a screenshot. Parameters: `selector` (string, optional — scope to element), `fullPage` (boolean, optional, default false), `format` (StringEnum `["png", "jpeg"]`, optional, default png), `session` (string, optional).
-- [ ] **TOOLS-07:** `browse_wait` — wait for a selector to appear or a fixed duration. Parameters: `selector` (string, optional), `timeout` (number, optional — max wait ms), `session` (string, optional).
-- [ ] **TOOLS-08:** `browse_tabs` — manage browser tabs. Parameters: `action` (StringEnum `["list", "new", "close", "select"]`, required), `url` (string, optional — for new tab), `index` (number, optional — for close/select), `session` (string, optional).
-- [ ] **TOOLS-09:** `browse_navigate` — page navigation actions. Parameters: `action` (StringEnum `["reload", "back", "forward"]`, required), `session` (string, optional).
-- [ ] **TOOLS-10:** `browse_scroll` — scroll the page or an element. Parameters: `selector` (string, optional — element to scroll), `direction` (StringEnum `["down", "up"]`, optional, default down), `distance` (number, optional — pixels), `session` (string, optional).
-- [ ] **TOOLS-11:** `browse_cookies` — manage cookies. Parameters: `action` (StringEnum `["get", "set", "delete", "clear"]`, required), `name` (string, optional), `value` (string, optional), `url` (string, optional — for set), `session` (string, optional).
-- [ ] **TOOLS-12:** `browse_storage` — manage localStorage and sessionStorage. Parameters: `action` (StringEnum `["get", "set", "delete", "clear"]`, required), `storageType` (StringEnum `["local", "session"]`, optional, default `"local"`), `key` (string, optional), `value` (string, optional), `session` (string, optional).
-- [ ] **TOOLS-13:** `browse_fill_form` — fill form fields instantly (no humanized typing) using `rod-cli fill`. Parameters: `selector` (string, required — input element), `text` (string, required), `submit` (boolean, optional — press Enter after fill), `session` (string, optional). Also used for bulk form filling via repeated calls.
+### OMP Extension (OMP)
 
-### Integration (INTEG)
+- [ ] **OMP-01:** A new `@agenthands/rod-cli-omp` package consumes the shared core; its adapter imports `@oh-my-pi/pi-coding-agent` (type-only), builds parameter schemas with the injected `pi.zod`/`pi.typebox` (no runtime `StringEnum`/`typebox` import), and declares an `omp.extensions` manifest entry.
+- [ ] **OMP-02:** All 13 `browse_*` tools register under OMP with argv mapping identical to Pi (shared core), plus the two lifecycle hooks: `session_start` binary `--version` check and `session_shutdown` quit-gated daemon close. Prompt guidance is preserved (as `promptGuidelines` if OMP's `ToolDefinition` supports it, otherwise folded into `description` — resolved during planning against the OMP host API).
+- [ ] **OMP-03:** A `bun:test` suite covers the OMP adapter — tool-registration presence, per-tool argv mapping, enum/positional handling, and lifecycle gating — and runs green under Bun.
+- [ ] **OMP-04:** The OMP extension loads in a real OMP session (via `omp plugin install` or `omp plugin link`), its 13 `browse_*` tools appear in the tool catalog, and a `browse_goto` + `browse_snapshot` round-trip drives a fixture page — replacing the Pi-extension symlink as the OMP-native path.
 
-- [ ] **INTEG-01:** Automated integration test — a vitest-based test in Phase 48 starts a local fixture page, runs the full 7-tool workflow (goto → snapshot → click → type → eval → screenshot → wait → close), asserts each tool returns correct output, and verifies the daemon is cleaned up. Uses a real rod-cli binary and a loopback HTTP fixture server.
+### CI & Publishing (CI)
 
-### Daemon Lifecycle (LIFECYCLE)
+- [ ] **CI-01:** CI typechecks and tests both extension packages on push/PR — `tsc --noEmit` for each, `vitest` for Pi, `bun:test` for OMP, plus the shared-core tests — as a blocking gate alongside the existing Go job.
+- [ ] **CI-02:** An auto-publish workflow triggers on an `ext-v*` git tag, runs the CI-01 gate, and publishes both packages to npm with `--access public` using an `NPM_TOKEN` secret. A tag whose gate fails does not publish.
+- [ ] **CI-03:** The extension release/versioning convention is documented — `ext-v*` tags, semver **independent** of the Go binary `v*` tags, and how to cut a release — in a release doc referenced from the extension READMEs.
 
-- [ ] **LIFECYCLE-01:** `session_start` hook — verifies the rod-cli binary is on PATH by running `rod-cli --version`. If present: notify user with version. If missing: `ctx.ui.notify("rod-cli not found. Install: go install github.com/agenthands/rod-cli@latest", "warn")`. Does NOT start the browser daemon.
-- [ ] **LIFECYCLE-02:** `session_shutdown` hook — runs `rod-cli close` (best-effort, errors caught, never throws). Gated on `event.reason === "quit"` — does NOT close daemon on session reload/fork/resume. Uses the correct event name `session_shutdown` (NOT `session_end`, which does not exist in Pi's event catalog).
-- [ ] **LIFECYCLE-03:** Lazy-start — the browser daemon starts implicitly on the first `browse_goto` call via rod-cli's existing `EnsureDaemon`. No browser is launched for non-browsing Pi sessions. The extension never explicitly calls a "start" command.
+### Documentation (DOCS)
 
-### Documentation & Discoverability (DOCS)
+- [ ] **DOCS-01:** Each package README (Pi + OMP) carries correct host-specific install instructions, the tool catalog, prerequisites (rod-cli binary + Chromium), and a verify-on-install step; the previously-broken `pi install npm:` claim is now accurate.
+- [ ] **DOCS-02:** The top-level README, `docs/onboarding/pi.md`, and `skills/rod-cli/SKILL.md` cross-link both published extensions and clearly distinguish the three integration paths (OMP extension, Pi extension, Agent Skill).
 
-- [ ] **DOCS-01:** `extensions/pi/README.md` — install instructions (`go install` + `pi install`), prerequisites (Go 1.23+, rod-cli binary), tool catalog with descriptions, and a verify-on-install step (ask Pi to "browse to example.com and tell me the page title").
-- [ ] **DOCS-02:** Skill-vs-Extension comparison — a table in README.md contrasting the existing Agent Skill (`SKILL.md` shell-out) with the new Extension (typed tools, lifecycle hooks, error handling). Both paths are supported; neither is deprecated.
-- [ ] **DOCS-03:** Cross-link — update `docs/onboarding/pi.md` to reference the extension as the richer path, keeping the skill instructions as the zero-install fallback. Update `skills/rod-cli/SKILL.md` to mention the extension for Pi users.
-- [ ] **DOCS-04:** `extensions/pi/` added to top-level README's docs index so Pi users discover it from the project root.
+---
+
+## Dependencies & Assumptions
+
+- **NPM_TOKEN / npm org:** Actual npm publication depends on an `@agenthands` npm org and an `NPM_TOKEN` repo secret provisioned by the maintainer. CI-02 builds the pipeline; the live publish executes once the token exists. PI-03/OMP-04 verification uses `npm pack` + local install where a live publish is not yet possible.
+- **OMP host API:** The OMP adapter targets `@oh-my-pi/pi-coding-agent`'s injected `pi.zod`/`pi.typebox`. Exact schema shape and `promptGuidelines` support are verified against the host API during planning (OMP-02).
+
+## Out of Scope
+
+- **New browser tools / capabilities** — this milestone packages and ships the existing 13-tool surface; it does not add features. (Rationale: distribution milestone.)
+- **Marketplace-catalog distribution** — OMP marketplace installs do not feed extension modules (they surface skills/commands/hooks/tools/MCP only); the extension path is npm / `omp plugin link`.
+- **Go binary changes** — the extensions are pure TypeScript shelling out to the existing rod-cli binary.
+- **TLS/JA3 spoofing** — permanently out of scope (real Chrome).
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| FOUND-01 | TBD | pending |
-| FOUND-02 | TBD | pending |
-| FOUND-03 | TBD | pending |
-| FOUND-04 | TBD | pending |
-| FOUND-05 | TBD | pending |
-| TOOLS-01 | TBD | pending |
-| TOOLS-02 | TBD | pending |
-| TOOLS-03 | TBD | pending |
-| TOOLS-04 | TBD | pending |
-| TOOLS-05 | TBD | pending |
-| TOOLS-06 | TBD | pending |
-| TOOLS-07 | TBD | pending |
-| TOOLS-08 | TBD | pending |
-| TOOLS-09 | TBD | pending |
-| TOOLS-10 | TBD | pending |
-| TOOLS-11 | TBD | pending |
-| TOOLS-12 | TBD | pending |
-| TOOLS-13 | TBD | pending |
-| LIFECYCLE-01 | TBD | pending |
-| LIFECYCLE-02 | TBD | pending |
-| LIFECYCLE-03 | TBD | pending |
+| CORE-01 | TBD | pending |
+| CORE-02 | TBD | pending |
+| PI-01 | TBD | pending |
+| PI-02 | TBD | pending |
+| PI-03 | TBD | pending |
+| OMP-01 | TBD | pending |
+| OMP-02 | TBD | pending |
+| OMP-03 | TBD | pending |
+| OMP-04 | TBD | pending |
+| CI-01 | TBD | pending |
+| CI-02 | TBD | pending |
+| CI-03 | TBD | pending |
 | DOCS-01 | TBD | pending |
 | DOCS-02 | TBD | pending |
-| DOCS-03 | TBD | pending |
-| DOCS-04 | TBD | pending |
-| INTEG-01 | TBD | pending |
