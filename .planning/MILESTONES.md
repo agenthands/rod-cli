@@ -1,5 +1,22 @@
 # Milestones
 
+## v2.3 Distribution & Publishing (Shipped: 2026-07-05)
+
+**Phases completed:** 4 phases (51–54), 4 plans
+
+**Key accomplishments:**
+
+- **Shared core extracted** — `@agenthands/rod-cli-core` (`extensions/core/`): host-agnostic, zero schema-lib runtime imports; a normalized binary-bound `ExecFn`/`ExecResult` contract + `execRodCli`, input validation, timeout table, and 13 pure argv-builders. Pi refactored onto it (`cli.ts` deleted) with zero behavior change.
+- **Native OMP extension** — `@agenthands/rod-cli-omp` (`extensions/omp/`): 13 `browse_*` tools on the shared core, schemas via injected `pi.zod`, guidance folded into `description`, ungated idempotent shutdown, `bun:test`. The injected `ExecFn` contract absorbed the OMP host with zero normalization; replaces the pi-symlink as the OMP-native path.
+- **Publish-ready + pipeline** — all three packages carry a MIT LICENSE, `publishConfig`, and precise deps (Pi's `peerDependencies:"*"` → real deps); `.github/workflows/extensions.yml` (blocking core/pi/omp CI gate) + `publish-extensions.yml` (`ext-v*` gated auto-publish, core→pi→omp). Verified to `npm pack` + scratch host-LOAD + `npm publish --dry-run`.
+- **Docs** — accurate per-package READMEs + a three-path (OMP/Pi/Skill) comparison across the top-level README, onboarding, and `SKILL.md`; every npm-install labelled "once published."
+- **Bug fixes folded in** — **B51-1** (broken `browse_goto` / defeated client-side validation from the Phase-49 `--` separator) fixed with regression tests; **rod-cli `--version`** made to work (`banner.Version` defaults to `"dev"`) + both extensions' `session_start` hardened to never dump usage or nag (binary rebuilt to `~/bin`).
+- **Not yet live on npm** — the live publish is gated on a maintainer `@agenthands` org + `NPM_TOKEN`; everything short of it is built + verified.
+
+See `.planning/v2.3-MILESTONE-AUDIT.md`, `.planning/v2.3-SECURITY.md` (review skipped by co-driver decision), `.planning/REQUIREMENTS.md`.
+
+---
+
 ## v2.2 Pi Extension (Shipped: 2026-06-27)
 
 **Phases completed:** 4 phases (47–50), 4 plans

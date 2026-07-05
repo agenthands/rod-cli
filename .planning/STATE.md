@@ -2,47 +2,37 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Distribution & Publishing
-status: roadmap_complete
-stopped_at: awaiting_phase_51
+status: milestone_complete
+stopped_at: v2.3_shipped
 last_updated: "2026-07-05T00:00:00.000Z"
 last_activity: 2026-07-05
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # STATE.md — rod-cli
 
 ## Current Position
 
-Milestone: v2.3 — Distribution & Publishing
-Status: Roadmap approved (4 phases, 51–54; red-team folded). Ready to plan Phase 51.
-Next: `/anvil-discuss-phase 51` (or `/anvil-plan-phase 51`).
-Last activity: 2026-07-05 — v2.3 roadmap approved. v2.2 (Pi Extension) closed & archived.
+Milestone: v2.3 — Distribution & Publishing — **COMPLETE** (shipped 2026-07-05)
+Status: All 4 phases (51–54) built + independently verified; MILESTONE-AUDIT PASSED. Security review skipped by co-driver decision.
+Next: cut the live release once a maintainer `@agenthands` npm org + `NPM_TOKEN` exist — `git tag ext-v0.1.0 && git push --tags` triggers `publish-extensions.yml`. Otherwise, start the next milestone.
+Last activity: 2026-07-05 — v2.3 shipped: shared core + Pi refactor + native OMP extension + publish pipeline + docs; B51-1 and rod-cli `--version` fixes folded in.
 
 ## Accumulated Context
 
-- **v2.2 Pi Extension shipped** (close commit `e90b5d4`, audit + security PASSED): `extensions/pi/` (`@agenthands/rod-cli-pi`), 13 `browse_*` tools, 116 tests. Not yet on npm.
-- **OMP loads the Pi extension only via a local symlink** — `~/.omp/plugins/node_modules/@agenthands/rod-cli-pi → extensions/pi` (`omp plugin link`). A native OMP-scoped package does not yet exist.
-- **Portability landmine**: 5 enum tools runtime-import `StringEnum` from `@earendil-works/pi-ai` + `Type` from `typebox`; OMP wants injected `pi.zod`/`pi.typebox` (OMP's `pi-ai` dropped `StringEnum`).
-- **CI is Go-only** — `test.yml`, `release.yml` (goreleaser on `v*`). No TS typecheck/test, no npm-publish job.
+- **v2.3 shipped**: three raw-TS packages in an `extensions/*` npm workspace — `@agenthands/rod-cli-core` (host-agnostic shared core: normalized binary-bound `ExecFn`/`ExecResult`, 13 pure argv-builders), `@agenthands/rod-cli-pi` (refactored onto the core, `cli.ts` deleted), `@agenthands/rod-cli-omp` (native OMP, injected `pi.zod`, bun:test). Gates: core 139 vitest, pi 39 vitest, omp 30 bun; all `tsc --noEmit` clean.
+- **CI**: `.github/workflows/extensions.yml` (blocking core/pi/omp gate) + `publish-extensions.yml` (`ext-v*` gated auto-publish, core→pi→omp, `--access public` via `NPM_TOKEN`). Release convention: `docs/extension-release.md`.
+- **Not yet on npm** — live publish blocked on a maintainer `@agenthands` org + `NPM_TOKEN`; verified to `npm pack` + scratch-install host-LOAD + `npm publish --dry-run`.
+- **OMP-native path**: OMP now loads `@agenthands/rod-cli-omp` (the pi-symlink was removed from `~/.omp/plugins`).
+- **rod-cli binary**: `banner.Version` defaults to `"dev"` so `rod-cli --version` works on any build (goreleaser ldflag still overrides for releases); `~/bin/rod-cli` rebuilt this session.
+- **Deferred**: F52-2 — the 13 `pi.registerTool({…} as never)` casts (zod/v4 vs OMP's TypeBox-typed `ToolDefinition`); follow-up = narrow the cast to `parameters` only.
 
-## v2.3 Decisions (locked 2026-07-05)
-
-- Version: **v2.3** (additive minor).
-- Architecture: **shared core + two thin adapters**, realized as **three published raw-TS packages** — `@agenthands/rod-cli-core` (real dependency of both adapters) + `@agenthands/rod-cli-pi` + `@agenthands/rod-cli-omp`. (Red-team B1: a relative-sibling core import is excluded from `npm pack`; no copy/bundle step — preserves raw-TS/no-build.)
-- Publishing: **auto-publish on an `ext-v*` git tag via CI**, gated on typecheck + tests, `--access public`, `NPM_TOKEN`. Extension semver independent of the `v*` Go binary tags; core + adapters versioned together per release.
-
-## v2.3 Roadmap (approved)
-
-| Phase | Name | Requirements |
-|-------|------|--------------|
-| 51 | Shared Core Extraction + Pi Refactor + CI Gate | CORE-01, CORE-02, PI-01, CI-01 |
-| 52 | Native OMP Extension | OMP-01..04 |
-| 53 | Publish Readiness + Auto-Publish Pipeline | CORE-03, PI-02, PI-03, CI-02, CI-03 |
-| 54 | Documentation & Discoverability | DOCS-01, DOCS-02 |
-
-Independent red-team verdict: NO-GO → resolved (B1, B2, M1–M6 folded). Typed `gate_result` recorded in `ROADMAP.md` `## Records`.
+## Key artifacts
+- `.planning/v2.3-MILESTONE-AUDIT.md`, `.planning/v2.3-SECURITY.md`, `.planning/research/omp-host-api.md`
+- `.planning/phases/51..54/{CONTEXT,PLAN,SUMMARY,VERIFICATION}.md`
+- `.planning/codebase/ARCHITECTURE.md` (§8 refreshed for v2.3)

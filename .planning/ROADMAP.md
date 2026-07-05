@@ -578,16 +578,16 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: TBD
 
-### 🔨 v2.3 Distribution & Publishing (In Progress)
+### ✅ v2.3 Distribution & Publishing (Shipped: 2026-07-05)
 
 **Milestone Goal:** Make rod-cli's browser-automation extension actually consumable — publish the Pi extension to npm, and build/test/publish a native OMP extension (OMP is the primary coding agent) — on a shared, host-agnostic core with a CI-driven release pipeline. Distribution milestone: it packages and ships the existing 13-tool surface; it adds no new browser capabilities.
 
 **Architecture (design-fork resolved — see Records):** shared runtime-agnostic core + two thin host adapters, realized as **three published raw-TS npm packages** — `@agenthands/rod-cli-core` (the shared core) + `@agenthands/rod-cli-pi` + `@agenthands/rod-cli-omp`. Each adapter declares the core as a real `dependencies` entry (NOT peer) so every published tarball loads standalone. Dev-time resolution via an `extensions/*` workspace / link; no copy- or bundle-at-pack step (preserves the raw-TS, no-build model).
 
-- [ ] **Phase 51: Shared Core Extraction + Pi Refactor + CI Gate** — Extract the host-agnostic core (with a normalized `ExecFn`/`ExecResult` contract) as its own package, refactor the Pi extension onto it with zero behavior change, and land the blocking CI typecheck+test gate up front (foundation; highest technical risk)
-- [ ] **Phase 52: Native OMP Extension** — Build `@agenthands/rod-cli-omp` on the core (OMP scope, injected schemas, host-verified lifecycle, bun:test), verified loading in a real OMP session (MVP vertical slice)
-- [ ] **Phase 53: Publish Readiness + Auto-Publish Pipeline** — All three packages publish-ready (LICENSE, publishConfig, resolved deps) and verified via host-LOAD of the packed tarballs; `ext-v*` auto-publish workflow
-- [ ] **Phase 54: Documentation & Discoverability** — Correct install docs + Pi-vs-OMP-vs-Skill guidance across READMEs and onboarding
+- [x] **Phase 51: Shared Core Extraction + Pi Refactor + CI Gate** — Extract the host-agnostic core (with a normalized `ExecFn`/`ExecResult` contract) as its own package, refactor the Pi extension onto it with zero behavior change, and land the blocking CI typecheck+test gate up front (foundation; highest technical risk)
+- [x] **Phase 52: Native OMP Extension** — Build `@agenthands/rod-cli-omp` on the core (OMP scope, injected schemas, host-verified lifecycle, bun:test), verified loading in a real OMP session (MVP vertical slice)
+- [x] **Phase 53: Publish Readiness + Auto-Publish Pipeline** — All three packages publish-ready (LICENSE, publishConfig, resolved deps) and verified via host-LOAD of the packed tarballs; `ext-v*` auto-publish workflow
+- [x] **Phase 54: Documentation & Discoverability** — Correct install docs + Pi-vs-OMP-vs-Skill guidance across READMEs and onboarding
 
 #### Phase 51: Shared Core Extraction + Pi Refactor + CI Gate
 
