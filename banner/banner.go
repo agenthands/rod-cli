@@ -22,7 +22,7 @@ Build: [%s] [%s]
 `, Version, Build, localTime)
 
 var (
-	Version   = ""
+	Version   = "dev"
 	BuildTime = ""
 	localTime = utils.GetChinaZoneTime(BuildTime)
 	style     = lipgloss.NewStyle().
