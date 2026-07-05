@@ -55,6 +55,10 @@ rod-cli now ships a first-class Pi TypeScript extension with typed tools, lifecy
 ### Install
 
 ```bash
+# Working path today (local checkout):
+pi install ./extensions/pi
+
+# Once published to npm (available once published):
 pi install npm:@agenthands/rod-cli-pi
 ```
 
@@ -68,6 +72,8 @@ pi install npm:@agenthands/rod-cli-pi
 The [Skill-based path](#install) (SKILL.md) remains available as a zero-install fallback for users who switch between assistants or prefer no npm dependencies.
 
 See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+
+**OMP users:** Use the native [`@agenthands/rod-cli-omp`](../../extensions/omp/README.md) extension instead -- it provides the same 13 typed browser tools for the OMP host.
 
 ## References
 

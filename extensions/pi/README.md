@@ -22,13 +22,11 @@ Pi extension for [rod-cli](https://github.com/agenthands/rod-cli) -- native brow
 ## Install
 
 ```bash
-pi install npm:@agenthands/rod-cli-pi
-```
-
-Or from a local checkout during development:
-
-```bash
+# Working path today (local checkout):
 pi install ./extensions/pi
+
+# Once published to npm (available once published):
+pi install npm:@agenthands/rod-cli-pi
 ```
 
 ## Tool Catalog
@@ -55,21 +53,19 @@ All tools accept an optional `session` parameter for multi-browser/multi-identit
 
 **Prefer native actions over `browse_eval` for interaction.** `browse_click`/`browse_type`/`browse_fill_form` dispatch real, trusted, humanized input (mouse tremor/speed, typing cadence); `browse_eval`-driven interaction (`el.click()`, setting `.value`) produces untrusted synthetic events with no humanization, defeating rod-cli's stealth design. Reserve `browse_eval` for reading page state/data.
 
-## Skill vs Extension
+## Integration Paths
 
-rod-cli offers two integration paths for Pi. Both use the same `rod-cli` binary underneath.
+rod-cli offers three integration paths. All use the same `rod-cli` binary underneath.
 
-| | Agent Skill | Pi Extension (this package) |
-|---|---|---|
-| **Setup** | Copy `skills/rod-cli/SKILL.md` to `~/.pi/agent/skills/` | `pi install npm:@agenthands/rod-cli-pi` |
-| **Tool discovery** | LLM reads markdown, invokes shell commands | Tools appear in Pi's "Available tools" catalog |
-| **Parameter validation** | None -- LLM constructs shell commands | TypeBox schema validation before execution |
-| **Prompt guidance** | Embedded in SKILL.md prose | `promptGuidelines` per tool, injected into system prompt |
-| **Error handling** | LLM parses stderr | Structured errors thrown to the LLM |
-| **Lifecycle hooks** | None | Auto-verifies binary on session start, cleans up daemon on quit |
-| **Compatibility** | Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, etc.) | Pi-only |
+| | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (`skills/rod-cli/SKILL.md`) |
+|---|---|---|---|
+| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) |
+| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy `SKILL.md` to the assistant's skills dir |
+| **Tools** | 13 typed `browse_*` (injected `pi.zod`) | 13 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
+| **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
+| **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
 
-**Recommendation:** Use the Extension if you primarily use Pi. Use the Skill if you switch between assistants or prefer zero npm dependencies.
+**Recommendation:** Use the Pi Extension if you primarily use Pi. Use the Skill if you switch between assistants or prefer zero npm dependencies. OMP users should use the [OMP extension](../omp/README.md).
 
 ## Verify
 

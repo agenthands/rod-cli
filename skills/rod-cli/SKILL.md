@@ -131,16 +131,23 @@ rod-cli snapshot
 rod-cli close
 ```
 
-## Pi Extension
+## Extensions
 
-Pi users have two integration paths:
+rod-cli ships two first-class host extensions alongside this Skill. All three paths use the same `rod-cli` binary underneath.
 
-- **Skill path:** Copy `skills/rod-cli/SKILL.md` to `~/.pi/agent/skills/rod-cli/` (the shell-out approach documented above).
-- **Extension path (recommended for Pi users):** Install the first-class Pi extension:
-  ```bash
-  pi install npm:@agenthands/rod-cli-pi
-  ```
-  The extension provides 13 typed browser tools with schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+| | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (this file) |
+|---|---|---|---|
+| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant |
+| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy this `SKILL.md` to the assistant's skills dir |
+| **Tools** | 13 typed `browse_*` (injected `pi.zod`) | 13 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
+| **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
+| **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
+
+**Pi Extension** (recommended for Pi users): 13 typed browser tools with TypeBox schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+
+**OMP Extension** (recommended for OMP users): The same 13 typed browser tools with injected `pi.zod` schemas, guidance folded into tool descriptions, and ungated idempotent daemon cleanup. See [extensions/omp/README.md](../../extensions/omp/README.md) for the full tool catalog.
+
+**Skill path** (this file): Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) with zero npm dependencies. Copy this `SKILL.md` to the assistant's skills directory.
 
 ## Specific tasks
 

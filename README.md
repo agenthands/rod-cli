@@ -23,5 +23,20 @@ Designed explicitly as a "Skill" for LLMs (Claude, Gemini, and custom autonomous
 - **[Usage Guide](USAGE.md)**: Comprehensive CLI reference and examples.
 - **[Agent Skill Definition](skills/rod-cli/SKILL.md)**: The prompt context to supply to your LLM agent so it knows how to use the CLI.
 - **[Pi Extension](extensions/pi/README.md)**: First-class Pi TypeScript extension with 13 typed browser tools, lifecycle hooks, and prompt guidance.
+- **[OMP Extension](extensions/omp/README.md)**: First-class OMP TypeScript extension with 13 typed browser tools, lifecycle hooks, and prompt guidance.
 - **[Reference Guides](skills/rod-cli/references/)**: Advanced tutorials on request mocking, code evaluation, tab management, and more.
 - **[Plugin Development](docs/plugins/README.md)**: Writing, loading, and running rod-cli plugins — start here for the plugin docs index.
+
+## Integration Paths
+
+rod-cli offers three integration paths. All use the same `rod-cli` binary underneath.
+
+| | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (`skills/rod-cli/SKILL.md`) |
+|---|---|---|---|
+| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) |
+| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy `SKILL.md` to the assistant's skills dir |
+| **Tools** | 13 typed `browse_*` (injected `pi.zod`) | 13 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
+| **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
+| **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
+
+See the per-package READMEs for full details: [Pi Extension](extensions/pi/README.md), [OMP Extension](extensions/omp/README.md), [Agent Skill](skills/rod-cli/SKILL.md).
