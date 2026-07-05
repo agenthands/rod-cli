@@ -7,6 +7,19 @@
   "main": "src/index.ts",
   "keywords": ["browser-automation", "rod-cli"],
   "files": ["src/**/*.ts", "!src/__tests__/**", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agenthands/rod-cli.git",
+    "directory": "extensions/core"
+  },
+  "homepage": "https://github.com/agenthands/rod-cli/tree/main/extensions/core#readme",
+  "bugs": "https://github.com/agenthands/rod-cli/issues",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

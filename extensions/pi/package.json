@@ -12,6 +12,19 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agenthands/rod-cli.git",
+    "directory": "extensions/pi"
+  },
+  "homepage": "https://github.com/agenthands/rod-cli/tree/main/extensions/pi#readme",
+  "bugs": "https://github.com/agenthands/rod-cli/issues",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -20,14 +33,12 @@
     "extensions": ["./src/index.ts"]
   },
   "dependencies": {
-    "@agenthands/rod-cli-core": "*"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-ai": "*",
-    "typebox": "*"
+    "@agenthands/rod-cli-core": "^0.1.0",
+    "typebox": "^1.3.4",
+    "@earendil-works/pi-ai": "^0.80.3"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.3",
     "@types/node": "^22.0.0",
     "typescript": "^5.8.0",
     "vitest": "^3.0.0"

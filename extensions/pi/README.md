@@ -78,3 +78,7 @@ Start a Pi session and ask:
 > Browse to https://example.com and tell me the page title.
 
 Pi should invoke `browse_goto` and `browse_snapshot` to complete the task.
+
+## Release Process
+
+See [`docs/extension-release.md`](../../docs/extension-release.md) for the release process, versioning convention, and how to cut a release.

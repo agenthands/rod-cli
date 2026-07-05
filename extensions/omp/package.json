@@ -7,6 +7,19 @@
   "main": "src/index.ts",
   "keywords": ["omp-extension", "browser-automation", "rod-cli"],
   "files": ["src/**/*.ts", "!src/__tests__/**", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agenthands/rod-cli.git",
+    "directory": "extensions/omp"
+  },
+  "homepage": "https://github.com/agenthands/rod-cli/tree/main/extensions/omp#readme",
+  "bugs": "https://github.com/agenthands/rod-cli/issues",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit"
@@ -15,7 +28,7 @@
     "extensions": ["./src/index.ts"]
   },
   "dependencies": {
-    "@agenthands/rod-cli-core": "*"
+    "@agenthands/rod-cli-core": "^0.1.0"
   },
   "devDependencies": {
     "@oh-my-pi/pi-coding-agent": "^16.3.6",

@@ -1,0 +1,34 @@
+name: publish-extensions
+on:
+  push:
+    tags: ["ext-v*"]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - run: npm ci
+      # --- CI-01 gate (must pass before any publish) ---
+      - run: npm run typecheck && npm test
+        working-directory: extensions/core
+      - run: npm run typecheck && npm test
+        working-directory: extensions/pi
+      - run: npm run typecheck && npm test
+        working-directory: extensions/omp
+      # --- publish in dependency order ---
+      - run: npm publish --access public
+        working-directory: extensions/core
+        env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }
+      - run: npm publish --access public
+        working-directory: extensions/pi
+        env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }
+      - run: npm publish --access public
+        working-directory: extensions/omp
+        env: { NODE_AUTH_TOKEN: "${{ secrets.NPM_TOKEN }}" }
