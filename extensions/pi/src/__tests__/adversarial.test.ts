@@ -10,6 +10,9 @@
 
 import { describe, it, expect, vi } from "vitest";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { registerLifecycle } from "../lifecycle";
+import { registerAllCoreTools, registerAllExtendedTools } from "../tools";
+import extensionDefault from "../index";
 
 interface RegisteredTool {
   name: string;
@@ -67,8 +70,7 @@ function asExt(pi: MockPi): ExtensionAPI {
 // ---------------------------------------------------------------------------
 
 describe("registerLifecycle — hook registration", () => {
-  it("registers session_start and session_shutdown handlers", async () => {
-    const { registerLifecycle } = await import("../lifecycle");
+  it("registers session_start and session_shutdown handlers", () => {
     const pi = mockPi();
 
     registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
@@ -78,7 +80,6 @@ describe("registerLifecycle — hook registration", () => {
 
   describe("session_start handler", () => {
     it("notifies warning when rodCliPath is null", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
 
       registerLifecycle(asExt(pi), null);
@@ -92,7 +93,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("runs --version and notifies info on success", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
       pi.exec.mockResolvedValueOnce({ code: 0, stdout: "rod-cli v1.0.0\n", stderr: "" });
 
@@ -107,7 +107,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("notifies warning when --version fails", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
       pi.exec.mockRejectedValueOnce(new Error("exec failed"));
 
@@ -123,7 +122,6 @@ describe("registerLifecycle — hook registration", () => {
 
   describe("session_shutdown handler", () => {
     it("runs close on reason quit", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
 
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
@@ -133,7 +131,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("does NOT run close on reason reload", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
 
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
@@ -143,7 +140,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("does NOT run close on reason fork", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
 
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
@@ -153,7 +149,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("does NOT run close on reason resume", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
 
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
@@ -163,7 +158,6 @@ describe("registerLifecycle — hook registration", () => {
     });
 
     it("swallows errors from close (best-effort)", async () => {
-      const { registerLifecycle } = await import("../lifecycle");
       const pi = mockPi();
       pi.exec.mockRejectedValueOnce(new Error("daemon already dead"));
 
@@ -178,8 +172,7 @@ describe("registerLifecycle — hook registration", () => {
 // ---------------------------------------------------------------------------
 
 describe("tool registration — all 13 tools present", () => {
-  it("registers all 13 browse_* tools", async () => {
-    const { registerAllCoreTools, registerAllExtendedTools } = await import("../tools");
+  it("registers all 13 browse_* tools", () => {
     const pi = mockPi();
     const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "", stderr: "" });
 
@@ -210,8 +203,7 @@ describe("tool registration — all 13 tools present", () => {
 // ---------------------------------------------------------------------------
 
 describe("per-tool execute() produces correct argv", () => {
-  async function getTool(name: string) {
-    const { registerAllCoreTools, registerAllExtendedTools } = await import("../tools");
+  function getTool(name: string) {
     const pi = mockPi();
     const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "", stderr: "" });
 
@@ -224,7 +216,7 @@ describe("per-tool execute() produces correct argv", () => {
   }
 
   it("browse_goto execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_goto");
+    const { tool, execFn } = getTool("browse_goto");
     await tool.execute("id", { url: "https://example.com" }, undefined);
     // execRodCli prepends --raw, so execFn receives ["--raw", "goto", "--", "https://example.com"]
     expect(execFn).toHaveBeenCalledWith(
@@ -234,7 +226,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_snapshot execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_snapshot");
+    const { tool, execFn } = getTool("browse_snapshot");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "snapshot"],
@@ -243,7 +235,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_click execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_click");
+    const { tool, execFn } = getTool("browse_click");
     await tool.execute("id", { selector: "#btn" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "click", "--", "#btn"],
@@ -252,7 +244,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_type execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_type");
+    const { tool, execFn } = getTool("browse_type");
     await tool.execute("id", { selector: "#input", text: "hello" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "type", "--", "#input", "hello"],
@@ -261,7 +253,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_eval execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_eval");
+    const { tool, execFn } = getTool("browse_eval");
     await tool.execute("id", { expression: "1+1" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "eval", "--", "1+1"],
@@ -270,7 +262,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_fill_form execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_fill_form");
+    const { tool, execFn } = getTool("browse_fill_form");
     await tool.execute("id", { selector: "#name", text: "John" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "fill", "--", "#name", "John"],
@@ -279,7 +271,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_scroll execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_scroll");
+    const { tool, execFn } = getTool("browse_scroll");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "mousewheel", "--", "0", "300"],
@@ -288,7 +280,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_tabs execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_tabs");
+    const { tool, execFn } = getTool("browse_tabs");
     await tool.execute("id", { action: "list" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "tab-list"],
@@ -297,7 +289,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_navigate execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_navigate");
+    const { tool, execFn } = getTool("browse_navigate");
     await tool.execute("id", { action: "reload" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "reload"],
@@ -306,7 +298,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_cookies execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_cookies");
+    const { tool, execFn } = getTool("browse_cookies");
     await tool.execute("id", { action: "get" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "cookie-get"],
@@ -315,7 +307,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_storage execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_storage");
+    const { tool, execFn } = getTool("browse_storage");
     await tool.execute("id", { action: "clear" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "localstorage-clear"],
@@ -324,7 +316,7 @@ describe("per-tool execute() produces correct argv", () => {
   });
 
   it("browse_screenshot execute passes correct argv", async () => {
-    const { tool, execFn } = await getTool("browse_screenshot");
+    const { tool, execFn } = getTool("browse_screenshot");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
       ["--raw", "screenshot"],
@@ -338,23 +330,20 @@ describe("per-tool execute() produces correct argv", () => {
 // ---------------------------------------------------------------------------
 
 describe("index.ts — default export (wiring)", () => {
-  it("is a function", async () => {
-    const mod = await import("../index");
-    expect(typeof mod.default).toBe("function");
+  it("is a function", () => {
+    expect(typeof extensionDefault).toBe("function");
   });
 
-  it("does not throw when called with a mock pi", async () => {
-    const mod = await import("../index");
+  it("does not throw when called with a mock pi", () => {
     const pi = mockPi();
 
-    expect(() => mod.default(asExt(pi))).not.toThrow();
+    expect(() => extensionDefault(asExt(pi))).not.toThrow();
   });
 
-  it("registers lifecycle hooks and all 13 tools", async () => {
-    const mod = await import("../index");
+  it("registers lifecycle hooks and all 13 tools", () => {
     const pi = mockPi();
 
-    mod.default(asExt(pi));
+    extensionDefault(asExt(pi));
 
     expect(pi.on).toHaveBeenCalledWith("session_start", expect.any(Function));
     expect(pi.on).toHaveBeenCalledWith("session_shutdown", expect.any(Function));
