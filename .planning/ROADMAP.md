@@ -14,7 +14,8 @@
 - ✅ **v1.9 godoll Hygiene & CDP-DEEP-01 Research** — Phases 38–39 (shipped 2026-06-26)
 - ✅ **v2.0 CDP-DEEP-01 Build — MITM WebSocket Proxy** — Phases 40–42 (shipped 2026-06-26)
 - ✅ **v2.1 CDP Proxy Hardening & Diagnostics** — Phases 43–46 (shipped 2026-06-27)
-- 🔨 **v2.2 Pi Extension** — Phases 47–50 (in progress)
+- ✅ **v2.2 Pi Extension** — Phases 47–50 (shipped 2026-06-27)
+- 🔨 **v2.3 Distribution & Publishing** — Phases 51–54 (in progress)
 
 Full per-phase detail for each shipped milestone lives under `.planning/milestones/`.
 
@@ -498,14 +499,14 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
 
 **Plans**: 0 (folded — see Phase 45)
 
-### 🔨 v2.2 Pi Extension (In Progress)
+### ✅ v2.2 Pi Extension (Shipped 2026-06-27)
 
 **Milestone Goal:** Build a first-class TypeScript Pi extension that wraps rod-cli's browser automation as native Pi tools — so a Pi coding agent discovers and drives a browser through rod-cli without manual shell commands. Zero Go code changes; pure TypeScript under `extensions/pi/`.
 
-- [ ] **Phase 47: Extension Foundation + Lifecycle** — npm scaffold, ExtensionAPI entry point, cross-platform binary discovery, `execRodCli` wrapper with input validation, smoke test + `session_start`/`session_shutdown` lifecycle hooks (FOUND-01..05, LIFECYCLE-01..03)
-- [ ] **Phase 48: Core Browser Tools + Integration Test** — 7 table-stakes tools: `browse_goto`, `browse_snapshot`, `browse_click`, `browse_type`, `browse_eval`, `browse_screenshot`, `browse_wait` + automated integration test against fixture page (TOOLS-01..07, INTEG-01)
-- [ ] **Phase 49: Extended Tools** — 6 extended tools: `browse_tabs`, `browse_navigate`, `browse_scroll`, `browse_cookies`, `browse_storage` (localStorage + sessionStorage), `browse_fill_form` (TOOLS-08..13)
-- [ ] **Phase 50: Documentation & Discoverability** — README with install guide, skill-vs-extension comparison, cross-links to SKILL.md + pi.md docs, top-level README index (DOCS-01..04)
+- [x] **Phase 47: Extension Foundation + Lifecycle** — npm scaffold, ExtensionAPI entry point, cross-platform binary discovery, `execRodCli` wrapper with input validation, smoke test + `session_start`/`session_shutdown` lifecycle hooks (FOUND-01..05, LIFECYCLE-01..03)
+- [x] **Phase 48: Core Browser Tools + Integration Test** — 7 table-stakes tools: `browse_goto`, `browse_snapshot`, `browse_click`, `browse_type`, `browse_eval`, `browse_screenshot`, `browse_wait` + automated integration test against fixture page (TOOLS-01..07, INTEG-01)
+- [x] **Phase 49: Extended Tools** — 6 extended tools: `browse_tabs`, `browse_navigate`, `browse_scroll`, `browse_cookies`, `browse_storage` (localStorage + sessionStorage), `browse_fill_form` (TOOLS-08..13)
+- [x] **Phase 50: Documentation & Discoverability** — README with install guide, skill-vs-extension comparison, cross-links to SKILL.md + pi.md docs, top-level README index (DOCS-01..04)
 
 ### Phase 47: Extension Foundation + Lifecycle
 
@@ -576,3 +577,106 @@ Phases execute in numeric order: 24 → 25 → 26 → 27 → 28 → 29
   4. `extensions/pi/` added to the top-level README's docs index. (DOCS-04)
 
 **Plans**: TBD
+
+### 🔨 v2.3 Distribution & Publishing (In Progress)
+
+**Milestone Goal:** Make rod-cli's browser-automation extension actually consumable — publish the Pi extension to npm, and build/test/publish a native OMP extension (OMP is the primary coding agent) — on a shared, host-agnostic core with a CI-driven release pipeline. Distribution milestone: it packages and ships the existing 13-tool surface; it adds no new browser capabilities.
+
+**Architecture (design-fork resolved — see Records):** shared runtime-agnostic core + two thin host adapters, realized as **three published raw-TS npm packages** — `@agenthands/rod-cli-core` (the shared core) + `@agenthands/rod-cli-pi` + `@agenthands/rod-cli-omp`. Each adapter declares the core as a real `dependencies` entry (NOT peer) so every published tarball loads standalone. Dev-time resolution via an `extensions/*` workspace / link; no copy- or bundle-at-pack step (preserves the raw-TS, no-build model).
+
+- [ ] **Phase 51: Shared Core Extraction + Pi Refactor + CI Gate** — Extract the host-agnostic core (with a normalized `ExecFn`/`ExecResult` contract) as its own package, refactor the Pi extension onto it with zero behavior change, and land the blocking CI typecheck+test gate up front (foundation; highest technical risk)
+- [ ] **Phase 52: Native OMP Extension** — Build `@agenthands/rod-cli-omp` on the core (OMP scope, injected schemas, host-verified lifecycle, bun:test), verified loading in a real OMP session (MVP vertical slice)
+- [ ] **Phase 53: Publish Readiness + Auto-Publish Pipeline** — All three packages publish-ready (LICENSE, publishConfig, resolved deps) and verified via host-LOAD of the packed tarballs; `ext-v*` auto-publish workflow
+- [ ] **Phase 54: Documentation & Discoverability** — Correct install docs + Pi-vs-OMP-vs-Skill guidance across READMEs and onboarding
+
+#### Phase 51: Shared Core Extraction + Pi Refactor + CI Gate
+
+**Goal:** Extract a runtime-agnostic core as its own package `@agenthands/rod-cli-core` — binary discovery, an `execRodCli` that takes a normalized injected `ExecFn` (adapting each host's `pi.exec`) returning a normalized `ExecResult`, input validation, timeout table, subcommand detection, and one pure argv-builder per `browse_*` tool. Refactor `@agenthands/rod-cli-pi` to depend on the core (adapter owns only schemas + `pi.registerTool` wiring). Land the blocking CI gate first so the riskiest refactor is protected from commit one.
+**Depends on:** Phase 50 (v2.2, shipped)
+**Requirements:** CORE-01, CORE-02, PI-01, CI-01
+**Success Criteria** (what must be TRUE):
+
+  1. `@agenthands/rod-cli-core` exists as its own raw-TS package with zero host-package imports and zero schema-library runtime imports; a grep confirms `typebox`/`StringEnum`/`pi.zod` appear only in adapter packages. The core defines a normalized `ExecFn`/`ExecResult` contract and each argv-builder is a pure `(params) → string[]`.
+  2. Core-only unit tests (single runner — vitest, Node lane; include-glob scoped to the core package) exercise all 13 argv-builders (enum, positional, `--` separator), the validation caps (URL/selector/expression), timeout resolution, and binary-discovery fallback — with no `pi` object.
+  3. `@agenthands/rod-cli-pi` consumes the core via a real dependency; its 116 vitest tests and `tsc --noEmit` are green.
+  4. The refactored Pi extension reloads and drives goto→snapshot **through the `~/.omp/plugins` symlink load path this session uses** (core resolvable in that node_modules via workspace/link), not only from the repo checkout.
+  5. CI runs a blocking `tsc --noEmit` + tests gate (core + Pi) on push/PR, proven by a deliberately failing test blocking the job. (This is CI-01, pulled forward from the publish phase per the red-team.)
+
+**Plans:** TBD
+
+#### Phase 52: Native OMP Extension
+
+**Goal:** Build `@agenthands/rod-cli-omp` on the shared core — `@oh-my-pi/pi-coding-agent` (type-only), parameter schemas via the injected `pi.zod`/`pi.typebox` (no runtime `StringEnum`/`typebox`), `omp.extensions` manifest, all 13 `browse_*` tools + lifecycle hooks, `bun:test` coverage — verified loading in a real OMP session. Host-API unknowns are resolved by reading the OMP host types during planning, not by copying Pi.
+**Depends on:** Phase 51 (core package + normalized ExecFn contract)
+**Requirements:** OMP-01, OMP-02, OMP-03, OMP-04
+**Host-API verifications required during planning (from red-team):** `pi.exec` return shape (normalize `code` vs `exitCode`); `session_shutdown` payload (OMP's documented reasons are start|switch|branch|tree|shutdown — likely **no `"quit"`**, so a copied `reason === "quit"` gate would be a dead no-op); `ToolDefinition` does **not** list `promptGuidelines`/`promptSnippet` (fold guidance into `description`); `pi.zod` access shape (`pi.zod.object` vs `pi.zod.z.object` — the OMP docs contradict).
+**Success Criteria** (what must be TRUE):
+
+  1. The package registers all 13 tools via the OMP host API with injected schemas; a grep confirms no runtime `StringEnum`/`typebox` import, and `tsc --noEmit` (strict) passes with no excess-property error from Pi-only fields.
+  2. Each OMP tool's `description` names the tool explicitly and carries the Pi `promptSnippet` usage example (prompt guidance folded into `description`; the resulting two-source-of-truth divergence from Pi is acknowledged).
+  3. The `session_shutdown` hook **behaviorally** fires `rod-cli close` on a real OMP shutdown (gated on OMP's actual terminal reason, or ungated + idempotent if OMP has no terminal-reason distinction) — verified by observing the close, not by a grep of `=== "quit"`.
+  4. A `bun:test` suite (with a mock `ExtensionAPI` exposing `.zod`/`.typebox`/`.registerTool`/`.on`/`.exec`) covers tool-registration presence, per-tool argv mapping (enum/positional), and lifecycle behavior, and passes under Bun.
+  5. `omp plugin install`/`link` loads the extension; the tool catalog shows the 13 `browse_*` tools; a `browse_goto` + `browse_snapshot` round-trip against a fixture page succeeds — this extension becomes the OMP-native path (replacing the Pi-symlink).
+
+**Plans:** TBD
+
+#### Phase 53: Publish Readiness + Auto-Publish Pipeline
+
+**Goal:** Make all **three** packages (core + Pi + OMP) publish-ready and prove they load from a clean install; wire the `ext-v*` auto-publish workflow. Live npm publish is gated on a maintainer-provisioned `@agenthands` org + `NPM_TOKEN`; everything short of the live push is verified via `npm pack` + host-load + `npm publish --dry-run`.
+**Depends on:** Phase 52 (all three packages exist)
+**Requirements:** CORE-03, PI-02, PI-03, CI-02, CI-03
+**Success Criteria** (what must be TRUE):
+
+  1. All three `package.json` files are publish-ready — `publishConfig.access: "public"`, `repository`/`homepage`/`bugs`/`engines`, accurate `files`, a real MIT `LICENSE` shipped in each tarball; each adapter declares `@agenthands/rod-cli-core` as a real `dependencies`, and the Pi adapter's `typebox`/`@earendil-works/pi-ai` are declared as real `dependencies` unless the Pi host is verified to inject them.
+  2. `npm pack --dry-run` for each package lists exactly the intended runtime `.ts` + README + LICENSE — no `__tests__`, `.smtc-cache`, `tmp`, `log`, or `rod`.
+  3. **Host-LOAD smoke** (not merely "installs"): the packed Pi tarball, installed into a scratch dir, **loads in a real Pi host and registers 13 tools**; the packed OMP tarball **loads in a real OMP session** — with the core resolved from `node_modules`, not the repo.
+  4. A `publish-extensions` workflow triggers on `ext-v*` (anchored glob, disjoint from the Go binary `v*` — no cross-trigger), runs the CI-01 gate, and publishes all three packages with `--access public` via `NPM_TOKEN`; a gate failure blocks publish. Verified via `npm publish --dry-run` where a live publish is not yet possible.
+  5. The `ext-v*` release convention (core + adapters versioned together per release, semver independent of the Go binary `v*` tags) is documented and referenced from the extension READMEs.
+
+**Plans:** TBD
+
+#### Phase 54: Documentation & Discoverability
+
+**Goal:** Correct and complete the consumer-facing docs — per-package READMEs with accurate host-specific install + verify steps, and top-level README + `docs/onboarding/pi.md` + `skills/rod-cli/SKILL.md` cross-linking both published extensions and distinguishing OMP-extension vs Pi-extension vs Agent-Skill.
+**Depends on:** Phase 53 (docs reflect final package names, install commands, release process)
+**Requirements:** DOCS-01, DOCS-02
+**Success Criteria** (what must be TRUE):
+
+  1. The Pi and OMP READMEs each have correct host-specific install instructions, tool catalog, prerequisites (rod-cli binary + Chromium), and a verify-on-install step. `pi install npm:` / `omp plugin install npm:` claims are labelled as working only once a live publish exists — no unpublished-install claim presented as verified.
+  2. The top-level README, `docs/onboarding/pi.md`, and `skills/rod-cli/SKILL.md` link both extensions and present a clear three-path (OMP / Pi / Skill) comparison.
+  3. Every documented command/example is verified against the shipped package names and current CLI surface (no stale flags like `--no-banner`, no unpublished-install claims).
+
+**Plans:** TBD
+
+## v2.3 Requirement Coverage
+
+| Phase | Requirements |
+|-------|--------------|
+| 51 | CORE-01, CORE-02, PI-01, CI-01 |
+| 52 | OMP-01, OMP-02, OMP-03, OMP-04 |
+| 53 | CORE-03, PI-02, PI-03, CI-02, CI-03 |
+| 54 | DOCS-01, DOCS-02 |
+
+All 15 v2.3 requirements mapped, each to exactly one phase. (CI-01 pulled forward to Phase 51; CORE-03 added for the shared-core package's own publish-readiness — both from the red-team fold.)
+
+## Records
+
+```yaml
+gate_result:
+  id: v2.3-roadmap-red-team
+  gate: roadmap_pre_mortem
+  evaluator: anvil-roadmap-red-team (independent subagent)
+  phase: v2.3-roadmap
+  verdict: pass_after_changes
+  initial_verdict: NO-GO
+  resolved:
+    - "B1: shared core published as its own package @agenthands/rod-cli-core (real dependency of both adapters); no relative-sibling import, no copy/bundle step. Added CORE-03; CI publishes three tarballs."
+    - "B2: Phase 53 verifies host-LOAD of the packed tarball (not just installs-cleanly); schema-lib deps resolved (peer->dependency unless host-injected)."
+    - "M1: OMP session_shutdown gate made behavioral; OMP reason vocab has no quit — verify payload, gate on real terminal reason or drop."
+    - "M2: OMP adapter drops promptGuidelines/promptSnippet (not in OMP ToolDefinition; strict tsc would fail), folds guidance into description."
+    - "M3: core defines a normalized ExecFn/ExecResult contract; OMP pi.exec shape verified in planning."
+    - "M4: CI-01 blocking gate pulled forward to Phase 51 (protects the riskiest refactor)."
+    - "M5: core owns one test runner (vitest, Node lane); per-package include-globs scoped."
+    - "M6: Phase 51 re-verifies the live ~/.omp/plugins symlink load path (core resolvable there)."
+  coverage: 15/15 REQ-IDs mapped 1:1
+```
