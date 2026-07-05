@@ -663,20 +663,37 @@ All 15 v2.3 requirements mapped, each to exactly one phase. (CI-01 pulled forwar
 
 ```yaml
 gate_result:
-  id: v2.3-roadmap-red-team
-  gate: roadmap_pre_mortem
-  evaluator: anvil-roadmap-red-team (independent subagent)
-  phase: v2.3-roadmap
-  verdict: pass_after_changes
-  initial_verdict: NO-GO
-  resolved:
-    - "B1: shared core published as its own package @agenthands/rod-cli-core (real dependency of both adapters); no relative-sibling import, no copy/bundle step. Added CORE-03; CI publishes three tarballs."
-    - "B2: Phase 53 verifies host-LOAD of the packed tarball (not just installs-cleanly); schema-lib deps resolved (peer->dependency unless host-injected)."
-    - "M1: OMP session_shutdown gate made behavioral; OMP reason vocab has no quit — verify payload, gate on real terminal reason or drop."
-    - "M2: OMP adapter drops promptGuidelines/promptSnippet (not in OMP ToolDefinition; strict tsc would fail), folds guidance into description."
-    - "M3: core defines a normalized ExecFn/ExecResult contract; OMP pi.exec shape verified in planning."
-    - "M4: CI-01 blocking gate pulled forward to Phase 51 (protects the riskiest refactor)."
-    - "M5: core owns one test runner (vitest, Node lane); per-package include-globs scoped."
-    - "M6: Phase 51 re-verifies the live ~/.omp/plugins symlink load path (core resolvable there)."
-  coverage: 15/15 REQ-IDs mapped 1:1
+  record_author: architect
+  accountable_owner: architect
+  id: G-v2.3-roadmap-redteam
+  kind: design_gate
+  gates_subject: v2.3 ROADMAP (phases 51-54)
+  evaluator: RoadmapRedTeam
+  verdict: blocked
+  status: superseded
+  remediation_owner: architect
+  method:
+    - "Independent roadmap pre-mortem vs REQUIREMENTS + repo + OMP host docs; verdict NO-GO"
+    - "B1: a relative-sibling core import is excluded from npm pack -> the core must be its own published package"
+    - "B2: installs-cleanly != host-loads"
+    - "M1 OMP session_shutdown has no quit reason; M2 OMP ToolDefinition rejects promptGuidelines; M3 needs a normalized ExecFn contract; M4 CI gate belongs in phase 51; M5 single core test runner; M6 re-verify live ~/.omp/plugins symlink path"
+    - "Coverage 14/14 complete; superseded by G-v2.3-roadmap-approved"
+```
+
+```yaml
+gate_result:
+  record_author: architect
+  accountable_owner: architect
+  id: G-v2.3-roadmap-approved
+  kind: design_gate
+  gates_subject: v2.3 ROADMAP (phases 51-54)
+  evaluator: architect
+  verdict: pass
+  status: accepted
+  method:
+    - "Folded all red-team blockers/majors into ROADMAP + REQUIREMENTS; supersedes G-v2.3-roadmap-redteam"
+    - "B1 -> CORE-03; core is a 3rd published package @agenthands/rod-cli-core (real dependency of both adapters); CI publishes 3 tarballs"
+    - "B2 -> Phase 53 host-LOAD verification + peer->dependency resolution"
+    - "M1 behavioral shutdown gate; M2 guidance folded into description; M3 ExecFn contract; M4 CI-01 pulled to Phase 51; M5 single core test runner; M6 live-symlink reload criterion"
+    - "15/15 REQ-IDs mapped 1:1; ratified by user approval 2026-07-05"
 ```
