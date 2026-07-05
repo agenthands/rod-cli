@@ -26,7 +26,7 @@ Extract a **runtime-agnostic core** as its own raw-TS package `@agenthands/rod-c
 (binary discovery, a normalized injected-`ExecFn`/`ExecResult` shell-out, input
 validation, per-subcommand timeout table, subcommand detection, and one **pure**
 argv-builder per `browse_*` tool), refactor `@agenthands/rod-cli-pi` to consume it
-with **zero behavior change**, and land the **blocking CI typecheck+test gate first**.
+with **zero behavior change** (one deliberate exception: the pre-existing `validateInput` `--`-separator bug is FIXED — finding B51-1 / D-16), and land the **blocking CI typecheck+test gate first**.
 
 **In scope:** the extraction + Pi rewire + CI gate (CORE-01, CORE-02, PI-01, CI-01).
 **Out of scope:** the OMP adapter (Phase 52), publish-readiness/LICENSE/`npm pack`
@@ -57,7 +57,10 @@ with **zero behavior change**, and land the **blocking CI typecheck+test gate fi
    binary-discovery fallback — **with no `pi` object**.
 3. **PI-01** — `@agenthands/rod-cli-pi` consumes the core as a real dependency; its
    adapter owns only the TypeBox/`StringEnum` schemas + `pi.registerTool` wiring; the
-   existing 116 vitest tests and `tsc --noEmit` stay green.
+   existing vitest tests and `tsc --noEmit` stay green. **One deliberate behavior change:**
+   the pre-existing `validateInput` `--`-separator bug (finding B51-1) is fixed, and new
+   regression tests cover the `--`-separated tool argv so goto works and client-side
+   validation actually enforces.
 4. **Success Criterion 4** — the refactored Pi extension reloads and drives
    goto→snapshot **through the `~/.omp/plugins` symlink load path**, core resolvable
    in that `node_modules`, not only from the repo checkout.
@@ -91,6 +94,9 @@ with **zero behavior change**, and land the **blocking CI typecheck+test gate fi
 - **D-13:** New workflow **`.github/workflows/extensions.yml`**, triggers `push` (main) + `pull_request`, alongside (not replacing) the Go `test.yml`. A matrix over `package: [core, pi]`: `actions/setup-node@v4` (Node 20 LTS), `npm ci` at repo root (installs the workspace), then `cd extensions/${package} && npm run typecheck && npm test`.
 - **D-14:** The **Bun/OMP test lane is deferred to Phase 52** (the OMP package does not exist yet); CI-01 in this phase covers core + Pi on the Node/vitest lane. Phase 52 adds the `bun:test` lane for OMP.
 - **D-15:** **Gate-blocks proof (Success Criterion 5):** demonstrate by running the exact CI command set locally on the green tree (shows pass), then adding a deliberately failing core test and re-running the same command set to show a non-zero exit (gate would block), then reverting. Documented in SUMMARY. (Avoids pushing a knowingly-broken commit; the command set *is* what CI runs.)
+
+### Bugfix folded in — finding B51-1 (user-ratified 2026-07-05)
+- **D-16:** The extraction FIXES the pre-existing `validateInput` bug: since Phase 49 (`9f5d8bd`) added the `--` injection separator to every tool's argv, `validateInput` has been reading `"--"` instead of the real argument — so `browse_goto` always threw (`got: --`) and click/type/fill/eval client-side validation was silently defeated (validating `"--"`). The core's `validateInput`/`findSubcommand` MUST locate the real argument **past** the `--` separator. New core regression tests assert the `--`-separated argv for every validated tool (goto http/https, click/type/fill non-empty, eval 10KB cap). This is the sole intended observable behavior change; everything else is byte-identical.
 
 ### the agent's Discretion
 - Exact argv-builder function names and the internal helper module boundaries (kept close to the file split in D-06) are the planner/engineer's to finalize.
@@ -179,6 +185,39 @@ disciplines:
 - **`ext-v*` auto-publish workflow** — Phase 53 (CI-02/CI-03). This phase lands only the *gate*, not the publish job.
 
 </deferred>
+
+## Records
+
+~~~yaml
+finding:
+  record_author: architect
+  accountable_owner: architect
+  id: B51-1
+  severity: high
+  subject_ref: extensions/pi/src/cli.ts validateInput
+  statement: "Since Phase 49 (9f5d8bd) added the -- injection separator to every tool's argv, validateInput reads rest[0] == '--' instead of the real argument. Net effect on shipped v2.2: browse_goto always throws ('got: --'); browse_click/type/fill_form non-empty checks and browse_eval's 10KB cap are silently defeated. The 116 tests miss it because none exercise the real tool argv (with '--') through validateInput."
+  evidence:
+    - "Probe: execRodCli(['goto','--','https://example.com']) with a mock pi THROWS before pi.exec is called."
+    - "git: -- separator added in 9f5d8bd (phase 49); validateInput written in c30a0c7/2e8973c (phase 47/48), no -- handling."
+    - "grep: no -- handling in extensions/pi/src/cli.ts."
+  status: open
+~~~
+
+~~~yaml
+decision:
+  record_author: architect
+  accountable_owner: architect
+  id: D51-BUGFIX
+  subject_ref: B51-1
+  statement: "Fix B51-1 as part of the Phase 51 extraction: core validateInput/findSubcommand locate the real argument past the -- separator, with new core regression tests on the --separated argv for every validated tool. CONTEXT's 'zero behavior change' is amended to 'zero behavior change except this documented bugfix'."
+  options_considered:
+    - "Fix as part of the extraction (chosen)"
+    - "Preserve exact behavior; file a separate bug"
+    - "Fix in a dedicated pre-commit before the refactor"
+  rationale: "Shipping a broken entry point (browse_goto) contradicts the milestone goal of a consumable extension; 'zero behavior change' protects working behavior, not a broken path. The literal PI-01 gate (tests + tsc green) stays satisfied."
+  ratified_by: co-driver
+  status: locked
+~~~
 
 ---
 
