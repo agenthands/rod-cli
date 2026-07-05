@@ -1,0 +1,25 @@
+{
+  "name": "@agenthands/rod-cli-omp",
+  "version": "0.1.0",
+  "description": "OMP (oh-my-pi) extension for rod-cli — native browser automation tools for the OMP coding agent",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "keywords": ["omp-extension", "browser-automation", "rod-cli"],
+  "files": ["src/**/*.ts", "!src/__tests__/**", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "omp": {
+    "extensions": ["./src/index.ts"]
+  },
+  "dependencies": {
+    "@agenthands/rod-cli-core": "*"
+  },
+  "devDependencies": {
+    "@oh-my-pi/pi-coding-agent": "^16.3.6",
+    "@types/bun": "latest",
+    "typescript": "^5.8.0"
+  }
+}

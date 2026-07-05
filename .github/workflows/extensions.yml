@@ -9,12 +9,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [core, pi]
+        package: [core, pi, omp]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - run: npm ci
       - run: npm run typecheck
         working-directory: extensions/${{ matrix.package }}
