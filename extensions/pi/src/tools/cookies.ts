@@ -1,10 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { execRodCli } from "../cli";
+import { execRodCli, buildCookiesArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseCookies(pi: ExtensionAPI) {
+export function registerBrowseCookies(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_cookies",
     label: "Browse Cookies",
@@ -30,30 +30,12 @@ export function registerBrowseCookies(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      let args: string[];
-
-      switch (params.action) {
-        case "get":
-          args = ["cookie-get"];
-          break;
-        case "set":
-          if (!params.name) throw new Error("action 'set' requires a 'name' parameter");
-          if (!params.value) throw new Error("action 'set' requires a 'value' parameter");
-          args = ["cookie-set", "--", params.name, params.value];
-          break;
-        case "delete":
-          if (!params.name) throw new Error("action 'delete' requires a 'name' parameter");
-          args = ["cookie-delete", "--", params.name];
-          break;
-        case "clear":
-          args = ["cookie-clear"];
-          break;
-        default:
-          throw new Error(`Unknown cookie action: ${params.action}`);
-      }
-
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildCookiesArgs({
+        action: params.action,
+        name: params.name,
+        value: params.value,
+        session: params.session,
+      }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

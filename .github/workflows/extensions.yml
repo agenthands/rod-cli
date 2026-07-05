@@ -1,0 +1,22 @@
+name: extensions
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  extensions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [core, pi]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run typecheck
+        working-directory: extensions/${{ matrix.package }}
+      - run: npm test
+        working-directory: extensions/${{ matrix.package }}

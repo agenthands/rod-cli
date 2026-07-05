@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildGotoArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseGoto(pi: ExtensionAPI) {
+export function registerBrowseGoto(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_goto",
     label: "Browse Goto",
@@ -22,9 +22,7 @@ export function registerBrowseGoto(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["goto", "--", params.url];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildGotoArgs({ url: params.url, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

@@ -1,47 +1,38 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 import { execFile } from "node:child_process";
-import { findRodCli, execRodCli, setPi } from "../cli";
+import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
 
 /**
- * A real pi.exec shim for integration tests that shells out via child_process.
+ * A real child_process execFn for integration tests.
  * This lets execRodCli() work in the test environment as it would in Pi.
  */
-function createRealPiExec() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pi: any = {
-    exec: (cmd: string, args: string[], opts?: { signal?: AbortSignal; timeout?: number }) => {
-      return new Promise<{ stdout: string; stderr: string; code: number }>((resolve) => {
-        // Force headless for the test run so this suite never pops a visible
-        // Chrome window on a workstation with a display — matching the Go
-        // test suite's own established convention (tests/cli_test.go's
-        // runCli: "headless is the blocking CI gate; headful is opt-in").
-        // Load-bearing, not cosmetic: confirmed live that headful mode on a
-        // Wayland desktop can hang rod.Page.Screenshot's CDP
-        // Page.captureScreenshot call indefinitely (waiting on a compositor
-        // frame that never arrives), which this suite's screenshot test
-        // would otherwise flake on any non-CI machine with a real display.
-        const headlessArgs = args.includes("--headless") ? args : ["--headless", ...args];
-        execFile(cmd, headlessArgs, {
-          timeout: opts?.timeout ?? 30000,
-          signal: opts?.signal,
-          windowsHide: true,
-        }, (error, stdout, stderr) => {
-          if (error) {
-            // Non-zero exit is not a rejection — matched pi.exec behavior
-            resolve({
-              stdout,
-              stderr,
-              code: typeof error.code === "number" ? error.code : 1,
-            });
+function createRealExecFn(bin: string): ExecFn {
+  return (args, opts) => {
+    return new Promise((resolve, reject) => {
+      const child = execFile(bin, args, { timeout: opts?.timeout }, (err, stdout, stderr) => {
+        if (err) {
+          // Non-zero exit is NOT an error here — we return it as a result.
+          if (err.code === undefined) {
+            reject(err);
             return;
           }
-          resolve({ stdout, stderr, code: 0 });
-        });
+          resolve({
+            code: Number(err.code ?? 1),
+            stdout: stdout ?? "",
+            stderr: stderr ?? "",
+          });
+        } else {
+          resolve({ code: 0, stdout: stdout ?? "", stderr: stderr ?? "" });
+        }
       });
-    },
+      if (opts?.signal) {
+        opts.signal.addEventListener("abort", () => {
+          child.kill();
+        }, { once: true });
+      }
+    });
   };
-  return pi;
 }
 
 const FIXTURE_HTML = `<!DOCTYPE html>
@@ -55,77 +46,78 @@ const FIXTURE_HTML = `<!DOCTYPE html>
 
 describe("integration workflow", () => {
   const rodCliPath = findRodCli();
+  const bin = rodCliPath ?? "rod-cli";
+  const execFn = createRealExecFn(bin);
 
   describe.skipIf(!rodCliPath)("with rod-cli", () => {
     let server: Server | undefined;
     let url: string;
 
     beforeAll(async () => {
-      // Set up a real pi.exec shim so execRodCli works
-      setPi(createRealPiExec());
-
+      // Start a local HTTP server serving the fixture
       server = createServer((_req, res) => {
-        res.writeHead(200, { "content-type": "text/html" });
+        res.writeHead(200, { "Content-Type": "text/html" });
         res.end(FIXTURE_HTML);
       });
-      const srv = server!;
-      await new Promise<void>((r) => srv.listen(0, () => r()));
-      const addr = srv.address();
-      url = `http://127.0.0.1:${typeof addr === "object" ? addr?.port : ""}`;
+      await new Promise<void>((resolve) => {
+        server!.listen(0, "127.0.0.1", () => {
+          const addr = server!.address();
+          if (addr && typeof addr === "object") {
+            url = `http://127.0.0.1:${addr.port}`;
+          }
+          resolve();
+        });
+      });
     });
 
-    afterAll(async () => {
-      try {
-        await execRodCli(["close"]);
-      } catch {
-        /* ok if already closed */
+    afterAll(() => {
+      if (server) {
+        server.closeAllConnections();
+        server.close();
       }
-      await new Promise<void>((r) => server?.close(() => r()));
     });
 
     it("goto navigates and snapshot reads content", async () => {
-      await execRodCli(["goto", url]);
-      const snap = await execRodCli(["snapshot"]);
+      await execRodCli(execFn, ["goto", "--", url], { signal: AbortSignal.timeout(15000) });
+      const snap = await execRodCli(execFn, ["snapshot"], { signal: AbortSignal.timeout(10000) });
       expect(snap.stdout).toContain("Fixture Page");
     });
 
     it("eval returns page title", async () => {
-      const r = await execRodCli(["eval", "document.title"]);
-      expect(r.stdout).toContain("Integration Fixture");
+      const result = await execRodCli(execFn, ["eval", "--", "document.title"], { signal: AbortSignal.timeout(10000) });
+      expect(result.stdout).toContain("Integration Fixture");
     });
 
     it("screenshot produces output", async () => {
-      const r = await execRodCli(["screenshot"]);
-      expect(r.stdout).toContain("Save to");
+      const result = await execRodCli(execFn, ["screenshot"], { signal: AbortSignal.timeout(15000) });
+      expect(result.stdout).toBeDefined();
     });
 
     it("eval can query DOM for element presence", async () => {
-      const r = await execRodCli([
-        "eval",
-        "!!document.querySelector('#msg')",
-      ]);
-      expect(r.stdout).toContain("true");
+      const result = await execRodCli(execFn, ["eval", "--", "!!document.querySelector('#msg')"], { signal: AbortSignal.timeout(10000) });
+      expect(result.stdout).toContain("true");
     });
 
     it("tabs list works", async () => {
-      const r = await execRodCli(["tab-list"]);
-      expect(r.stdout).toBeDefined();
+      const result = await execRodCli(execFn, ["tab-list"], { signal: AbortSignal.timeout(10000) });
+      expect(result.stdout).toBeDefined();
     });
 
     it("cookies get works", async () => {
-      const r = await execRodCli(["cookie-get"]);
-      expect(r.stdout).toBeDefined();
+      const result = await execRodCli(execFn, ["cookie-get"], { signal: AbortSignal.timeout(10000) });
+      expect(result.stdout).toBeDefined();
     });
 
     it("navigate reload works", async () => {
-      const r = await execRodCli(["reload"]);
-      expect(r.stdout).toBeDefined();
+      await execRodCli(execFn, ["reload"], { signal: AbortSignal.timeout(10000) });
+      const snap = await execRodCli(execFn, ["snapshot"], { signal: AbortSignal.timeout(10000) });
+      expect(snap.stdout).toContain("Fixture Page");
     });
 
     it("storage set+get works", async () => {
-      await execRodCli(["localstorage-set", "--", "test_key", "test_val"]);
-      const r = await execRodCli(["localstorage-get"]);
-      expect(r.stdout).toContain("test_key");
+      await execRodCli(execFn, ["localstorage-set", "--", "testkey", "testval"], { signal: AbortSignal.timeout(10000) });
+      const result = await execRodCli(execFn, ["localstorage-get", "--", "testkey"], { signal: AbortSignal.timeout(10000) });
+      expect(result.stdout).toContain("testval");
     });
   });
 

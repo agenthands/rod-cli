@@ -1,14 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-// Test that the source files parse and export correctly
 describe("extension foundation", () => {
-  it("findRodCli resolves or returns null", async () => {
-    const { findRodCli } = await import("../cli");
-    const result = findRodCli();
-    // On a dev machine with rod-cli installed: string.
-    // In CI without rod-cli: null.
-    // Either is acceptable -- we just verify it doesn't throw.
-    expect(result === null || typeof result === "string").toBe(true);
+  it("index module exports default function", async () => {
+    const mod = await import("../index");
+    expect(typeof mod.default).toBe("function");
   });
 
   it("types module exports SessionParam", async () => {
@@ -21,8 +16,10 @@ describe("extension foundation", () => {
     expect(typeof registerLifecycle).toBe("function");
   });
 
-  it("index module exports default function", async () => {
-    const mod = await import("../index");
-    expect(typeof mod.default).toBe("function");
+  it("@agenthands/rod-cli-core resolves and exports builders", async () => {
+    const core = await import("@agenthands/rod-cli-core");
+    expect(typeof core.buildGotoArgs).toBe("function");
+    expect(typeof core.execRodCli).toBe("function");
+    expect(typeof core.findRodCli).toBe("function");
   });
 });

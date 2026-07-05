@@ -1,15 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { execRodCli } from "../cli";
+import { execRodCli, buildStorageArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-const STORAGE_PREFIX: Record<string, string> = {
-  local: "localstorage",
-  session: "sessionstorage",
-};
-
-export function registerBrowseStorage(pi: ExtensionAPI) {
+export function registerBrowseStorage(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_storage",
     label: "Browse Storage",
@@ -41,37 +36,13 @@ export function registerBrowseStorage(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const storageType = params.storageType ?? "local";
-      const prefix = STORAGE_PREFIX[storageType];
-      if (!prefix) throw new Error(`Unknown storage type: ${storageType}`);
-
-      let args: string[];
-
-      switch (params.action) {
-        case "get":
-          args = params.key
-            ? [`${prefix}-get`, "--", params.key]
-            : [`${prefix}-get`];
-          break;
-        case "set":
-          if (!params.key) throw new Error("action 'set' requires a 'key' parameter");
-          if (!params.value)
-            throw new Error("action 'set' requires a 'value' parameter");
-          args = [`${prefix}-set`, "--", params.key, params.value];
-          break;
-        case "delete":
-          if (!params.key) throw new Error("action 'delete' requires a 'key' parameter");
-          args = [`${prefix}-delete`, "--", params.key];
-          break;
-        case "clear":
-          args = [`${prefix}-clear`];
-          break;
-        default:
-          throw new Error(`Unknown storage action: ${params.action}`);
-      }
-
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildStorageArgs({
+        action: params.action,
+        storageType: params.storageType,
+        key: params.key,
+        value: params.value,
+        session: params.session,
+      }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

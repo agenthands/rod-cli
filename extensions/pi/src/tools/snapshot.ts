@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildSnapshotArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseSnapshot(pi: ExtensionAPI) {
+export function registerBrowseSnapshot(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_snapshot",
     label: "Browse Snapshot",
@@ -27,11 +27,7 @@ export function registerBrowseSnapshot(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["snapshot"];
-      if (params.session) args.unshift("-s", params.session);
-      // Note: rod-cli snapshot currently has no --selector flag.
-      // The selector param is accepted for future compatibility.
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildSnapshotArgs({ selector: params.selector, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

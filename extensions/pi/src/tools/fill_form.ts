@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildFillFormArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseFillForm(pi: ExtensionAPI) {
+export function registerBrowseFillForm(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_fill_form",
     label: "Browse Fill Form",
@@ -35,13 +35,12 @@ export function registerBrowseFillForm(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      // --submit is a tool-generated flag, so it goes BEFORE the -- separator.
-      // User-controlled values (selector, text) go AFTER -- for I6 protection.
-      const args = ["fill"];
-      if (params.submit) args.push("--submit");
-      args.push("--", params.selector, params.text);
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildFillFormArgs({
+        selector: params.selector,
+        text: params.text,
+        submit: params.submit,
+        session: params.session,
+      }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

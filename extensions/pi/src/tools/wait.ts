@@ -1,57 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { waitForSelector, sleep, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-/**
- * Sleep helper that respects AbortSignal — resolves after `ms` milliseconds
- * or rejects immediately when the signal is aborted.
- */
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    if (signal?.aborted) return reject(signal.reason);
-    const id = setTimeout(resolve, ms);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(id);
-          reject(signal.reason);
-        },
-        { once: true },
-      );
-    }
-  });
-}
-
-/**
- * Poll for a CSS selector using rod-cli eval since no dedicated wait command
- * exists. Evaluates `document.querySelector(sel) !== null` on a 500ms interval.
- * Times out after `timeoutMs` with an error. Respects session and AbortSignal.
- */
-async function waitForSelector(
-  selector: string,
-  timeoutMs: number,
-  session: string | undefined,
-  signal?: AbortSignal,
-): Promise<void> {
-  const pollScript = JSON.stringify(selector);
-  const deadline = Date.now() + timeoutMs;
-  const evalArgs = ["eval", "--", `!!document.querySelector(${pollScript})`];
-  if (session) evalArgs.unshift("-s", session);
-
-  while (Date.now() < deadline) {
-    const result = await execRodCli(evalArgs, { signal });
-    if (result.stdout.trim() === "true") return;
-    await sleep(500, signal);
-  }
-
-  throw new Error(
-    `Timed out waiting ${timeoutMs}ms for selector: ${selector}`,
-  );
-}
-
-export function registerBrowseWait(pi: ExtensionAPI) {
+export function registerBrowseWait(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_wait",
     label: "Browse Wait",
@@ -78,17 +30,16 @@ export function registerBrowseWait(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const timeoutMs = params.timeout ?? 30000;
+      const timeoutMs = params.timeout ?? 30_000;
 
       if (params.selector) {
-        await waitForSelector(params.selector, timeoutMs, params.session, signal);
+        await waitForSelector(execFn, {
+          selector: params.selector,
+          timeoutMs,
+          session: params.session,
+        }, { signal });
         return {
-          content: [
-            {
-              type: "text",
-              text: `Found selector: ${params.selector}`,
-            },
-          ],
+          content: [{ type: "text", text: `Found selector: ${params.selector}` }],
           details: {},
         };
       }

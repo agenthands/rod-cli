@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildTypeArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseType(pi: ExtensionAPI) {
+export function registerBrowseType(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_type",
     label: "Browse Type",
@@ -28,9 +28,7 @@ export function registerBrowseType(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["type", "--", params.selector, params.text];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildTypeArgs({ selector: params.selector, text: params.text, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

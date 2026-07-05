@@ -1,0 +1,19 @@
+{
+  "name": "@agenthands/rod-cli-core",
+  "version": "0.1.0",
+  "description": "Runtime-agnostic core for rod-cli host extensions — binary discovery, normalized exec contract, input validation, timeout table, and pure argv-builders for the browse_* tools",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "keywords": ["browser-automation", "rod-cli"],
+  "files": ["src/**/*.ts", "!src/__tests__/**", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,10 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { execRodCli } from "../cli";
+import { execRodCli, buildScrollArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseScroll(pi: ExtensionAPI) {
+export function registerBrowseScroll(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_scroll",
     label: "Browse Scroll",
@@ -40,20 +40,12 @@ export function registerBrowseScroll(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      if (params.selector) {
-        throw new Error(
-          "browse_scroll does not support element-level scrolling. " +
-            "Use browse_eval with element.scrollBy() for element-level scrolling.",
-        );
-      }
-
-      const direction = params.direction ?? "down";
-      const distance = params.distance ?? 300;
-      const dy = direction === "down" ? distance : -distance;
-
-      const args = ["mousewheel", "--", "0", String(dy)];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildScrollArgs({
+        direction: params.direction,
+        distance: params.distance,
+        selector: params.selector,
+        session: params.session,
+      }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

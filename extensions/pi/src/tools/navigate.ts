@@ -1,16 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { execRodCli } from "../cli";
+import { execRodCli, buildNavigateArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-const ACTION_TO_COMMAND: Record<string, string> = {
-  reload: "reload",
-  back: "go-back",
-  forward: "go-forward",
-};
-
-export function registerBrowseNavigate(pi: ExtensionAPI) {
+export function registerBrowseNavigate(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_navigate",
     label: "Browse Navigate",
@@ -29,12 +23,7 @@ export function registerBrowseNavigate(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const cmd = ACTION_TO_COMMAND[params.action];
-      if (!cmd) throw new Error(`Unknown navigation action: ${params.action}`);
-
-      const args: string[] = [cmd];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildNavigateArgs({ action: params.action, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

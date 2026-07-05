@@ -1,10 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { StringEnum } from "@earendil-works/pi-ai";
-import { execRodCli } from "../cli";
+import { execRodCli, buildTabsArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseTabs(pi: ExtensionAPI) {
+export function registerBrowseTabs(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_tabs",
     label: "Browse Tabs",
@@ -34,36 +34,12 @@ export function registerBrowseTabs(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      let args: string[];
-
-      switch (params.action) {
-        case "list":
-          args = ["tab-list"];
-          break;
-        case "new": {
-          if (!params.url)
-            throw new Error("action 'new' requires a 'url' parameter");
-          args = ["tab-new", "--", params.url];
-          break;
-        }
-        case "close": {
-          if (params.index === undefined)
-            throw new Error("action 'close' requires an 'index' parameter");
-          args = ["tab-close", "--", String(params.index)];
-          break;
-        }
-        case "select": {
-          if (params.index === undefined)
-            throw new Error("action 'select' requires an 'index' parameter");
-          args = ["tab-select", "--", String(params.index)];
-          break;
-        }
-        default:
-          throw new Error(`Unknown tab action: ${params.action}`);
-      }
-
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildTabsArgs({
+        action: params.action,
+        url: params.url,
+        index: params.index,
+        session: params.session,
+      }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildClickArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseClick(pi: ExtensionAPI) {
+export function registerBrowseClick(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_click",
     label: "Browse Click",
@@ -33,10 +33,7 @@ export function registerBrowseClick(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      // rod-cli has separate click and dblclick commands (no --double flag)
-      const args = [params.doubleClick ? "dblclick" : "click", "--", params.selector];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildClickArgs({ selector: params.selector, doubleClick: params.doubleClick, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });

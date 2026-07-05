@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { execRodCli } from "../cli";
+import { execRodCli, buildEvalArgs, type ExecFn } from "@agenthands/rod-cli-core";
 import { SessionParam } from "../types";
 
-export function registerBrowseEval(pi: ExtensionAPI) {
+export function registerBrowseEval(pi: ExtensionAPI, execFn: ExecFn) {
   pi.registerTool({
     name: "browse_eval",
     label: "Browse Eval",
@@ -27,9 +27,7 @@ export function registerBrowseEval(pi: ExtensionAPI) {
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const args = ["eval", "--", params.expression];
-      if (params.session) args.unshift("-s", params.session);
-      const result = await execRodCli(args, { signal });
+      const result = await execRodCli(execFn, buildEvalArgs({ expression: params.expression, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });
