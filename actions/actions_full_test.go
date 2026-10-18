@@ -1320,3 +1320,22 @@ func TestRoutesFollowTabSwitch(t *testing.T) {
 		t.Errorf("route did not follow the tab switch; fetch got: %s", out)
 	}
 }
+
+func TestSnapshotEngineNotVisibleToPage(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	if _, err := Snapshot(ctx, "", false); err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	out, err := Evaluate(ctx, "typeof window.snapshotEngine", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if out != "undefined" {
+		t.Fatalf("typeof window.snapshotEngine = %q, want %q", out, "undefined")
+	}
+}

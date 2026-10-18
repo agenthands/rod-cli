@@ -21,7 +21,7 @@ import (
 var (
 	yamlMarshal    = yaml.Marshal
 	yamlUnmarshal  = yaml.Unmarshal
-	pageEval       = func(p *rod.Page, js string, args ...any) (*proto.RuntimeRemoteObject, error) { return p.Eval(js, args...) }
+	pageEval       = utils.EngineEval
 	pageInfo       = func(p *rod.Page) (*proto.TargetTargetInfo, error) { return p.Info() }
 	executeTemple  = utils.ExecuteTemple
 	queryEleByAria = utils.QueryEleByAria

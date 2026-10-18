@@ -121,3 +121,7 @@ verify: T15 — pass — core vitest 142/142 + tsc clean; pi vitest 40/40 + tsc 
 ## T16
 
 verify: T16 — pass — greps print isTrusted=false 1, --max-output 1, mousewheel [--end 1, snapshot [-i] 1, Read recipes 1; build ok and --help shows --end, --interactive, --full-page; docs-only diff (SKILL.md, running-code.md, tabs-and-windows.md)
+
+## T17
+
+tdd: TestSnapshotEngineNotVisibleToPage — red: actions_full_test.go:1339: typeof window.snapshotEngine = "object", want "undefined" — green: go test ./actions/ -run 'TestSnapshotEngineNotVisibleToPage$' -count=1 passed

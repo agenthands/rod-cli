@@ -424,7 +424,7 @@ func (ctx *Context) switchTo(p *rod.Page) (adopted bool) {
 	if p != nil && !ctx.prepared[p.TargetID] {
 		adopted = true
 		ctx.preparePage(p)
-		if _, err := p.Eval(js.InjectEngine); err != nil {
+		if _, err := utils.EngineEval(p, js.InjectEngine); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: snapshot engine inject failed: %v\n", err)
 		}
 	}
@@ -780,7 +780,10 @@ func (ctx *Context) preparePage(page *rod.Page) {
 	// always-on interceptor identity rule is removed (see updateInterceptorRules).
 	ctx.applyEmulationIdentity(page, &prof)
 
-	page.EvalOnNewDocument(js.InjectedSnapShot)
+	// The engine lives in an isolated world so page scripts cannot see it.
+	if _, err := (proto.PageAddScriptToEvaluateOnNewDocument{Source: js.InjectedSnapShot, WorldName: utils.EngineWorld}).Call(page); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: snapshot engine new-document script failed: %v\n", err)
+	}
 
 	// Console capture (CDP-01): the RuntimeConsoleAPICalled subscription forces
 	// Runtime.enable, so it is OPT-IN (default OFF). When off the subscription is
