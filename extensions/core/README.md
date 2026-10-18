@@ -9,7 +9,8 @@ Runtime-agnostic core for rod-cli host extensions -- binary discovery, normalize
 - **`findRodCli()`** -- Locate the `rod-cli` binary on `$PATH` or common install locations.
 - **`ExecFn` / `ExecResult`** -- Normalized exec contract: `ExecFn` is the host's exec function, `ExecResult` carries `{ stdout, stderr, exitCode }`.
 - **`execRodCli(execFn, args, options?)`** -- Run a rod-cli command through the host's exec function with timeout and signal support.
-- **13 pure argv-builders** -- `buildGotoArgs`, `buildSnapshotArgs`, `buildClickArgs`, `buildTypeArgs`, `buildEvalArgs`, `buildScreenshotArgs`, `buildScrollArgs`, `buildTabsArgs`, `buildNavigateArgs`, `buildCookiesArgs`, `buildStorageArgs`, `buildFillFormArgs`, plus `withSession`.
+- **Pure argv-builders** -- `buildGotoArgs`, `buildSnapshotArgs`, `buildClickArgs`, `buildTypeArgs`, `buildEvalArgs`, `buildScreenshotArgs`, `buildScrollArgs`, `buildTabsArgs`, `buildNavigateArgs`, `buildCookiesArgs`, `buildStorageArgs`, `buildFillFormArgs`, `buildPressArgs`, `buildSelectArgs`, `buildHoverArgs`, plus `withSession`.
+- **`captureScreenshot`** -- takes a screenshot into a private temp file and returns text plus PNG image content, deleting the file.
 - **`waitForSelector(execFn, params, options?)`** -- Poll the DOM until a CSS selector appears (or timeout).
 - **`sleep(ms, signal?)`** -- Promise-based delay with abort support.
 
