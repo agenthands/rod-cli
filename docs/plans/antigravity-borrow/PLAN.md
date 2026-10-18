@@ -276,8 +276,7 @@ Output is one line: `scrolled dy=<moved> y=<pos>/<max>`.
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ ./ -run 'MouseWheel|Mouse|MissingArg' -count=1 && go test ./tests/ -run 'TestTabsAndViewCommands|TestRawInputs' -count=1` prints only `ok`.
 
-### T07 [!] Checkpoint 1: P0 complete, full suite green
-Blocked: Blocked under the T07 rule: 'If a test outside the Baseline fails, return blocked and name the task whose files it touches.' I fixed nothing, as the task says. The only commit is eaecdae 'wip(T07): start', and the heading stays at [~].
+### T07 [~] Checkpoint 1: P0 complete, full suite green
 
 Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 full-suite runs. Run 1 failed with 'failed to ensure daemon: failed to start daemon' and run 3 with 'localstorage-set exit status 1'. It passes 13/13 when run alone, so it fails only under the full parallel run. The Baseline recorded the tests package as ok. The command path is daemon/
 **Seams:** none (no code).

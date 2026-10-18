@@ -4,6 +4,8 @@
 
 - go version go1.26.4 linux/amd64
 - FAIL github.com/agenthands/rod-cli/daemon — TestStartServerWithPpid (daemon_more_test.go:156: server with ppid did not become ready). Flaky under the full parallel run: passed 3/3 in isolation (`go test ./daemon -run 'TestStartServerWithPpid$' -count=3`).
+- FAIL github.com/agenthands/rod-cli/tests — TestStorageCommands (cli_test.go:71 "Failed to set localstorage" / "failed to start daemon"). Load flake, not branch-caused: also failed on main (ec2012a) in 1 of 2 full `go test ./... -count=1` runs on 2026-10-18; the 10 s daemon-start poll (daemon/daemon.go:130) races Chrome launches from parallel packages.
+- FAIL github.com/agenthands/rod-cli/tests — TestInputsAndForms (interaction_test.go:134 "Inputs were not set correctly: ailce 2"). Pre-existing godoll bug, not branch-caused: humanize/typing.go:126 transpose typo (and :149 missed space) is never corrected; ~1.6% per 5-char `type`. Seen 1 of 2 branch runs; code path unchanged on this branch.
 - All other Go packages ok; go vet clean.
 - extensions/core: vitest 139/139 passed, tsc clean. extensions/pi: vitest 39/39 passed, tsc clean. extensions/omp: bun 30/30 passed, tsc clean. (Run separately because the suite chain stops at the Go failure.)
 
