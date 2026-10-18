@@ -107,3 +107,18 @@ func TestMouseWheelRefScrollsInnerBox(t *testing.T) {
 		t.Fatalf("MouseWheel = %q, %v", got, err)
 	}
 }
+
+func TestMouseWheelEndLive(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	if _, err := Navigate(ctx, srv.URL+"/scroll"); err != nil {
+		t.Fatalf("Navigate: %v", err)
+	}
+	got, err := MouseWheel(ctx, 0, 0, "", 50)
+	m := regexp.MustCompile(` y=(\d+)/(\d+) end$`).FindStringSubmatch(got)
+	if err != nil || m == nil || m[1] != m[2] {
+		t.Fatalf("MouseWheel = %q, %v", got, err)
+	}
+}
