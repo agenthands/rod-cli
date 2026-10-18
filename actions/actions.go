@@ -16,6 +16,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -692,7 +694,7 @@ func tabDesc(p *rod.Page) string {
 	return fmt.Sprintf("%s %s (%s)", shortID(p), title, url)
 }
 
-func TabClose(ctx *types.Context, index int) (string, error) {
+func TabClose(ctx *types.Context, sel string) (string, error) {
 	browser := ctx.GetBrowser()
 	if browser == nil {
 		return "", errors.New("No active browser")
@@ -701,13 +703,54 @@ func TabClose(ctx *types.Context, index int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if index < 0 || index >= len(pages) {
-		return "", errors.Errorf("Tab index out of range: %d", index)
+	i, err := resolveTab(pages, sel)
+	if err != nil {
+		return "", err
 	}
-	if err := pageClose(pages[index]); err != nil {
+	target := pages[i]
+	tail := ""
+	if cur, err := ctx.ControlledPage(); err == nil && cur.TargetID == target.TargetID {
+		rest := append(pages[:i:i], pages[i+1:]...)
+		if len(rest) == 0 {
+			ctx.SwitchTo(nil)
+			tail = "; no tabs left (goto opens one)"
+		} else {
+			j := max(i-1, 0)
+			ctx.SwitchTo(rest[j])
+			tail = fmt.Sprintf("; current: [%d] %s", j, tabDesc(rest[j]))
+		}
+	}
+	if err := pageClose(target); err != nil {
 		return "", errors.Wrap(err, "Failed to close tab")
 	}
-	return fmt.Sprintf("Closed tab %d", index), nil
+	return fmt.Sprintf("Closed tab %d %s%s", i, shortID(target), tail), nil
+}
+
+var tabIndexRe = regexp.MustCompile(`^[0-9]{1,7}$`)
+
+// resolveTab maps a tab selector to an index in pages: fewer than 8 digits is
+// an index; anything else is a unique, case-insensitive TargetID prefix.
+func resolveTab(pages rod.Pages, sel string) (int, error) {
+	if tabIndexRe.MatchString(sel) {
+		i, _ := strconv.Atoi(sel)
+		if i >= len(pages) {
+			return 0, errors.Errorf("Tab index out of range: %d", i)
+		}
+		return i, nil
+	}
+	match := -1
+	for i, p := range pages {
+		if sel != "" && strings.HasPrefix(strings.ToUpper(string(p.TargetID)), strings.ToUpper(sel)) {
+			if match >= 0 {
+				return 0, errors.Errorf("Tab id %q is ambiguous", sel)
+			}
+			match = i
+		}
+	}
+	if match < 0 {
+		return 0, errors.Errorf("No tab matches %q", sel)
+	}
+	return match, nil
 }
 
 func TabSelect(ctx *types.Context, index int) (string, error) {

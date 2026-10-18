@@ -471,7 +471,7 @@ func TestErrPaths_Tabs(t *testing.T) {
 	if _, err := TabList(ctx); err == nil {
 		t.Error("TabList expected wrapped error")
 	}
-	if _, err := TabClose(ctx, 0); err == nil {
+	if _, err := TabClose(ctx, "0"); err == nil {
 		t.Error("TabClose Pages expected error")
 	}
 	if _, err := TabSelect(ctx, 0); err == nil {
@@ -482,7 +482,7 @@ func TestErrPaths_Tabs(t *testing.T) {
 	// TabClose: Close failure (Pages succeeds, index valid)
 	origClose := pageClose
 	pageClose = func(p *rod.Page) error { return errBoom }
-	if _, err := TabClose(ctx, 0); err == nil {
+	if _, err := TabClose(ctx, "0"); err == nil {
 		t.Error("TabClose Close expected wrapped error")
 	}
 	pageClose = origClose

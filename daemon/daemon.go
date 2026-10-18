@@ -337,9 +337,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "tab-new":
 		return actions.TabNew(ctx, req.Args["url"])
 	case "tab-close":
-		var index int
-		fmt.Sscanf(req.Args["index"], "%d", &index)
-		return actions.TabClose(ctx, index)
+		return actions.TabClose(ctx, req.Args["index"])
 	case "tab-select":
 		var index int
 		fmt.Sscanf(req.Args["index"], "%d", &index)

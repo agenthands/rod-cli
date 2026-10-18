@@ -758,10 +758,10 @@ func TestTabs(t *testing.T) {
 	if _, err := TabSelect(ctx, 999); err == nil {
 		t.Error("TabSelect expected error out of range")
 	}
-	if _, err := TabClose(ctx, 999); err == nil {
+	if _, err := TabClose(ctx, "999"); err == nil {
 		t.Error("TabClose expected error out of range")
 	}
-	if _, err := TabClose(ctx, 1); err != nil {
+	if _, err := TabClose(ctx, "1"); err != nil {
 		t.Errorf("TabClose: %v", err)
 	}
 
@@ -772,7 +772,7 @@ func TestTabs(t *testing.T) {
 	if _, err := TabNew(freshCtx(), ""); err == nil {
 		t.Error("TabNew expected error no browser")
 	}
-	if _, err := TabClose(freshCtx(), 0); err == nil {
+	if _, err := TabClose(freshCtx(), "0"); err == nil {
 		t.Error("TabClose expected error no browser")
 	}
 	if _, err := TabSelect(freshCtx(), 0); err == nil {
@@ -1197,5 +1197,31 @@ func TestTabListMarksCurrentWithID(t *testing.T) {
 	}
 	if !regexp.MustCompile(`(?m)^\* \[\d+\] [0-9A-F]{8} Page 2`).MatchString(out) {
 		t.Fatalf("TabList does not mark the current tab with its id:\n%s", out)
+	}
+}
+
+func TestTabCloseCurrentSwitches(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	navFixture(t, ctx, srv)
+	if _, err := TabNew(ctx, srv.URL+"/page2"); err != nil {
+		t.Fatalf("TabNew: %v", err)
+	}
+	cur, err := ctx.ControlledPage()
+	if err != nil {
+		t.Fatalf("ControlledPage: %v", err)
+	}
+	out, err := TabClose(ctx, shortID(cur))
+	if err != nil {
+		t.Fatalf("TabClose: %v", err)
+	}
+	if !strings.Contains(out, "; current: [") {
+		t.Fatalf("TabClose output = %q, want it to name the new current tab", out)
+	}
+	if _, err := Snapshot(ctx); err != nil {
+		t.Fatalf("Snapshot after closing current tab: %v", err)
 	}
 }
