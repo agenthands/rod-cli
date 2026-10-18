@@ -2,11 +2,13 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -629,5 +631,21 @@ func TestExecuteActionSelectPassesList(t *testing.T) {
 	got, err := executeAction(ctx, Request{Command: "eval", Args: map[string]string{"script": "document.getElementById('multi').selectedOptions.length"}})
 	if err != nil || got != "2" {
 		t.Fatalf("selected count = %q (err %v), want 2", got, err)
+	}
+}
+
+func TestUploadCommaInFilename(t *testing.T) {
+	ctx := liveCtxWithHTML(t, `<input id="f" type="file" multiple aria-label="File Input">`)
+	fp := filepath.Join(t.TempDir(), "a,b.txt")
+	if err := os.WriteFile(fp, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	files, _ := json.Marshal([]string{fp})
+	if _, err := executeAction(ctx, Request{Command: "upload", Args: map[string]string{"ref": "#f", "files": string(files)}}); err != nil {
+		t.Fatalf("upload failed: %v", err)
+	}
+	got, err := executeAction(ctx, Request{Command: "eval", Args: map[string]string{"script": "const f = document.getElementById('f').files; f.length + ':' + f[0].name"}})
+	if err != nil || got != "1:a,b.txt" {
+		t.Fatalf("files = %q (err %v), want 1:a,b.txt", got, err)
 	}
 }
