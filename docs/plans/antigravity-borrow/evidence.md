@@ -91,3 +91,4 @@ tdd: TestScreenshotSelectorIsCropped — red: actions/screenshot_test.go:37:43: 
 tdd: TestScreenshotNameCannotEscape — red: screenshot_test.go:58: saved to "/tmp/TestScreenshotNameCannotEscape1624854895/001/tmp/evil.png", want "/tmp/TestScreenshotNameCannotEscape1624854895/001/tmp/screenshots/evil.png" — green: go test ./actions/ -run TestScreenshotNameCannotEscape -count=1 passed
 tdd: TestScreenshotFullPage — red: screenshot_test.go:87: full-page height 800, want > viewport 800 — green: go test ./actions/ -run TestScreenshotFullPage -count=1 passed
 tdd: TestScreenshotOutAbsolute — red: misc_test.go:152: screenshot --out: err=exit status 1 out=Incorrect Usage: flag provided but not defined: -out — green: go test ./tests/ -run TestScreenshotOutAbsolute -count=1 passed
+verify: T12 — pass — go build + go test ./actions/ -run 'Screenshot|Pdf' ok + go test ./tests/ -run 'TestScreenshot|TestMisc|TestNavigation' ok; go vet clean

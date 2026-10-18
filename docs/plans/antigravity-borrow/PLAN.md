@@ -385,7 +385,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./ -run 'CapOutput|RunClientCommand' -count=1 && (cd extensions/core && npx vitest run) && (cd extensions/pi && npx vitest run) && (cd extensions/omp && /home/john/bin/bun test)` all pass, and `grep -rn "50KB/2000" extensions/*/src` prints nothing.
 
-### T12 [~] Screenshots and PDFs: honour --selector, safe --name, absolute --out, --full-page
+### T12 [x] Screenshots and PDFs: honour --selector, safe --name, absolute --out, --full-page
 **Seams:** `actions.Screenshot/Pdf` (live); CLI `screenshot` (`./tests/`).
 **Change:**
 - **CLI** `screenshot [--name n] [--selector ref|css] [--out path] [--full-page]` and `pdf [--name n] [--out path]`.
