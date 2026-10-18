@@ -586,6 +586,7 @@ func TestAllCommandActionsHappyPath(t *testing.T) {
 		{"mousedown", "left"},
 		{"mouseup", "left"},
 		{"mousewheel", "0", "10"},
+		{"mousewheel", "--end", "--max", "5", "--", "0", "-300"},
 		{"resize", "800", "600"},
 		{"tab-list"},
 		{"tab-new", "http://example.com"},

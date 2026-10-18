@@ -674,10 +674,14 @@ func getApp() *cli.App {
 			{
 				Name:      "mousewheel",
 				Usage:     "Scroll with real wheel input (default: one viewport down)",
-				ArgsUsage: "[dx dy] [ref]",
+				ArgsUsage: "[--end [--max n]] [dx dy] [ref]  (negative values need --: mousewheel --end -- 0 -300)",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "end", Usage: "keep scrolling until the end (absorbs lazy loads)"},
+					&cli.IntFlag{Name: "max", Value: 10, Usage: "with --end: at most this many scrolls"},
+				},
 				Action: func(c *cli.Context) error {
 					a := c.Args().Slice()
-					args := map[string]string{}
+					args := map[string]string{"end": strconv.FormatBool(c.Bool("end")), "max": strconv.Itoa(c.Int("max"))}
 					switch len(a) {
 					case 0:
 					case 1:
