@@ -131,3 +131,13 @@ verify: T17 — pass — `go test ./types/ ./actions/ -count=1`: ok types 18.4s,
 ## T18
 
 tdd: TestSmokeAntigravity — red: smoke_antigravity_test.go:66: screenshot: output "" does not match ^saved /tmp/TestSmokeAntigravity732565899/001/smoke\.png \d+x\d+$ — green: go test ./tests/ -run TestSmokeAntigravity -count=1 passed
+- deps: toolchain go1.26.4 → go1.26.9, golang.org/x/text v0.3.8 → v0.39.0 (commit e46b647).
+- full suite: go build + go vet clean; go test ./... fails only TestStartServerWithPpid (Baseline-listed; passes 3/3 in isolation). extensions/core vitest 142/142 + tsc clean; extensions/pi vitest 40/40 + tsc clean; extensions/omp bun 32 pass 0 fail + tsc clean.
+- govulncheck: `No vulnerabilities found.` (0 affecting code; 2 in required modules, not called).
+- smoke: `go test ./tests/ -run TestSmokeAntigravity -count=1` → ok.
+
+## Summary
+
+- Tasks done: T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T10, T11, T12, T13, T13b, T14, T15, T16, T17 (implemented: snapshot engine in an isolated world), T18 (pending verifier tick).
+- Tasks with no-go: none.
+- Commit range: `git log --oneline main..HEAD | wc -l` = 113 before this summary commit.
