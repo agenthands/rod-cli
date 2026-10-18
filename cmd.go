@@ -210,6 +210,7 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 	if err != nil {
 		return err
 	}
+	msg = capOutput(msg, c.Int("max-output"))
 
 	if c.Bool("json") {
 		// If the daemon already produced a structured JSON object/array (e.g.
@@ -324,6 +325,7 @@ func getApp() *cli.App {
 			&cli.BoolFlag{Name: "vision", Aliases: []string{"vs"}, Usage: "support vision LLM"},
 			&cli.BoolFlag{Name: "raw", Usage: "output raw results"},
 			&cli.BoolFlag{Name: "json", Usage: "output structured json"},
+			&cli.IntFlag{Name: "max-output", Usage: "cap output at N bytes (0 = unlimited)", Value: 0},
 			&cli.StringFlag{Name: "session", Aliases: []string{"s"}, Usage: "named session", Value: "default"},
 			&cli.StringFlag{Name: "proxy", Usage: "route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port)"},
 			&cli.StringFlag{Name: "proxy-auth", Usage: "proxy credentials as user:pass (handled via CDP, never URL-embedded)"},

@@ -886,3 +886,20 @@ func TestCapOutputSkipsJSON(t *testing.T) {
 		t.Fatalf("got %q, want {\"a\":1}", got)
 	}
 }
+
+// TestRunClientCommandMaxOutput: --max-output caps what the client prints.
+func TestRunClientCommandMaxOutput(t *testing.T) {
+	clearPortFiles(t)
+	srv, session := startFakeDaemon(t)
+	defer srv.Close()
+	defer os.Remove(portFilePathForSession(session))
+
+	out := captureStdout(t, func() {
+		if err := runApp("--max-output", "4", "--session", session, "snapshot"); err != nil {
+			t.Errorf("snapshot --max-output failed: %v", err)
+		}
+	})
+	if !strings.HasPrefix(out, "fake\n[truncated: 4 of 11 bytes;") {
+		t.Fatalf("expected capped output, got %q", out)
+	}
+}

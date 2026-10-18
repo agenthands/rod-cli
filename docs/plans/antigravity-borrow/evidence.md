@@ -81,3 +81,4 @@ verify: T10 — pass — go test ./types/ ./actions/ -run Prune|Snapshot ok (typ
 ## T11
 tdd: TestCapOutputProperties — red: seed 2167098811415620920: draw s: "A", draw max: 1 — over cap: no [truncated: suffix in "xA" — green: go test ./ -run TestCapOutputProperties -count=1 passed
 tdd: TestCapOutputSkipsJSON — red: cmd_test.go:886: got "{\"a\n[truncated: 3 of 7 bytes; narrow with snapshot -i / snapshot <ref>, or --max-output 0]", want {"a":1} — green: go test ./ -run TestCapOutputSkipsJSON -count=1 passed
+tdd: TestRunClientCommandMaxOutput — red: cmd_test.go:899: snapshot --max-output failed: flag provided but not defined: -max-output — green: go test ./ -run TestRunClientCommandMaxOutput -count=1 passed
