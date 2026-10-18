@@ -548,7 +548,8 @@ Cause, reproduced by hand:
 
 **Done when:** either `go test ./types/ ./actions/ -count=1` passes with both tests included, or `grep -c '^## T17 no-go' docs/plans/antigravity-borrow/evidence.md` prints `1` and `go test ./types/ ./actions/ -count=1` passes.
 
-### T18 [~] Final verification: full suite, vulnerability scan, live smoke
+### T18 [!] Final verification: full suite, vulnerability scan, live smoke
+Blocked: I couldn't finish T18 as written. The plan assumes govulncheck reports nothing, and that's false for this repo. All 16 reachable findings come from outside this branch's changes. 15 are in the Go standard library: go.mod pins `toolchain go1.26.4`, and the fixes are in go1.26.5 through go1.26.9. The last one is golang.org/x/text v0.3.8 (fixed in v0.39.0), which comes in through github.com/dop251/goja via internal/plugin. Clearing them means raising the go.mod toolchain line to go1.26.9 (which downloads that toolchain) and upgrading golang.org/x/text (`go get golang.org/x/text@v0.39.0 && go mod 
 **Seams:** CLI end-to-end (`./tests/`, `runCli` + `SetupTestServer`). Write `TestSmokeAntigravity` with sf-tdd: run it red first (assert one output format from a not-yet-asserted step), then green.
 **Change:**
 1. Run the Full suite command.
