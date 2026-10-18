@@ -34,9 +34,10 @@ Status marks, in the heading `### Tnn [s] title`:
 - **Full suite** (checkpoint tasks run it):
 
 ```bash
-cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && go vet ./... && go test ./... -count=1 && (cd extensions/core && npx vitest run && npx tsc --noEmit) && (cd extensions/pi && npx vitest run && npx tsc --noEmit) && (cd extensions/omp && /home/john/bin/bun test && npx tsc --noEmit)
+cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && go vet ./... && go test ./... -count=1 && export ROD_CLI_PATH="$PWD/rod-cli" && (cd extensions/core && npx vitest run && npx tsc --noEmit) && (cd extensions/pi && npx vitest run && npx tsc --noEmit) && (cd extensions/omp && /home/john/bin/bun test && npx tsc --noEmit)
 ```
 
+- **Extension tests use the fresh build.** Run extension vitest/bun with `ROD_CLI_PATH=/home/john/go/src/github.com/agenthands/rod-cli/rod-cli` (after `go build -o rod-cli .`); otherwise they pick the old installed `/home/john/bin/rod-cli`.
 - **Expected test failures.** A failure listed under `## Baseline` in evidence.md existed before this plan. Any other failure belongs to the task that caused it.
 
 ---
@@ -49,8 +50,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `grep -c '^## Baseline' docs/plans/antigravity-borrow/evidence.md` prints `1`.
 
-### T01 [!] eval prints the bare value
-Blocked: The code work is done and the tests pass. Only the plan's grep check cannot pass as written. It expects no output, but it scans the whole repo, including the tracked historical records under .planning/ (two phase-24 files, one phase-26 file and one phase-51 file). Those records quote the old prefix. No change listed in the plan touches them, and I did not rewrite historical records just to make a grep pass. Two ways to fix it: add `| grep -v '^./.planning/'` to the Done-when grep (my recommendation), or approve editing those four .planning files. Every remaining hit is in .planning/. No code, 
+### T01 [~] eval prints the bare value
 **Why:** It saves tokens on every call and fixes `browse_wait`, which compares stdout to `"true"` (`extensions/core/src/wait.ts:50`).
 **Seams:** `actions.Evaluate` (live, `newLiveCtx`); CLI `rod-cli eval` (`./tests/`).
 **Change:**
@@ -70,7 +70,7 @@ Blocked: The code work is done and the tests pass. Only the plan's grep check ca
    - `Evaluate(ctx,"() => this.tagName", refFor(t, ctx, "Click Me"))` == `"BUTTON"`
 2. `TestEvalCLIBareValue` (new `tests/eval_test.go`): `runCli("--raw","goto",ts.URL+"/page1")`, then `runCli("--raw","eval","1+1")`. Trimmed output == `"2"`.
 
-**Done when:** `go build -o rod-cli . && go test ./actions/ -run 'TestEvaluate' -count=1 && go test ./tests/ -run 'TestEvalCLIBareValue|TestDetection|TestProxy' -count=1` ends with `ok` lines only, and `grep -rn "Evaluate code successfully" --include=*.go --include=*.ts --include=*.md . | grep -v node_modules | grep -v docs/plans` prints nothing.
+**Done when:** `go build -o rod-cli . && go test ./actions/ -run 'TestEvaluate' -count=1 && go test ./tests/ -run 'TestEvalCLIBareValue|TestDetection|TestProxy' -count=1` ends with `ok` lines only, and `grep -rn "Evaluate code successfully" --include=*.go --include=*.ts --include=*.md . | grep -v node_modules | grep -v docs/plans | grep -v '^./.planning/'` prints nothing (`.planning/` holds historical records that keep the old text).
 
 ### T02 [ ] Snapshot: frame-index off-by-one, no page-console logging, portable build script
 **Seams:** `types.Snapshot.LocatorInFrame` (unit); `actions.Snapshot` + `actions.ConsoleLogs` (live, `newLiveCtxCfg` with console capture on).
