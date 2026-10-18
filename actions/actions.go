@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
+	"image/png"
 	"io"
 	"math"
 	"math/rand/v2"
@@ -318,17 +320,29 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 	return valStr, nil
 }
 
-func Screenshot(ctx *types.Context, name string, selector string, width, height float64) (string, error) {
+func Screenshot(ctx *types.Context, name, selector, out string, fullPage bool) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
 	}
-	req := &proto.PageCaptureScreenshot{
-		Format: proto.PageCaptureScreenshotFormatPng,
-	}
-	bin, err := pageScreenshot(page.Timeout(defaultCaptureTimeout), false, req)
-	if err != nil {
-		return "", errors.Wrap(err, "Failed to screenshot")
+	var bin []byte
+	if selector != "" {
+		el, err := getElementByRef(ctx, selector)
+		if err != nil {
+			return "", err
+		}
+		bin, err = el.Timeout(defaultCaptureTimeout).Screenshot(proto.PageCaptureScreenshotFormatPng, 0)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to screenshot")
+		}
+	} else {
+		req := &proto.PageCaptureScreenshot{
+			Format: proto.PageCaptureScreenshotFormatPng,
+		}
+		bin, err = pageScreenshot(page.Timeout(defaultCaptureTimeout), false, req)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to screenshot")
+		}
 	}
 	toFile := []string{"tmp", "screenshots", name + ".png"}
 	filePath := filepath.Join(toFile...)
@@ -338,7 +352,15 @@ func Screenshot(ctx *types.Context, name string, selector string, width, height 
 	if err := osWriteFile(filePath, bin, 0664); err != nil {
 		return "", errors.Wrap(err, "Failed to save screenshot")
 	}
-	return fmt.Sprintf("Save to %s", filePath), nil
+	abs, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", err
+	}
+	cfg, err := png.DecodeConfig(bytes.NewReader(bin))
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to read screenshot size")
+	}
+	return fmt.Sprintf("saved %s %dx%d", abs, cfg.Width, cfg.Height), nil
 }
 
 var (

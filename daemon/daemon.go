@@ -304,7 +304,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "cdp-traffic":
 		return actions.CDPTraffic(ctx, req.Args["json"] == "true")
 	case "screenshot":
-		return actions.Screenshot(ctx, req.Args["name"], req.Args["selector"], 0, 0)
+		return actions.Screenshot(ctx, req.Args["name"], req.Args["selector"], req.Args["out"], req.Args["full-page"] == "true")
 	case "pdf":
 		return actions.Pdf(ctx, req.Args["name"])
 	case "press":

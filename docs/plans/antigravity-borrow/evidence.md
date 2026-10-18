@@ -84,3 +84,7 @@ tdd: TestCapOutputSkipsJSON — red: cmd_test.go:886: got "{\"a\n[truncated: 3 o
 tdd: TestRunClientCommandMaxOutput — red: cmd_test.go:899: snapshot --max-output failed: flag provided but not defined: -max-output — green: go test ./ -run TestRunClientCommandMaxOutput -count=1 passed
 tdd: TestExecPrependsMaxOutput — red: AssertionError: expected "spy" to be called with arguments: [ …(2) ] (called with ["--raw","goto","https://example.com"]) — green: (cd extensions/core && npx vitest run src/__tests__/exec.test.ts) passed
 verify: T11 — pass — go test CapOutput|RunClientCommand ok (3 PASS); core vitest 140/140, pi vitest 39/39 (with ROD_CLI_PATH=fresh build; stale /home/john/bin/rod-cli lacks --max-output), omp bun 30/30; grep 50KB/2000 empty
+
+## T12
+
+tdd: TestScreenshotSelectorIsCropped — red: actions/screenshot_test.go:37:43: cannot use "" (untyped string constant) as float64 value in argument to Screenshot — green: go test ./actions/ -run TestScreenshotSelectorIsCropped -count=1 passed

@@ -154,7 +154,7 @@ func TestErrPaths_Screenshot(t *testing.T) {
 	pageScreenshot = func(p *rod.Page, fullPage bool, req *proto.PageCaptureScreenshot) ([]byte, error) {
 		return nil, errBoom
 	}
-	if _, err := Screenshot(ctx, "x", "", 0, 0); err == nil {
+	if _, err := Screenshot(ctx, "x", "", "", false); err == nil {
 		t.Error("Screenshot op expected wrapped error")
 	}
 	pageScreenshot = origShot
@@ -165,7 +165,7 @@ func TestErrPaths_Screenshot(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, "tmp"), []byte("x"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Screenshot(ctx, "shot", "", 0, 0); err == nil {
+		if _, err := Screenshot(ctx, "shot", "", "", false); err == nil {
 			t.Error("Screenshot mkdir expected error")
 		}
 	})
@@ -176,7 +176,7 @@ func TestErrPaths_Screenshot(t *testing.T) {
 		if err := os.MkdirAll(target, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Screenshot(ctx, "shot", "", 0, 0); err == nil {
+		if _, err := Screenshot(ctx, "shot", "", "", false); err == nil {
 			t.Error("Screenshot write expected error")
 		}
 	})

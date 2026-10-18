@@ -611,14 +611,14 @@ func TestScreenshot(t *testing.T) {
 	defer srv.Close()
 	navFixture(t, ctx, srv)
 
-	out, err := Screenshot(ctx, "test_shot", "", 800, 600)
+	out, err := Screenshot(ctx, "test_shot", "", "", false)
 	if err != nil {
 		t.Errorf("Screenshot: %v", err)
 	}
-	if !strings.Contains(out, "Save to") {
+	if !strings.Contains(out, "saved ") {
 		t.Errorf("unexpected: %s", out)
 	}
-	if _, err := Screenshot(freshCtx(), "x", "", 0, 0); err == nil {
+	if _, err := Screenshot(freshCtx(), "x", "", "", false); err == nil {
 		t.Error("Screenshot expected error no page")
 	}
 }
