@@ -14,9 +14,12 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/pkg/errors"
 	"io"
+	"math"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -76,7 +79,6 @@ var (
 	clickWithMouse      = humanize.ClickWithMouse
 	typeWithHumanize    = humanize.TypeWithHumanize
 	humanizeHover       = humanize.Hover
-	humanizeScrollBy    = humanize.ScrollBy
 	humanizeDragAndDrop = humanize.DragAndDrop
 	elementClick        = func(el *rod.Element, button proto.InputMouseButton, n int) error { return el.Click(button, n) }
 	elementSelect       = func(el *rod.Element, selectors []string, selected bool, t rod.SelectorType) error {
@@ -96,6 +98,11 @@ var (
 	pageMouseDown        = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Down(btn, clicks) }
 	pageMouseUp          = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Up(btn, clicks) }
 	ioReadAll            = io.ReadAll
+	mouseScroll          = func(p *rod.Page, dx, dy float64) error { return p.Mouse.Scroll(dx, dy, 1) }
+	moveToPoint          = humanize.MoveToPoint
+	measureScroll        = measureScrollBoxes
+	wheelSettle          = 400 * time.Millisecond
+	wheelEndBudget       = 10 * time.Second
 	queryElementDirect   = utils.QueryEleByAria
 )
 
@@ -137,23 +144,6 @@ func mouseOpts(s types.StealthConfig) []humanize.MouseOption {
 	}
 	if s.MouseDeviation != nil {
 		opts = append(opts, humanize.WithMouseDeviation(*s.MouseDeviation))
-	}
-	return opts
-}
-
-// scrollOpts builds the []humanize.ScrollOption for ScrollBy from the resolved
-// tuning. NOTE: godoll's WithPhysics() can only ENABLE physics (physics is its
-// own default and there is no disable option), so we emit WithPhysics() only for
-// an explicit true; a false/nil ScrollPhysics emits nothing and godoll's default
-// physics still applies — disabling would need a godoll signature change (out of
-// scope for v1.6).
-func scrollOpts(s types.StealthConfig) []humanize.ScrollOption {
-	var opts []humanize.ScrollOption
-	if s.ScrollDuration != nil {
-		opts = append(opts, humanize.WithDuration(*s.ScrollDuration))
-	}
-	if s.ScrollPhysics != nil && *s.ScrollPhysics {
-		opts = append(opts, humanize.WithPhysics())
 	}
 	return opts
 }
@@ -626,37 +616,120 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	return fmt.Sprintf("Save to %s", filePath), nil
 }
 
-func MouseWheel(ctx *types.Context, dx, dy float64) (string, error) {
+// scrollBox is one scroll container's position, limits and viewport size.
+type scrollBox struct{ X, Y, MaxX, MaxY, VW, VH float64 }
+
+// measureScrollBoxes returns el's scrollable ancestors, innermost first,
+// always ending with document.scrollingElement.
+func measureScrollBoxes(el *rod.Element) ([]scrollBox, error) {
+	res, err := elementEval(el, `function(){
+  const box = e => ({X:e.scrollLeft, Y:e.scrollTop, MaxX:e.scrollWidth-e.clientWidth, MaxY:e.scrollHeight-e.clientHeight, VW:e.clientWidth, VH:e.clientHeight});
+  const root = document.scrollingElement, out = [];
+  for (let e = this; e; e = e.parentElement || (e.getRootNode && e.getRootNode().host)) {
+    if (e.nodeType !== 1 || e === root) continue;
+    const s = getComputedStyle(e);
+    if (/auto|scroll|overlay/.test(s.overflowX + s.overflowY) && (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)) out.push(box(e));
+  }
+  out.push(box(root));
+  return out;
+}`)
+	if err != nil {
+		return nil, err
+	}
+	var boxes []scrollBox
+	if err := res.Value.Unmarshal(&boxes); err != nil {
+		return nil, err
+	}
+	return boxes, nil
+}
+
+// MouseWheel scrolls with real wheel input and reports what actually moved.
+// dx=dy=0 → one viewport down. ref=="" → page; ref → the ref's nearest
+// scrollable ancestor (T08). maxSteps 0 = one scroll; n>0 = until end (T08).
+func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
 	}
+	if ref != "" {
+		return "", errors.New("mousewheel by ref is not supported yet")
+	}
+	m, err := proto.PageGetLayoutMetrics{}.Call(page)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to read viewport")
+	}
+	w, h := float64(m.CSSLayoutViewport.ClientWidth), float64(m.CSSLayoutViewport.ClientHeight)
+	pt := humanize.Point{X: w * (0.4 + 0.2*rand.Float64()), Y: h * (0.4 + 0.2*rand.Float64())}
+	if err := moveToPoint(page, pt, mouseOpts(ctx.HumanizeTuning())...); err != nil {
+		return "", errors.Wrap(err, "Failed to move pointer")
+	}
+	anchor, err := page.ElementByJS(rod.Eval(`(x,y)=>document.elementFromPoint(x,y)||document.scrollingElement`, pt.X, pt.Y))
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to find scroll target")
+	}
 
-	sOpts := scrollOpts(ctx.HumanizeTuning())
-
-	// Handle Y axis scrolling with godoll physics
-	if dy > 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollDown, int(dy), sOpts...); err != nil {
-			return "", errors.Wrap(err, "Failed to scroll mouse wheel down")
+	before, err := measureScroll(anchor)
+	if err != nil || len(before) == 0 {
+		return "", errors.Wrap(err, "Failed to measure scroll")
+	}
+	dxReq := dx != 0
+	if dx == 0 && dy == 0 {
+		dy = before[0].VH
+	}
+	n := int(math.Ceil(math.Max(math.Abs(dx), math.Abs(dy)) / 100))
+	for i := 0; i < n; i++ {
+		if i > 0 {
+			gap := time.Duration(20+rand.IntN(41)) * time.Millisecond
+			if d := ctx.HumanizeTuning().ScrollDuration; d != nil {
+				gap = time.Duration(*d) * time.Millisecond / time.Duration(n)
+			}
+			time.Sleep(gap)
 		}
-	} else if dy < 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollUp, int(-dy), sOpts...); err != nil {
-			return "", errors.Wrap(err, "Failed to scroll mouse wheel up")
+		if err := mouseScroll(page, dx/float64(n), dy/float64(n)); err != nil {
+			return "", errors.Wrap(err, "Failed to scroll mouse wheel")
 		}
 	}
 
-	// Handle X axis scrolling with godoll physics
-	if dx > 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollRight, int(dx), sOpts...); err != nil {
-			return "", errors.Wrap(err, "Failed to scroll mouse wheel right")
+	// Smooth scrolling animates: re-measure until two reads agree (max 1s).
+	after, err := measureScroll(anchor)
+	for deadline := time.Now().Add(time.Second); err == nil && time.Now().Before(deadline); {
+		time.Sleep(50 * time.Millisecond)
+		var next []scrollBox
+		if next, err = measureScroll(anchor); err == nil && slices.Equal(next, after) {
+			break
 		}
-	} else if dx < 0 {
-		if err := humanizeScrollBy(page, humanize.ScrollLeft, int(-dx), sOpts...); err != nil {
-			return "", errors.Wrap(err, "Failed to scroll mouse wheel left")
-		}
+		after = next
+	}
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to measure scroll")
 	}
 
-	return "Mouse wheel scrolled", nil
+	i := 0
+	for j := 0; j < len(before) && j < len(after); j++ {
+		if before[j].X != after[j].X || before[j].Y != after[j].Y {
+			i = j
+			break
+		}
+	}
+	if i >= len(after) {
+		return "", errors.New("Failed to measure scroll")
+	}
+	b, a := before[min(i, len(before)-1)], after[i]
+	movedX, movedY := a.X-b.X, a.Y-b.Y
+
+	out := fmt.Sprintf("dy=%.0f y=%.0f/%.0f", movedY, a.Y, a.MaxY)
+	if dxReq || movedX != 0 {
+		out = fmt.Sprintf("dx=%.0f x=%.0f/%.0f ", movedX, a.X, a.MaxX) + out
+	}
+	out = "scrolled " + out
+	moved, req, pos, max := movedY, dy, a.Y, a.MaxY
+	if dy == 0 {
+		moved, req, pos, max = movedX, dx, a.X, a.MaxX
+	}
+	if moved == 0 || (req > 0 && pos >= max) || (req < 0 && pos <= 0) {
+		out += " end"
+	}
+	return out, nil
 }
 
 func Resize(ctx *types.Context, width, height int) (string, error) {

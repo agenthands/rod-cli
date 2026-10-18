@@ -731,16 +731,16 @@ func TestMouse(t *testing.T) {
 	}
 
 	// MouseWheel all directions
-	if _, err := MouseWheel(ctx, 0, 100); err != nil {
+	if _, err := MouseWheel(ctx, 0, 100, "", 0); err != nil {
 		t.Errorf("MouseWheel down: %v", err)
 	}
-	if _, err := MouseWheel(ctx, 0, -50); err != nil {
+	if _, err := MouseWheel(ctx, 0, -50, "", 0); err != nil {
 		t.Errorf("MouseWheel up: %v", err)
 	}
-	if _, err := MouseWheel(ctx, 100, 0); err != nil {
+	if _, err := MouseWheel(ctx, 100, 0, "", 0); err != nil {
 		t.Errorf("MouseWheel right: %v", err)
 	}
-	if _, err := MouseWheel(ctx, -50, 0); err != nil {
+	if _, err := MouseWheel(ctx, -50, 0, "", 0); err != nil {
 		t.Errorf("MouseWheel left: %v", err)
 	}
 
@@ -754,7 +754,7 @@ func TestMouse(t *testing.T) {
 	if _, err := MouseUp(freshCtx(), "left"); err == nil {
 		t.Error("MouseUp expected error no page")
 	}
-	if _, err := MouseWheel(freshCtx(), 0, 10); err == nil {
+	if _, err := MouseWheel(freshCtx(), 0, 10, "", 0); err == nil {
 		t.Error("MouseWheel expected error no page")
 	}
 }

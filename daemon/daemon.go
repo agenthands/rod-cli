@@ -322,7 +322,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 		var dx, dy float64
 		fmt.Sscanf(req.Args["dx"], "%f", &dx)
 		fmt.Sscanf(req.Args["dy"], "%f", &dy)
-		return actions.MouseWheel(ctx, dx, dy)
+		return actions.MouseWheel(ctx, dx, dy, req.Args["ref"], 0)
 	case "resize":
 		var w, h int
 		fmt.Sscanf(req.Args["width"], "%d", &w)

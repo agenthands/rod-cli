@@ -401,23 +401,21 @@ func TestErrPaths_MouseAndResize(t *testing.T) {
 	ctx, cleanup := withLiveFixture(t)
 	defer cleanup()
 
-	origScroll := humanizeScrollBy
-	humanizeScrollBy = func(page *rod.Page, direction humanize.ScrollDirection, amount int, opts ...humanize.ScrollOption) error {
-		return errBoom
-	}
-	if _, err := MouseWheel(ctx, 0, 100); err == nil {
+	origScroll := mouseScroll
+	mouseScroll = func(p *rod.Page, dx, dy float64) error { return errBoom }
+	if _, err := MouseWheel(ctx, 0, 100, "", 0); err == nil {
 		t.Error("MouseWheel down expected wrapped error")
 	}
-	if _, err := MouseWheel(ctx, 0, -100); err == nil {
+	if _, err := MouseWheel(ctx, 0, -100, "", 0); err == nil {
 		t.Error("MouseWheel up expected wrapped error")
 	}
-	if _, err := MouseWheel(ctx, 100, 0); err == nil {
+	if _, err := MouseWheel(ctx, 100, 0, "", 0); err == nil {
 		t.Error("MouseWheel right expected wrapped error")
 	}
-	if _, err := MouseWheel(ctx, -100, 0); err == nil {
+	if _, err := MouseWheel(ctx, -100, 0, "", 0); err == nil {
 		t.Error("MouseWheel left expected wrapped error")
 	}
-	humanizeScrollBy = origScroll
+	mouseScroll = origScroll
 
 	origVP := pageSetViewport
 	pageSetViewport = func(p *rod.Page, params *proto.EmulationSetDeviceMetricsOverride) error { return errBoom }

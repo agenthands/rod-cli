@@ -42,3 +42,6 @@ tdd: TestSelectByValueFallback — red: actions_full_test.go:380: Select = "", F
 tdd: TestSelectPartialMatchFails — red: actions_full_test.go:394: Select err = Failed to select option(s): cannot find element; want it to contain "no option matches \"Durian\"" — green: go test ./actions/ -run TestSelectPartialMatchFails$ -count=1 passed
 tdd: TestUploadCommaInFilename — red: daemon_more_test.go:649: files = "2:a" (err <nil>), want 1:a,b.txt (run against the pre-T05 comma-split upload dispatch, temporarily restored) — green: go test ./daemon/ -run TestUploadCommaInFilename$ -count=1 passed
 verify: T05 — pass — done-when: ok daemon (58.2s), ok actions (44.4s), ok tests (9.4s); 5/5 tdd lines present; go vet clean
+
+## T06
+tdd: TestMouseWheelReportsEndOnFakeScroller — red: actions/mousewheel_test.go:16:39: undefined: measureScroll — green: go test ./actions/ -run TestMouseWheelReportsEndOnFakeScroller -count=1 passed
