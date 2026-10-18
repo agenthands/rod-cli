@@ -409,7 +409,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ -run 'Screenshot|Pdf' -count=1 && go test ./tests/ -run 'TestScreenshot|TestMisc|TestNavigation' -count=1` prints only `ok`.
 
-### T13 [ ] Console and requests: record uncaught exceptions, bounded buffers, `--clear`
+### T13 [~] Console and requests: record uncaught exceptions, bounded buffers, `--clear`
 **Seams:** `actions.ConsoleLogs/NetworkRequests` (live with capture on); `types.Context` getters.
 **Change:**
 - **types/context.go** console-capture branch (:757-770):
