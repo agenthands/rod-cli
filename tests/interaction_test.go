@@ -124,7 +124,7 @@ func TestInputsAndForms(t *testing.T) {
 
 	// Case 3: Select
 	out, err = runCli("--raw", "select", dropRef, "Two")
-	if err != nil || !strings.Contains(out, "Select option") {
+	if err != nil || !strings.Contains(out, `Selected "Two" in`) {
 		t.Errorf("Select failed: err=%v out=%s", err, out)
 	}
 
