@@ -13,6 +13,9 @@ import {
   buildCookiesArgs,
   buildStorageArgs,
   buildFillFormArgs,
+  buildPressArgs,
+  buildSelectArgs,
+  buildHoverArgs,
 } from "../argv";
 
 describe("withSession", () => {
@@ -363,5 +366,26 @@ describe("buildFillFormArgs", () => {
     expect(buildFillFormArgs({ selector: "#x", text: "hi", session: "admin" })).toEqual([
       "-s", "admin", "fill", "--", "#x", "hi",
     ]);
+  });
+});
+
+describe("press/select/hover builders", () => {
+  it("buildPressArgs puts the key after --", () => {
+    expect(buildPressArgs({ key: "Enter" })).toEqual(["press", "--", "Enter"]);
+    expect(buildPressArgs({ key: "Tab", session: "a" })).toEqual(["-s", "a", "press", "--", "Tab"]);
+  });
+
+  it("buildSelectArgs passes the selector then every value", () => {
+    expect(buildSelectArgs({ selector: "s1e2", values: ["red", "blue"] })).toEqual([
+      "select", "--", "s1e2", "red", "blue",
+    ]);
+    expect(buildSelectArgs({ selector: "#c", values: ["x"], session: "a" })).toEqual([
+      "-s", "a", "select", "--", "#c", "x",
+    ]);
+  });
+
+  it("buildHoverArgs puts the selector after --", () => {
+    expect(buildHoverArgs({ selector: "s1e9" })).toEqual(["hover", "--", "s1e9"]);
+    expect(buildHoverArgs({ selector: "s1e9", session: "a" })).toEqual(["-s", "a", "hover", "--", "s1e9"]);
   });
 });

@@ -112,3 +112,4 @@ verify: T14 — pass — go build + vet clean; go test fails only Baseline-liste
 ## T15
 
 tdd: buildScrollArgs cases — red: AssertionError: expected [ 'mousewheel', '--', '0', '300' ] to deeply equal [ 'mousewheel' ] — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed
+tdd: press/select/hover builders — red: TypeError: (0 , buildPressArgs) is not a function — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed

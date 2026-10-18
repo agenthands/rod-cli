@@ -6,7 +6,7 @@ export function withSession(session: string | undefined, args: string[]): string
 }
 
 // ---------------------------------------------------------------------------
-// 13 pure argv-builders
+// pure argv-builders
 // ---------------------------------------------------------------------------
 
 export function buildGotoArgs(p: { url: string; session?: string }): string[] {
@@ -213,4 +213,16 @@ export function buildFillFormArgs(p: {
   if (p.submit) args.push("--submit");
   args.push("--", p.selector, p.text);
   return withSession(p.session, args);
+}
+
+export function buildPressArgs(p: { key: string; session?: string }): string[] {
+  return withSession(p.session, ["press", "--", p.key]);
+}
+
+export function buildSelectArgs(p: { selector: string; values: string[]; session?: string }): string[] {
+  return withSession(p.session, ["select", "--", p.selector, ...p.values]);
+}
+
+export function buildHoverArgs(p: { selector: string; session?: string }): string[] {
+  return withSession(p.session, ["hover", "--", p.selector]);
 }
