@@ -24,7 +24,7 @@ func TestStealthInitialization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to eval navigator.webdriver: %v", err)
 	}
-	if !strings.Contains(out, "result: false") && !strings.Contains(out, "result: undefined") && !strings.Contains(out, "false") {
+	if v := strings.TrimSpace(out); v != "false" && v != "undefined" {
 		t.Errorf("Stealth failure: expected navigator.webdriver to be false or undefined, got: %s", out)
 	}
 

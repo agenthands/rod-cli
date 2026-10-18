@@ -231,7 +231,7 @@ func waitForDetectReady(t *testing.T) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		out, err := runCli("eval", "window.__detect && window.__detect.ready === true")
-		if err == nil && strings.Contains(out, "result: true") {
+		if err == nil && strings.TrimSpace(out) == "true" {
 			return
 		}
 		time.Sleep(300 * time.Millisecond)
