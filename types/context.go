@@ -797,7 +797,7 @@ func (ctx *Context) preparePage(page *rod.Page) {
 					args = append(args, arg.Value.String())
 				}
 			}
-			ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+			ctx.consoleLogs = appendCapped(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
 		}, func(e *proto.RuntimeExceptionThrown) {
 			ctx.stateLock.Lock()
 			defer ctx.stateLock.Unlock()
@@ -805,7 +805,7 @@ func (ctx *Context) preparePage(page *rod.Page) {
 			if ex := e.ExceptionDetails.Exception; ex != nil && ex.Description != "" {
 				msg = ex.Description
 			}
-			ctx.consoleLogs = append(ctx.consoleLogs, "[exception] "+msg)
+			ctx.consoleLogs = appendCapped(ctx.consoleLogs, "[exception] "+msg)
 		})()
 	}
 
@@ -817,9 +817,21 @@ func (ctx *Context) preparePage(page *rod.Page) {
 		go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
 			ctx.stateLock.Lock()
 			defer ctx.stateLock.Unlock()
-			ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+			ctx.requests = appendCapped(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
 		})()
 	}
+}
+
+// captureCap bounds the console and request buffers.
+// ponytail: drop-oldest slice trim (O(n) copy once per overflow event); switch to a ring buffer if capture rates make that measurable.
+const captureCap = 2000
+
+func appendCapped(buf []string, entry string) []string {
+	buf = append(buf, entry)
+	if len(buf) > captureCap {
+		buf = slices.Delete(buf, 0, len(buf)-captureCap)
+	}
+	return buf
 }
 
 // RecordCDPDomain marks a footprint-adding CDP domain as enabled for this

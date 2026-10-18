@@ -97,3 +97,4 @@ verify: T12 — pass — go build + go test ./actions/ -run 'Screenshot|Pdf' ok 
 
 tdd: TestConsoleRecordsUncaughtException — red: console_test.go:28: ConsoleLogs = "No console logs", err=<nil>; want [exception] ... boom — green: go test ./actions/ -run TestConsoleRecordsUncaughtException -count=1 passed
 tdd: TestConsoleClear — red: console_test.go:41: ConsoleLogs after clear = "[log] keep me", err=<nil>; want "No console logs" — green: go test ./actions/ -run TestConsoleClear -count=1 passed
+tdd: TestConsoleBufferCapped — red: console_test.go:63: got 2100 entries, first "[log] 0"; want 2000, first "[log] 100" — green: go test ./actions/ -run TestConsoleBufferCapped -count=1 passed

@@ -41,3 +41,25 @@ func TestConsoleClear(t *testing.T) {
 		t.Errorf("ConsoleLogs after clear = %q, err=%v; want \"No console logs\"", out, err)
 	}
 }
+
+func TestConsoleBufferCapped(t *testing.T) {
+	ctx, cleanup := newConsoleCtx(t)
+	defer cleanup()
+	if _, err := Evaluate(ctx, "for (let i = 0; i < 2100; i++) console.log(i)", ""); err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	var logs []string
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		logs = ctx.GetConsoleLogs()
+		if len(logs) > 0 && logs[len(logs)-1] == "[log] 2099" {
+			break
+		}
+	}
+	if len(logs) != 2000 || logs[0] != "[log] 100" {
+		first := ""
+		if len(logs) > 0 {
+			first = logs[0]
+		}
+		t.Errorf("got %d entries, first %q; want 2000, first \"[log] 100\"", len(logs), first)
+	}
+}
