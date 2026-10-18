@@ -843,3 +843,10 @@ func writePortFile(t *testing.T, srv *httptest.Server, session string) {
 		t.Fatal(err)
 	}
 }
+
+func TestMouseWheelCLIArgs(t *testing.T) {
+	err := runApp("mousewheel", "5")
+	if err == nil || !strings.Contains(err.Error(), "dx and dy are required together") {
+		t.Fatalf("mousewheel 5: err = %v", err)
+	}
+}

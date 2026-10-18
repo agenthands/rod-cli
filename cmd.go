@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/agenthands/rod-cli/banner"
@@ -359,7 +360,9 @@ func getApp() *cli.App {
 			&cli.IntFlag{Name: "mouse-speed-max", Usage: "Max mouse speed in px/s; set with --mouse-speed-min"},
 			&cli.Float64Flag{Name: "mouse-deviation", Usage: "Mouse-path randomness factor 0.0-1.0"},
 			&cli.IntFlag{Name: "scroll-duration", Usage: "Base scroll animation duration in ms"},
-			&cli.BoolFlag{Name: "scroll-physics", Usage: "Use physics-based (eased) scrolling (godoll default; cannot be disabled via flag in v1.6)"},
+			// ponytail: --scroll-physics is accepted for config compatibility but ignored;
+			// mousewheel sends real wheel notches. Remove the flag in a breaking release.
+			&cli.BoolFlag{Name: "scroll-physics", Usage: "ignored: wheel scrolling uses real wheel notches"},
 			&cli.IntFlag{Name: "ppid", Hidden: true, Usage: "parent process ID for daemon mode"},
 		},
 		Commands: []*cli.Command{
@@ -669,15 +672,28 @@ func getApp() *cli.App {
 				},
 			},
 			{
-				Name:  "mousewheel",
-				Usage: "Scroll mouse wheel",
+				Name:      "mousewheel",
+				Usage:     "Scroll with real wheel input (default: one viewport down)",
+				ArgsUsage: "[dx dy] [ref]",
 				Action: func(c *cli.Context) error {
-					dx := c.Args().Get(0)
-					dy := c.Args().Get(1)
-					if dx == "" || dy == "" {
-						return fmt.Errorf("dx and dy are required")
+					a := c.Args().Slice()
+					args := map[string]string{}
+					switch len(a) {
+					case 0:
+					case 1:
+						if _, err := strconv.ParseFloat(a[0], 64); err == nil {
+							return fmt.Errorf("dx and dy are required together")
+						}
+						args["ref"] = a[0]
+					case 2, 3:
+						args["dx"], args["dy"] = a[0], a[1]
+						if len(a) == 3 {
+							args["ref"] = a[2]
+						}
+					default:
+						return fmt.Errorf("usage: mousewheel [dx dy] [ref]")
 					}
-					return runClientCommand(c, daemon.Request{Command: "mousewheel", Args: map[string]string{"dx": dx, "dy": dy}})
+					return runClientCommand(c, daemon.Request{Command: "mousewheel", Args: args})
 				},
 			},
 			{
