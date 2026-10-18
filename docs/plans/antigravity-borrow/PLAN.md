@@ -276,7 +276,7 @@ Output is one line: `scrolled dy=<moved> y=<pos>/<max>`.
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ ./ -run 'MouseWheel|Mouse|MissingArg' -count=1 && go test ./tests/ -run 'TestTabsAndViewCommands|TestRawInputs' -count=1` prints only `ok`.
 
-### T07 [ ] Checkpoint 1: P0 complete, full suite green
+### T07 [~] Checkpoint 1: P0 complete, full suite green
 **Seams:** none (no code).
 **Change:** Run the Full suite command. Fix nothing here. If a test outside the Baseline fails, return `blocked` and name the task whose files it touches.
 **Done when:** the Full suite command exits 0, apart from Baseline-listed failures.
