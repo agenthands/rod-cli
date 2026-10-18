@@ -93,7 +93,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `go test ./types/ -run TestLocatorInFrame -count=1 && go test ./actions/ -run 'TestSnapshot' -count=1` prints `ok` for both, and `grep -c 'console.log' types/js/snapshotter.js` prints `0`.
 
-### T03 [ ] Snapshot: Go-owned generation, engine re-inject, options struct
+### T03 [~] Snapshot: Go-owned generation, engine re-inject, options struct
 **Why:**
 - The JS generation counter restarts at 1 on every document (`snapshotter_raw.js:1509`), so an old `s1e5` can silently match a different element after navigation.
 - Tabs and frames that were never prepared have no `snapshotEngine`.
