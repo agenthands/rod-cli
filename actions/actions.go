@@ -438,11 +438,21 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := elementSelect(element, values, true, rod.SelectorTypeText); err != nil {
-		return "", errors.Wrap(err, "Failed to select option(s)")
+	for _, v := range values {
+		if err := elementSelect(element, []string{v}, true, rod.SelectorTypeText); err != nil {
+			return "", errors.Wrap(err, "Failed to select option(s)")
+		}
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
-	return fmt.Sprintf("Select option(s) in element %s successfully", ref), nil
+	res, err := elementEval(element, `() => Array.from(this.selectedOptions, o => o.text.trim())`)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to read selected options")
+	}
+	labels := make([]string, 0, len(res.Value.Arr()))
+	for _, l := range res.Value.Arr() {
+		labels = append(labels, strconv.Quote(l.Str()))
+	}
+	return fmt.Sprintf("Selected %s in %s", strings.Join(labels, ", "), ref), nil
 }
 
 func Check(ctx *types.Context, ref string) (string, error) {

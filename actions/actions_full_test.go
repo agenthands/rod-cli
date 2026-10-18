@@ -35,6 +35,7 @@ const fixtureHTML = `<!DOCTYPE html>
       <option value="a">Apple</option>
       <option value="b">Banana</option>
     </select>
+    <select id="multi" multiple aria-label="Multi Box"><option value="a">Apple</option><option value="b">Banana</option><option value="c">Cherry</option></select>
     <textarea id="ta" aria-label="Text Area"></textarea>
   </form>
   <div id="dragsrc" role="button" tabindex="0" draggable="true" aria-label="Drag Source" style="width:50px;height:50px;background:red">SRC</div>
@@ -349,6 +350,20 @@ func TestSelect(t *testing.T) {
 	}
 	if _, err := Select(freshCtx(), "x", []string{"a"}); err == nil {
 		t.Error("Select expected error no page")
+	}
+}
+
+func TestSelectMultiple(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	ref := refFor(t, ctx, "Multi Box")
+	out, err := Select(ctx, ref, []string{"Apple", "Banana"})
+	if want := `Selected "Apple", "Banana" in ` + ref; err != nil || out != want {
+		t.Fatalf("Select = %q, %v; want %q", out, err, want)
 	}
 }
 

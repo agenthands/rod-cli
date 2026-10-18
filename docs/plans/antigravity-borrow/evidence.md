@@ -37,3 +37,4 @@ verify: T04 — pass — done-check printed only ok lines (types 18.7s, actions 
 
 ## T05
 tdd: TestExecuteActionSelectPassesList — red: daemon_more_test.go:627: select failed: Failed to select option(s): cannot find element — green: go test ./daemon/ -run TestExecuteActionSelectPassesList -count=1 passed
+tdd: TestSelectMultiple — red: actions_full_test.go:366: Select = "Select option(s) in element s1e14 successfully", <nil>; want "Selected \"Apple\", \"Banana\" in s1e14" — green: go test ./actions/ -run TestSelectMultiple$ -count=1 passed
