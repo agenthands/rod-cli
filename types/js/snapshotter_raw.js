@@ -1501,10 +1501,8 @@ class SnapshotEngine {
 
     ariaSnapshot(node, options) {
         if (node.nodeType !== Node.ELEMENT_NODE) {
-            console.log('ariaSnapshot only works on elements.')
-            return;
+            return '';
         }
-        console.log(node, options)
 
         const generation = (this._lastAriaSnapshot?.generation || 0) + 1;
         this._lastAriaSnapshot = this.generateAriaTree(node, generation, options?.ref ?? false);

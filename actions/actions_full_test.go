@@ -608,6 +608,23 @@ func TestSnapshot(t *testing.T) {
 	}
 }
 
+func TestSnapshotDoesNotLogToConsole(t *testing.T) {
+	on := true
+	ctx, cleanup := newLiveCtxCfg(t, func(c *types.Config) { c.Stealth.ConsoleCapture = &on })
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	if _, err := Snapshot(ctx); err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	time.Sleep(200 * time.Millisecond) // console events arrive asynchronously
+	if out, err := ConsoleLogs(ctx); err != nil || out != "No console logs" {
+		t.Errorf("ConsoleLogs after Snapshot = %q, err=%v; want \"No console logs\"", out, err)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Keyboard / Mouse
 // ---------------------------------------------------------------------------
