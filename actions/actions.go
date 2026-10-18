@@ -339,7 +339,7 @@ func Screenshot(ctx *types.Context, name, selector, out string, fullPage bool) (
 		req := &proto.PageCaptureScreenshot{
 			Format: proto.PageCaptureScreenshotFormatPng,
 		}
-		bin, err = pageScreenshot(page.Timeout(defaultCaptureTimeout), false, req)
+		bin, err = pageScreenshot(page.Timeout(defaultCaptureTimeout), fullPage, req)
 		if err != nil {
 			return "", errors.Wrap(err, "Failed to screenshot")
 		}

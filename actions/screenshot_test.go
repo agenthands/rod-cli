@@ -65,3 +65,25 @@ func TestScreenshotNameCannotEscape(t *testing.T) {
 		}
 	})
 }
+
+func TestScreenshotFullPage(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	if _, err := Navigate(ctx, srv.URL+"/scroll"); err != nil {
+		t.Fatal(err)
+	}
+	vh, err := Evaluate(ctx, "window.innerHeight", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	viewport, _ := strconv.Atoi(strings.TrimSpace(vh))
+	out, err := Screenshot(ctx, "full", "", "", true)
+	if err != nil {
+		t.Fatalf("Screenshot: %v", err)
+	}
+	if _, _, h := shotDims(t, out); viewport == 0 || h <= viewport {
+		t.Errorf("full-page height %d, want > viewport %d", h, viewport)
+	}
+}
