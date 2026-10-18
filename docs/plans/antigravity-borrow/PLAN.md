@@ -361,7 +361,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./types/ ./actions/ -run 'Prune|Snapshot' -count=1 && (cd extensions/core && npx vitest run && npx tsc --noEmit)` all pass.
 
-### T11 [ ] `--max-output N`: a hard cap on every command's output, used by the extensions
+### T11 [~] `--max-output N`: a hard cap on every command's output, used by the extensions
 **Why:** Pi requires tools to truncate (`node_modules/@earendil-works/pi-coding-agent/docs/extensions.md:1993`). Today the snapshot description claims 50KB/2000 lines, but nothing truncates.
 **Seams:** `capOutput` (pure, cmd.go; property test); `runClientCommand` output (`cmd_test.go` `TestRunClientCommandOutputBranches` style); core `execRodCli` argv.
 **Change:**
