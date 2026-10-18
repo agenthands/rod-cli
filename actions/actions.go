@@ -439,10 +439,8 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 		return "", err
 	}
 	for _, v := range values {
-		if err := elementSelect(element, []string{v}, true, rod.SelectorTypeText); err != nil {
-			if err := selectByValue(element, v); err != nil {
-				return "", errors.Wrap(err, "Failed to select option(s)")
-			}
+		if err := selectOne(element, v); err != nil {
+			return "", err
 		}
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -455,6 +453,28 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 		labels = append(labels, strconv.Quote(l.Str()))
 	}
 	return fmt.Sprintf("Selected %s in %s", strings.Join(labels, ", "), ref), nil
+}
+
+// selectOne selects the option matching v: option text, then value, then
+// case-insensitive substring of the text.
+func selectOne(el *rod.Element, v string) error {
+	if elementSelect(el, []string{v}, true, rod.SelectorTypeText) == nil || selectByValue(el, v) == nil {
+		return nil
+	}
+	res, err := elementEval(el, `(v) => {
+		const o = Array.from(this.options).find(o => o.text.toLowerCase().includes(v.toLowerCase()));
+		return o ? o.value : null;
+	}`, v)
+	if err != nil {
+		return errors.Wrap(err, "Failed to select option(s)")
+	}
+	if res.Value.Nil() {
+		return fmt.Errorf("no option matches %q", v)
+	}
+	if err := selectByValue(el, res.Value.Str()); err != nil {
+		return errors.Wrap(err, "Failed to select option(s)")
+	}
+	return nil
 }
 
 func selectByValue(el *rod.Element, v string) error {

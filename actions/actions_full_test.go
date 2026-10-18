@@ -381,6 +381,20 @@ func TestSelectByValueFallback(t *testing.T) {
 	}
 }
 
+func TestSelectPartialMatchFails(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	ref := refFor(t, ctx, "Multi Box")
+	_, err := Select(ctx, ref, []string{"Apple", "Durian"})
+	if err == nil || !strings.Contains(err.Error(), `no option matches "Durian"`) {
+		t.Fatalf("Select err = %v; want it to contain %q", err, `no option matches "Durian"`)
+	}
+}
+
 func TestUpload(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()
