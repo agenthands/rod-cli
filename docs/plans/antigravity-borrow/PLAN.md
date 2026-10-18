@@ -548,10 +548,12 @@ Cause, reproduced by hand:
 
 **Done when:** either `go test ./types/ ./actions/ -count=1` passes with both tests included, or `grep -c '^## T17 no-go' docs/plans/antigravity-borrow/evidence.md` prints `1` and `go test ./types/ ./actions/ -count=1` passes.
 
-### T18 [!] Final verification: full suite, vulnerability scan, live smoke
-Blocked: I couldn't finish T18 as written. The plan assumes govulncheck reports nothing, and that's false for this repo. All 16 reachable findings come from outside this branch's changes. 15 are in the Go standard library: go.mod pins `toolchain go1.26.4`, and the fixes are in go1.26.5 through go1.26.9. The last one is golang.org/x/text v0.3.8 (fixed in v0.39.0), which comes in through github.com/dop251/goja via internal/plugin. Clearing them means raising the go.mod toolchain line to go1.26.9 (which downloads that toolchain) and upgrading golang.org/x/text (`go get golang.org/x/text@v0.39.0 && go mod 
+### T18 [~] Final verification: full suite, vulnerability scan, live smoke
 **Seams:** CLI end-to-end (`./tests/`, `runCli` + `SetupTestServer`). Write `TestSmokeAntigravity` with sf-tdd: run it red first (assert one output format from a not-yet-asserted step), then green.
 **Change:**
+0. Clear the govulncheck findings, all of which predate this branch: 15 are Go stdlib issues on toolchain go1.26.4, and one is golang.org/x/text v0.3.8, pulled in via goja. Run exactly:
+   `cd /home/john/go/src/github.com/agenthands/rod-cli && go mod edit -toolchain=go1.26.9 && go get golang.org/x/text@v0.39.0 && go mod tidy`
+   Then commit `go.mod` and `go.sum` by path, with subject `wip(T18): bump toolchain go1.26.9 and x/text v0.39.0 (govulncheck)`. A dependency bump writes no code, so it needs no sf-tdd cycle; the Full suite and govulncheck in steps 1-2 are its check.
 1. Run the Full suite command.
 2. Run `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`.
 3. Run the live smoke against the test server, in a new `tests/smoke_antigravity_test.go`. It drives one session: `goto /page1`, then `tab-new <ts>/page2`, then `snapshot -i`, then `mousewheel`, then `tab-list`, then `tab-close <current id>`, then `eval 1+1`, then `screenshot --out <tmp>`. It asserts the output formats from T01, T04, T06, T10 and T12.
