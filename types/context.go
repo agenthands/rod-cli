@@ -254,6 +254,7 @@ type Context struct {
 	stateLock  sync.Mutex
 	isInitial  atomic.Bool
 	snapshot    *Snapshot
+	snapGen     int
 	mode        Mode
 	consoleLogs []string
 	requests    []string
@@ -428,13 +429,15 @@ func (ctx *Context) AddLoadedPlugin(path string) {
 	ctx.loadedPlugins = append(ctx.loadedPlugins, path)
 }
 
-func (ctx *Context) BuildSnapshot() (string, error) {
+func (ctx *Context) BuildSnapshot(o SnapshotOpts) (string, error) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	if ctx.page == nil {
 		return "", errors.New("No tab to capture snapshot, call rod_navigate first")
 	}
-	snapshot, err := BuildSnapshot(ctx.page)
+	ctx.snapGen++
+	o.Gen = ctx.snapGen
+	snapshot, err := BuildSnapshot(ctx.page, o)
 	if err != nil {
 		return "", err
 	}

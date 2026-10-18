@@ -121,7 +121,7 @@ func TestContext_LifecycleAndAccessors(t *testing.T) {
 	}
 
 	// BuildSnapshot (positive) then LatestSnapshot.
-	snapStr, err := ctx.BuildSnapshot()
+	snapStr, err := ctx.BuildSnapshot(SnapshotOpts{})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestContext_FreshNegativePaths(t *testing.T) {
 	}
 
 	// BuildSnapshot with nil page returns error.
-	if _, err := ctx.BuildSnapshot(); err == nil {
+	if _, err := ctx.BuildSnapshot(SnapshotOpts{}); err == nil {
 		t.Fatal("expected BuildSnapshot error with nil page")
 	}
 

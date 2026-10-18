@@ -45,7 +45,7 @@ func TestBuildSnapshot_EvalError(t *testing.T) {
 	}
 	defer func() { pageEval = orig }()
 
-	if _, err := BuildSnapshot(page); err == nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err == nil {
 		t.Fatal("expected error from eval failure")
 	}
 }
@@ -71,7 +71,7 @@ func TestBuildSnapshot_EvalTransientThenSucceeds(t *testing.T) {
 	}
 	defer func() { pageEval = origEval }()
 
-	if _, err := BuildSnapshot(page); err != nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err != nil {
 		t.Fatalf("expected retry to recover from transient eval failures, got: %v", err)
 	}
 	if attempts != 3 {
@@ -86,7 +86,7 @@ func TestBuildSnapshot_UnmarshalError(t *testing.T) {
 	yamlUnmarshal = func([]byte, any) error { return errBoom }
 	defer func() { yamlUnmarshal = orig }()
 
-	if _, err := BuildSnapshot(page); err == nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err == nil {
 		t.Fatal("expected error from yaml.Unmarshal failure")
 	}
 }
@@ -98,7 +98,7 @@ func TestBuildSnapshot_MarshalError(t *testing.T) {
 	yamlMarshal = func(any) ([]byte, error) { return nil, errBoom }
 	defer func() { yamlMarshal = orig }()
 
-	if _, err := BuildSnapshot(page); err == nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err == nil {
 		t.Fatal("expected error from yaml.Marshal failure")
 	}
 }
@@ -110,7 +110,7 @@ func TestBuildSnapshot_PageInfoError(t *testing.T) {
 	pageInfo = func(p *rod.Page) (*proto.TargetTargetInfo, error) { return nil, errBoom }
 	defer func() { pageInfo = orig }()
 
-	if _, err := BuildSnapshot(page); err == nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err == nil {
 		t.Fatal("expected error from page.Info failure")
 	}
 }
@@ -122,7 +122,7 @@ func TestBuildSnapshot_TemplateError(t *testing.T) {
 	executeTemple = func(string, any) (string, error) { return "", errBoom }
 	defer func() { executeTemple = orig }()
 
-	if _, err := BuildSnapshot(page); err == nil {
+	if _, err := BuildSnapshot(page, SnapshotOpts{Gen: 1}); err == nil {
 		t.Fatal("expected error from template execute failure")
 	}
 }
@@ -159,7 +159,7 @@ func TestWalk_IframeQueryEleError(t *testing.T) {
 	}
 	defer func() { queryEleByAria = orig }()
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestWalk_IframeChildCaptureError(t *testing.T) {
 	}
 	defer func() { pageEval = orig }()
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestWalk_IframeFrameError(t *testing.T) {
 	}
 	defer func() { queryEleByAria = orig }()
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestWalk_IframeFrameError(t *testing.T) {
 
 func TestLocatorInFrame_AtoiOverflow(t *testing.T) {
 	_, page := navFixture(t)
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestLocatorInFrame_AtoiOverflow(t *testing.T) {
 
 func TestLocatorInFrame_NestedFrameRef(t *testing.T) {
 	page := navIframe(t)
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -349,7 +349,7 @@ func TestContextBuildSnapshot_InnerError(t *testing.T) {
 	}
 	defer func() { pageEval = orig }()
 
-	if _, err := ctx.BuildSnapshot(); err == nil {
+	if _, err := ctx.BuildSnapshot(SnapshotOpts{}); err == nil {
 		t.Fatal("expected ctx.BuildSnapshot to propagate inner error")
 	}
 }
@@ -411,7 +411,7 @@ func TestWalk_IframeEmptyChildContent(t *testing.T) {
 	}
 	defer func() { yamlUnmarshal = origU }()
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}

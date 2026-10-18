@@ -22,7 +22,7 @@ func TestBuildSnapshot_RichDOM(t *testing.T) {
 		t.Fatalf("wait load: %v", err)
 	}
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestBuildSnapshot_IframeParent(t *testing.T) {
 		t.Fatalf("wait load: %v", err)
 	}
 
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot with iframe: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestLocatorInFrame_BadFrameIndex(t *testing.T) {
 	if err := page.WaitLoad(); err != nil {
 		t.Fatalf("wait load: %v", err)
 	}
-	snap, err := BuildSnapshot(page)
+	snap, err := BuildSnapshot(page, SnapshotOpts{Gen: 1})
 	if err != nil {
 		t.Fatalf("BuildSnapshot: %v", err)
 	}

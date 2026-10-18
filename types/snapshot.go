@@ -34,16 +34,25 @@ const snapshotTpl = `
 - Page Snapshot
 ` + "```yaml\n" + "{{ .Snapshot }}" + "\n```\n"
 
+// SnapshotOpts controls one snapshot capture. Gen is the ref generation
+// (s<Gen>e<N>). Root is a JS expression for the root element; empty means
+// document.body. Interactive is reserved for interactive-only output.
+type SnapshotOpts struct {
+	Gen         int
+	Root        string
+	Interactive bool
+}
+
 type Snapshot struct {
 	frames       []*rod.Page
 	textSnapshot string
 }
 
-func BuildSnapshot(p *rod.Page) (*Snapshot, error) {
+func BuildSnapshot(p *rod.Page, o SnapshotOpts) (*Snapshot, error) {
 	snapshot := &Snapshot{
 		frames: []*rod.Page{},
 	}
-	yamlDoc, err := snapshot.captureSnapshotWithFrames(p)
+	yamlDoc, err := snapshot.captureSnapshotWithFrames(p, o)
 	if err != nil {
 		return nil, err
 	}
@@ -92,14 +101,19 @@ const (
 	snapshotEvalRetryDelay = 200 * time.Millisecond
 )
 
-func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page) (*yaml.Node, error) {
+func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page, o SnapshotOpts) (*yaml.Node, error) {
 	s.frames = append(s.frames, p)
 	frameIndex := len(s.frames) - 1
 
+	root := o.Root
+	if root == "" {
+		root = "document.body"
+	}
+	opts := fmt.Sprintf("({ref: true, generation: %d})", o.Gen)
 	var rawSnapshot *proto.RuntimeRemoteObject
 	err := retry.Retry(func() error {
 		var evalErr error
-		rawSnapshot, evalErr = pageEval(p, js.AriaSnapshot, "document.body", "({ref: true})")
+		rawSnapshot, evalErr = pageEval(p, js.AriaSnapshot, root, opts)
 		return evalErr
 	}, retry.WithMaxRetries(snapshotEvalMaxRetries), retry.WithExponentialBackoff(), retry.WithDelay(snapshotEvalRetryDelay))
 	if err != nil {
@@ -112,14 +126,14 @@ func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page) (*yaml.Node, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "capture snapshot with frames failed, frame index: %d", frameIndex)
 	}
-	return s.walk(&snapNode, frameIndex, p)
+	return s.walk(&snapNode, frameIndex, p, o)
 
 }
 
-func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page) (*yaml.Node, error) {
+func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page, o SnapshotOpts) (*yaml.Node, error) {
 	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
 		rootNode := node.Content[0]
-		processedRoot, err := s.walk(rootNode, frameIndex, frame)
+		processedRoot, err := s.walk(rootNode, frameIndex, frame, o)
 		if err != nil {
 			return nil, err
 		}
@@ -134,13 +148,13 @@ func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page) (*yaml
 			valueNode := node.Content[i+1]
 
 			// Process key
-			newKey, err := s.walk(keyNode, frameIndex, frame)
+			newKey, err := s.walk(keyNode, frameIndex, frame, o)
 			if err != nil {
 				return nil, err
 			}
 
 			// Process value
-			newValue, err := s.walk(valueNode, frameIndex, frame)
+			newValue, err := s.walk(valueNode, frameIndex, frame, o)
 			if err != nil {
 				return nil, err
 			}
@@ -151,7 +165,7 @@ func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page) (*yaml
 	case yaml.SequenceNode:
 		// Process sequence nodes
 		for i, item := range node.Content {
-			processedItem, err := s.walk(item, frameIndex, frame)
+			processedItem, err := s.walk(item, frameIndex, frame, o)
 			if err != nil {
 				return nil, err
 			}
@@ -191,7 +205,9 @@ func (s *Snapshot) walk(node *yaml.Node, frameIndex int, frame *rod.Page) (*yaml
 					if err != nil {
 						return pairNode, nil
 					}
-					childSnapshot, err := s.captureSnapshotWithFrames(childFrame)
+					childOpts := o
+					childOpts.Root = "" // child frames always snapshot document.body
+					childSnapshot, err := s.captureSnapshotWithFrames(childFrame, childOpts)
 
 					if err != nil {
 						return pairNode, nil

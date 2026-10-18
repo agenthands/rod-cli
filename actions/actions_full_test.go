@@ -1092,3 +1092,29 @@ func TestCloseBrowser(t *testing.T) {
 		t.Errorf("unexpected: %s", out)
 	}
 }
+
+func TestSnapshotGenerationIsMonotonicAcrossNavigations(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	navFixture(t, ctx, srv)
+	firstRef := refFor(t, ctx, "Click Me")
+	if !strings.HasPrefix(firstRef, "s1e") {
+		t.Fatalf("first ref = %q, want prefix s1e", firstRef)
+	}
+	if _, err := Navigate(ctx, srv.URL+"/page2"); err != nil {
+		t.Fatalf("Navigate page2: %v", err)
+	}
+	if _, err := Navigate(ctx, srv.URL); err != nil {
+		t.Fatalf("Navigate back: %v", err)
+	}
+	secondRef := refFor(t, ctx, "Click Me")
+	if !strings.HasPrefix(secondRef, "s2e") {
+		t.Fatalf("second ref = %q, want prefix s2e", secondRef)
+	}
+	if _, err := Click(ctx, firstRef); err == nil {
+		t.Fatalf("Click(%q) with stale ref succeeded, want error", firstRef)
+	}
+}

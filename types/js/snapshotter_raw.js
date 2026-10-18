@@ -1504,7 +1504,7 @@ class SnapshotEngine {
             return '';
         }
 
-        const generation = (this._lastAriaSnapshot?.generation || 0) + 1;
+        const generation = options?.generation ?? ((this._lastAriaSnapshot?.generation || 0) + 1);
         this._lastAriaSnapshot = this.generateAriaTree(node, generation, options?.ref ?? false);
         return this.renderAriaTree(this._lastAriaSnapshot, options);
     }

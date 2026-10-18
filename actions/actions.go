@@ -352,7 +352,7 @@ func Screenshot(ctx *types.Context, name string, selector string, width, height 
 }
 
 func Snapshot(ctx *types.Context) (string, error) {
-	snapshot, err := ctx.BuildSnapshot()
+	snapshot, err := ctx.BuildSnapshot(types.SnapshotOpts{})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to capture snapshot")
 	}
