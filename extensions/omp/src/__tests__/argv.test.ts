@@ -1,6 +1,11 @@
 import { describe, it, expect } from "bun:test";
 import { createMockApi } from "./mockapi";
 import extension from "../index";
+import { writeFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const PNG_1x1 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 describe("tool argv mapping", () => {
   it("browse_goto produces correct argv", async () => {
@@ -261,5 +266,29 @@ describe("tool argv mapping", () => {
     await tool.execute("id", { action: "forward" });
 
     expect(mock.execCalls[0]).toEqual(["--raw", "--max-output", "51200", "go-forward"]);
+  });
+
+  it("Screenshot execute returns the PNG as an image and deletes the temp file", async () => {
+    const mock = createMockApi();
+    let argv: string[] = [];
+    (mock.api as unknown as { exec: unknown }).exec = async (_cmd: string, args: string[]) => {
+      argv = args;
+      writeFileSync(args[args.indexOf("--out") + 1]!, Buffer.from(PNG_1x1, "base64"));
+      return { stdout: "Screenshot saved", stderr: "", code: 0, killed: false };
+    };
+    extension(mock.api);
+
+    const tool = mock.tools.find((t) => t.name === "browse_screenshot")!;
+    const result = await tool.execute("id", { fullPage: true });
+
+    const outPath = argv[argv.indexOf("--out") + 1]!;
+    expect(argv).toContain("--full-page");
+    expect(outPath.startsWith(tmpdir())).toBe(true);
+    expect(outPath.endsWith(".png")).toBe(true);
+    expect(result.content).toEqual([
+      { type: "text", text: "Screenshot saved" },
+      { type: "image", data: PNG_1x1, mimeType: "image/png" },
+    ] as never);
+    expect(existsSync(outPath)).toBe(false);
   });
 });

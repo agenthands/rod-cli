@@ -28,6 +28,10 @@ export {
   buildHoverArgs,
 } from "./argv";
 
+// Screenshot as image content
+export { captureScreenshot } from "./screenshot";
+export type { ScreenshotContent } from "./screenshot";
+
 // Testable helpers
 export { validateInput } from "./validate";
 export { timeoutFor, TIMEOUTS } from "./timeouts";

@@ -13,6 +13,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerLifecycle } from "../lifecycle";
 import { registerAllCoreTools, registerAllExtendedTools } from "../tools";
 import extensionDefault from "../index";
+import { writeFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const PNG_1x1 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 interface RegisteredTool {
   name: string;
@@ -325,13 +330,28 @@ describe("per-tool execute() produces correct argv", () => {
     );
   });
 
-  it("browse_screenshot execute passes correct argv", async () => {
-    const { tool, execFn } = getTool("browse_screenshot");
-    await tool.execute("id", {}, undefined);
-    expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "--max-output", "51200", "screenshot"],
-      expect.anything(),
-    );
+  it("Screenshot execute returns the PNG as an image and deletes the temp file", async () => {
+    const pi = mockPi();
+    let outPath = "";
+    const execFn = vi.fn(async (args: string[]) => {
+      outPath = args[args.indexOf("--out") + 1]!;
+      writeFileSync(outPath, Buffer.from(PNG_1x1, "base64"));
+      return { code: 0, stdout: "Screenshot saved", stderr: "" };
+    });
+    registerAllCoreTools(asExt(pi), execFn);
+    const tool = pi._tools.find((t: RegisteredTool) => t.name === "browse_screenshot")!;
+
+    const result = await tool.execute("id", { fullPage: true }, undefined);
+
+    const argv = execFn.mock.calls[0]![0];
+    expect(argv).toContain("--full-page");
+    expect(outPath.startsWith(tmpdir())).toBe(true);
+    expect(outPath.endsWith(".png")).toBe(true);
+    expect(result.content).toEqual([
+      { type: "text", text: "Screenshot saved" },
+      { type: "image", data: PNG_1x1, mimeType: "image/png" },
+    ]);
+    expect(existsSync(outPath)).toBe(false);
   });
 });
 
