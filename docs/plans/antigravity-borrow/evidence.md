@@ -19,3 +19,4 @@ verify: T01 — pass — go build ok; go test ./actions -run TestEvaluate ok; go
 ## T02
 tdd: TestLocatorInFrame_IndexEqualsLen — red: snapshot_test.go:135: LocatorInFrame panicked: runtime error: index out of range [1] with length 1 — green: go test ./types/ -run TestLocatorInFrame_IndexEqualsLen -count=1 passed
 tdd: TestSnapshotDoesNotLogToConsole — red: actions_full_test.go:624: ConsoleLogs after Snapshot = "[log] ", err=<nil>; want "No console logs" — green: go test ./actions/ -run TestSnapshotDoesNotLogToConsole -count=1 passed
+verify: T02 — pass — go test ./types/ -run TestLocatorInFrame ok; go test ./actions/ -run TestSnapshot ok; grep -c console.log types/js/snapshotter.js = 0
