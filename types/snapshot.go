@@ -111,9 +111,17 @@ func (s *Snapshot) captureSnapshotWithFrames(p *rod.Page, o SnapshotOpts) (*yaml
 	}
 	opts := fmt.Sprintf("({ref: true, generation: %d})", o.Gen)
 	var rawSnapshot *proto.RuntimeRemoteObject
+	injected := false
 	err := retry.Retry(func() error {
 		var evalErr error
 		rawSnapshot, evalErr = pageEval(p, js.AriaSnapshot, root, opts)
+		if evalErr != nil && !injected && strings.Contains(evalErr.Error(), "snapshotEngine is not defined") {
+			injected = true
+			if _, injErr := pageEval(p, js.InjectEngine); injErr != nil {
+				return injErr
+			}
+			rawSnapshot, evalErr = pageEval(p, js.AriaSnapshot, root, opts)
+		}
 		return evalErr
 	}, retry.WithMaxRetries(snapshotEvalMaxRetries), retry.WithExponentialBackoff(), retry.WithDelay(snapshotEvalRetryDelay))
 	if err != nil {

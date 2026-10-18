@@ -12,6 +12,7 @@ import (
 
 	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 // ---------------------------------------------------------------------------
@@ -1116,5 +1117,28 @@ func TestSnapshotGenerationIsMonotonicAcrossNavigations(t *testing.T) {
 	}
 	if _, err := Click(ctx, firstRef); err == nil {
 		t.Fatalf("Click(%q) with stale ref succeeded, want error", firstRef)
+	}
+}
+
+func TestSnapshotInjectsMissingEngine(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	raw, err := ctx.GetBrowser().Page(proto.TargetCreateTarget{URL: srv.URL + "/page2"})
+	if err != nil {
+		t.Fatalf("create raw page: %v", err)
+	}
+	if err := raw.WaitLoad(); err != nil {
+		t.Fatalf("wait load: %v", err)
+	}
+	ctx.SetPage(raw)
+	out, err := Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("Snapshot on unprepared page: %v", err)
+	}
+	if !strings.Contains(out, "Page Two") {
+		t.Fatalf("snapshot missing %q:\n%s", "Page Two", out)
 	}
 }
