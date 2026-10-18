@@ -1197,7 +1197,7 @@ func EvalStorage(ctx *types.Context, storageType string, action string, key stri
 	return res, nil
 }
 
-func ConsoleLogs(ctx *types.Context) (string, error) {
+func ConsoleLogs(ctx *types.Context, clear bool) (string, error) {
 	logs := ctx.GetConsoleLogs()
 	if len(logs) == 0 {
 		return "No console logs", nil
@@ -1205,7 +1205,7 @@ func ConsoleLogs(ctx *types.Context) (string, error) {
 	return strings.Join(logs, "\n"), nil
 }
 
-func NetworkRequests(ctx *types.Context) (string, error) {
+func NetworkRequests(ctx *types.Context, clear bool) (string, error) {
 	reqs := ctx.GetRequests()
 	if len(reqs) == 0 {
 		return "No network requests", nil

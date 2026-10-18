@@ -375,9 +375,9 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "route-list":
 		return actions.RouteList(ctx)
 	case "console":
-		return actions.ConsoleLogs(ctx)
+		return actions.ConsoleLogs(ctx, req.Args["clear"] == "true")
 	case "requests":
-		return actions.NetworkRequests(ctx)
+		return actions.NetworkRequests(ctx, req.Args["clear"] == "true")
 	case "request":
 		var index int
 		fmt.Sscanf(req.Args["index"], "%d", &index)

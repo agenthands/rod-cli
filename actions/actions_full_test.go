@@ -669,7 +669,7 @@ func TestSnapshotDoesNotLogToConsole(t *testing.T) {
 		t.Fatalf("Snapshot: %v", err)
 	}
 	time.Sleep(200 * time.Millisecond) // console events arrive asynchronously
-	if out, err := ConsoleLogs(ctx); err != nil || out != "No console logs" {
+	if out, err := ConsoleLogs(ctx, false); err != nil || out != "No console logs" {
 		t.Errorf("ConsoleLogs after Snapshot = %q, err=%v; want \"No console logs\"", out, err)
 	}
 }
@@ -907,14 +907,14 @@ func TestConsoleLogs(t *testing.T) {
 	defer srv.Close()
 
 	// empty case
-	if out, err := ConsoleLogs(ctx); err != nil || !strings.Contains(out, "No console logs") {
+	if out, err := ConsoleLogs(ctx, false); err != nil || !strings.Contains(out, "No console logs") {
 		t.Errorf("ConsoleLogs empty: out=%s err=%v", out, err)
 	}
 
 	navFixture(t, ctx, srv)
 	_, _ = Evaluate(ctx, "console.log('hi from test')", "")
 	time.Sleep(200 * time.Millisecond)
-	if _, err := ConsoleLogs(ctx); err != nil {
+	if _, err := ConsoleLogs(ctx, false); err != nil {
 		t.Errorf("ConsoleLogs: %v", err)
 	}
 }
@@ -931,7 +931,7 @@ func TestNetworkRequests(t *testing.T) {
 	defer srv.Close()
 
 	// empty
-	if out, err := NetworkRequests(ctx); err != nil || !strings.Contains(out, "No network requests") {
+	if out, err := NetworkRequests(ctx, false); err != nil || !strings.Contains(out, "No network requests") {
 		t.Errorf("NetworkRequests empty: out=%s err=%v", out, err)
 	}
 	if _, err := NetworkRequest(ctx, 0); err == nil {
@@ -940,7 +940,7 @@ func TestNetworkRequests(t *testing.T) {
 
 	navFixture(t, ctx, srv)
 	time.Sleep(200 * time.Millisecond)
-	if _, err := NetworkRequests(ctx); err != nil {
+	if _, err := NetworkRequests(ctx, false); err != nil {
 		t.Errorf("NetworkRequests: %v", err)
 	}
 	if _, err := NetworkRequest(ctx, 0); err != nil {

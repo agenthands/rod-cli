@@ -92,3 +92,7 @@ tdd: TestScreenshotNameCannotEscape — red: screenshot_test.go:58: saved to "/t
 tdd: TestScreenshotFullPage — red: screenshot_test.go:87: full-page height 800, want > viewport 800 — green: go test ./actions/ -run TestScreenshotFullPage -count=1 passed
 tdd: TestScreenshotOutAbsolute — red: misc_test.go:152: screenshot --out: err=exit status 1 out=Incorrect Usage: flag provided but not defined: -out — green: go test ./tests/ -run TestScreenshotOutAbsolute -count=1 passed
 verify: T12 — pass — go build + go test ./actions/ -run 'Screenshot|Pdf' ok + go test ./tests/ -run 'TestScreenshot|TestMisc|TestNavigation' ok; go vet clean
+
+## T13
+
+tdd: TestConsoleRecordsUncaughtException — red: console_test.go:28: ConsoleLogs = "No console logs", err=<nil>; want [exception] ... boom — green: go test ./actions/ -run TestConsoleRecordsUncaughtException -count=1 passed

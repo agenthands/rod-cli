@@ -797,6 +797,14 @@ func (ctx *Context) preparePage(page *rod.Page) {
 				}
 			}
 			ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+		}, func(e *proto.RuntimeExceptionThrown) {
+			ctx.stateLock.Lock()
+			defer ctx.stateLock.Unlock()
+			msg := e.ExceptionDetails.Text
+			if ex := e.ExceptionDetails.Exception; ex != nil && ex.Description != "" {
+				msg = ex.Description
+			}
+			ctx.consoleLogs = append(ctx.consoleLogs, "[exception] "+msg)
 		})()
 	}
 
