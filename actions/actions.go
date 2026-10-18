@@ -440,7 +440,9 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 	}
 	for _, v := range values {
 		if err := elementSelect(element, []string{v}, true, rod.SelectorTypeText); err != nil {
-			return "", errors.Wrap(err, "Failed to select option(s)")
+			if err := selectByValue(element, v); err != nil {
+				return "", errors.Wrap(err, "Failed to select option(s)")
+			}
 		}
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -453,6 +455,10 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 		labels = append(labels, strconv.Quote(l.Str()))
 	}
 	return fmt.Sprintf("Selected %s in %s", strings.Join(labels, ", "), ref), nil
+}
+
+func selectByValue(el *rod.Element, v string) error {
+	return elementSelect(el, []string{"[value=" + strconv.Quote(v) + "]"}, true, rod.SelectorTypeCSSSector)
 }
 
 func Check(ctx *types.Context, ref string) (string, error) {

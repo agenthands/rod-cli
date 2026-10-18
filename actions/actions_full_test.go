@@ -367,6 +367,20 @@ func TestSelectMultiple(t *testing.T) {
 	}
 }
 
+func TestSelectByValueFallback(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	ref := refFor(t, ctx, "Select Box")
+	out, err := Select(ctx, ref, []string{"b"})
+	if want := `Selected "Banana" in ` + ref; err != nil || out != want {
+		t.Fatalf("Select = %q, %v; want %q", out, err, want)
+	}
+}
+
 func TestUpload(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()
