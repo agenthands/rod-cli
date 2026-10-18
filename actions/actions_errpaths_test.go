@@ -380,11 +380,11 @@ func TestErrPaths_ElementOps(t *testing.T) {
 		}
 	})
 
-	// Drag via humanizeDragAndDrop
+	// Drag via moveToElement
 	t.Run("Drag", func(t *testing.T) {
-		orig := humanizeDragAndDrop
-		humanizeDragAndDrop = func(page *rod.Page, source, target *rod.Element) error { return errBoom }
-		defer func() { humanizeDragAndDrop = orig }()
+		orig := moveToElement
+		moveToElement = func(p *rod.Page, el *rod.Element, opts ...humanize.MouseOption) error { return errBoom }
+		defer func() { moveToElement = orig }()
 		src := refFor(t, ctx, "Drag Source")
 		dst := refFor(t, ctx, "Drag Dest")
 		if _, err := Drag(ctx, src, dst); err == nil {

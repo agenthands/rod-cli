@@ -2,9 +2,12 @@ package actions
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/agenthands/godoll/humanize"
+	"github.com/agenthands/rod-cli/types"
+	"github.com/go-rod/rod"
 )
 
 func TestMouseMoveTracksPosition(t *testing.T) {
@@ -34,5 +37,43 @@ func TestHoverDoesNotTeleport(t *testing.T) {
 	want := fmt.Sprintf("%d,%d", int(p.X), int(p.Y))
 	if got, err := Evaluate(ctx, "window.__mx+','+window.__my", ""); err != nil || got != want {
 		t.Errorf("page saw %q (err %v), tracked pointer %s", got, err, want)
+	}
+}
+
+func TestDragHonoursTuning(t *testing.T) {
+	steps := 7
+	ctx, cleanup := newLiveCtxCfg(t, func(c *types.Config) { c.Stealth.MouseSteps = &steps })
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	var got []int
+	orig := moveToElement
+	moveToElement = func(p *rod.Page, el *rod.Element, opts ...humanize.MouseOption) error {
+		got = append(got, len(opts))
+		return nil
+	}
+	defer func() { moveToElement = orig }()
+
+	// Both refs must come from one snapshot: a second snapshot retires the first's refs.
+	snap, err := Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("Snapshot: %v", err)
+	}
+	refs := map[string]string{}
+	for _, line := range strings.Split(snap, "\n") {
+		for _, name := range []string{"Drag Source", "Drag Dest"} {
+			if m := refRe.FindStringSubmatch(line); m != nil && strings.Contains(line, name) {
+				refs[name] = m[1]
+			}
+		}
+	}
+	if _, err := Drag(ctx, refs["Drag Source"], refs["Drag Dest"]); err != nil {
+		t.Fatalf("Drag: %v", err)
+	}
+	want := len(mouseOpts(ctx.HumanizeTuning()))
+	if want == 0 || len(got) != 2 || got[0] != want || got[1] != want {
+		t.Errorf("moveToElement option counts = %v, want two moves with %d (non-zero)", got, want)
 	}
 }

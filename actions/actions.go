@@ -73,15 +73,14 @@ var (
 	pageScreenshot = func(p *rod.Page, fullPage bool, req *proto.PageCaptureScreenshot) ([]byte, error) {
 		return p.Screenshot(fullPage, req)
 	}
-	pagePDF             = func(p *rod.Page, req *proto.PagePrintToPDF) (*rod.StreamReader, error) { return p.PDF(req) }
-	osMkdirAll          = os.MkdirAll
-	osWriteFile         = os.WriteFile
-	clickWithMouse      = humanize.ClickWithMouse
-	typeWithHumanize    = humanize.TypeWithHumanize
-	moveToElement       = humanize.MoveTo
-	humanizeDragAndDrop = humanize.DragAndDrop
-	elementClick        = func(el *rod.Element, button proto.InputMouseButton, n int) error { return el.Click(button, n) }
-	elementSelect       = func(el *rod.Element, selectors []string, selected bool, t rod.SelectorType) error {
+	pagePDF          = func(p *rod.Page, req *proto.PagePrintToPDF) (*rod.StreamReader, error) { return p.PDF(req) }
+	osMkdirAll       = os.MkdirAll
+	osWriteFile      = os.WriteFile
+	clickWithMouse   = humanize.ClickWithMouse
+	typeWithHumanize = humanize.TypeWithHumanize
+	moveToElement    = humanize.MoveTo
+	elementClick     = func(el *rod.Element, button proto.InputMouseButton, n int) error { return el.Click(button, n) }
+	elementSelect    = func(el *rod.Element, selectors []string, selected bool, t rod.SelectorType) error {
 		return el.Select(selectors, selected, t)
 	}
 	elementSetFiles      = func(el *rod.Element, paths []string) error { return el.SetFiles(paths) }
@@ -1245,9 +1244,27 @@ func Drag(ctx *types.Context, startRef, endRef string) (string, error) {
 		return "", err
 	}
 
-	if err := humanizeDragAndDrop(page, el1, el2); err != nil {
-		return "", err
+	opts := mouseOpts(ctx.HumanizeTuning())
+	if err := moveToElement(page, el1, opts...); err != nil {
+		return "", errors.Wrap(err, "Failed to move to drag source")
 	}
+	if err := pageMouseDown(page, proto.InputMouseButtonLeft, 1); err != nil {
+		return "", errors.Wrap(err, "Failed to press mouse on drag source")
+	}
+	held := true
+	defer func() {
+		if held { // never leave the button stuck down on an error path
+			_ = pageMouseUp(page, proto.InputMouseButtonLeft, 1)
+		}
+	}()
+	if err := moveToElement(page, el2, opts...); err != nil {
+		return "", errors.Wrap(err, "Failed to move to drag target")
+	}
+	held = false
+	if err := pageMouseUp(page, proto.InputMouseButtonLeft, 1); err != nil {
+		return "", errors.Wrap(err, "Failed to release mouse on drag target")
+	}
+	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
 	return fmt.Sprintf("Dragged from %s to %s", startRef, endRef), nil
 }
 
