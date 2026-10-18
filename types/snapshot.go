@@ -31,15 +31,18 @@ const snapshotTpl = `
 - Page URL: {{ .URL }}
 - Page Title: {{ .Title }}
 - Frame Count: {{ .Frames }}
-- Page Snapshot
+{{ if .Scope }}- Scope: {{ .Scope }}
+{{ end }}- Page Snapshot
 ` + "```yaml\n" + "{{ .Snapshot }}" + "\n```\n"
 
 // SnapshotOpts controls one snapshot capture. Gen is the ref generation
 // (s<Gen>e<N>). Root is a JS expression for the root element; empty means
-// document.body. Interactive keeps only interactive nodes and their ancestors.
+// document.body. Scope is the user's root arg, echoed in the header.
+// Interactive keeps only interactive nodes and their ancestors.
 type SnapshotOpts struct {
 	Gen         int
 	Root        string
+	Scope       string
 	Interactive bool
 }
 
@@ -75,6 +78,7 @@ func BuildSnapshot(p *rod.Page, o SnapshotOpts) (*Snapshot, error) {
 		"Title":    info.Title,
 		"Snapshot": strings.TrimSpace(string(yamlBytes)),
 		"Frames":   len(snapshot.frames),
+		"Scope":    o.Scope,
 	}
 	res, err := executeTemple(snapshotTpl, tplInfo)
 	if err != nil {

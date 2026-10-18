@@ -341,8 +341,36 @@ func Screenshot(ctx *types.Context, name string, selector string, width, height 
 	return fmt.Sprintf("Save to %s", filePath), nil
 }
 
+var (
+	snapRefRe  = regexp.MustCompile(`^s(\d+)e(\d+)$`)
+	frameRefRe = regexp.MustCompile(`^f\d+s\d+e\d+$`)
+)
+
+// snapshotRootExpr turns a snapshot positional arg (a ref or a CSS selector)
+// into the JS expression the snapshotter evaluates as its root element.
+func snapshotRootExpr(root string) (string, error) {
+	if root == "" {
+		return "", nil
+	}
+	if frameRefRe.MatchString(root) {
+		return "", errors.Errorf("snapshot %s does not support iframe refs yet", root)
+	}
+	if m := snapRefRe.FindStringSubmatch(root); m != nil {
+		return fmt.Sprintf(`(()=>{const s=snapshotEngine._lastAriaSnapshot;if(!s||s.generation!==%s)throw new Error("stale ref %s: run snapshot");const e=s.elements.get(%s);if(!e)throw new Error("no element for ref %s");return e})()`, m[1], root, m[2], root), nil
+	}
+	sel, _ := json.Marshal(root)
+	msg, _ := json.Marshal("no element matches " + root)
+	return fmt.Sprintf(`document.querySelector(%s)||(()=>{throw new Error(%s)})()`, sel, msg), nil
+}
+
+// Snapshot captures the page, or only the subtree under root (a ref or CSS
+// selector) when given; interactive keeps only controls and their ancestors.
 func Snapshot(ctx *types.Context, root string, interactive bool) (string, error) {
-	snapshot, err := ctx.BuildSnapshot(types.SnapshotOpts{Interactive: interactive})
+	expr, err := snapshotRootExpr(root)
+	if err != nil {
+		return "", err
+	}
+	snapshot, err := ctx.BuildSnapshot(types.SnapshotOpts{Root: expr, Scope: root, Interactive: interactive})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to capture snapshot")
 	}

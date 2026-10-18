@@ -73,3 +73,4 @@ verify: T09 — pass — done-check: build ok; go test ./actions/ (MouseMove|Hov
 ## T10
 tdd: TestPruneInteractiveKeepsControlsAndAncestors — red: types/prune_test.go:20:25: undefined: pruneInteractive — green: go test ./types/ -run TestPruneInteractive -count=1 passed
 tdd: TestSnapshotInteractiveIsSmaller — red: actions/snapshot_scope_test.go:15:29: too many arguments in call to Snapshot — green: go test ./actions/ -run TestSnapshotInteractiveIsSmaller -count=1 passed (fixture is all controls, so pruning now drops non-interactive children too: link /url and button text)
+tdd: TestSnapshotSubtreeCSS — red: snapshot_scope_test.go:40: subtree snapshot wrong: — green: go test ./actions/ -run TestSnapshotSubtreeCSS -count=1 passed
