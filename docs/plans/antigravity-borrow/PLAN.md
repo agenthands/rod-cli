@@ -548,7 +548,7 @@ Cause, reproduced by hand:
 
 **Done when:** either `go test ./types/ ./actions/ -count=1` passes with both tests included, or `grep -c '^## T17 no-go' docs/plans/antigravity-borrow/evidence.md` prints `1` and `go test ./types/ ./actions/ -count=1` passes.
 
-### T18 [ ] Final verification: full suite, vulnerability scan, live smoke
+### T18 [~] Final verification: full suite, vulnerability scan, live smoke
 **Seams:** CLI end-to-end (`./tests/`, `runCli` + `SetupTestServer`). Write `TestSmokeAntigravity` with sf-tdd: run it red first (assert one output format from a not-yet-asserted step), then green.
 **Change:**
 1. Run the Full suite command.
