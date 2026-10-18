@@ -427,7 +427,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1` prints `ok` for both.
 
-### T13b [ ] pi integration tests run headless, like the Go e2e suite
+### T13b [~] pi integration tests run headless, like the Go e2e suite
 **Why:** `extensions/pi/src/__tests__/integration.test.ts` runs rod-cli without `--headless`. With no warm default daemon, the first `goto` spawns a headed Chrome. Under Wayland its first `screenshot` hangs 20-30 s, so the 6 tests after it hit vitest's 5000 ms timeout. This also fails on main. `tests/cli_test.go` `runCli` already defaults to `--headless` for this reason.
 **Seams:** the pi integration suite (`extensions/pi/src/__tests__/integration.test.ts`) run from a cold default session.
 **Change:** in `createRealExecFn` (integration.test.ts), replace `execFile(bin, args, { timeout: opts?.timeout }, ` with `execFile(bin, ["--headless", ...args], { timeout: opts?.timeout }, `.
