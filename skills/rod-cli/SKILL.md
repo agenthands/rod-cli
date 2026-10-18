@@ -27,6 +27,8 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 
 ## Commands
 
+**Flag placement**: Command-specific flags (`--submit`, `--path`, `--body`, `--name`, `--annotate`) must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
+
 ### Global Options
 - `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
 - `--raw`: Only changes output for two commands — `install` (suppresses the "Downloading…" progress line) and `stealth-check` (single-line PASS/FAIL instead of a table). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — don't add it reflexively.
@@ -60,7 +62,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli hover [selector]`: Hover over an element.
 - `rod-cli upload [selector] [file]`: Upload a file to an element.
 - `rod-cli drag [start-selector] [end-selector]`: Drag one element to another.
-- `rod-cli drop [selector] --path [file-path]`: Drop a file onto an element.
+- `rod-cli drop --path [file-path] [selector]`: Drop a file onto an element.
 
 ### Advanced Input & Dialogs
 - `rod-cli press [key]`: Simulate a raw keyboard key press (e.g., `Enter`, `Tab`, `Escape`).
@@ -91,14 +93,14 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking). Accepts the same CSS-selector-or-snapshot-ref `[selector]` as the Interaction commands above.
 - `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
 - `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
-- `rod-cli console`: List browser console messages.
+- `rod-cli console`: List browser console messages. Only works when the session was started with `--console-capture` (off by default) — pass it on the session's first command, e.g. `rod-cli --console-capture goto https://example.com`.
 
 ### Network Interception
-- `rod-cli route [pattern] --body [body]`: Mock network requests via godoll/network interceptor.
+- `rod-cli route --body [body] [pattern]`: Mock network requests matching a URL pattern.
 - `rod-cli route-list`: List all active network interception routes.
 - `rod-cli unroute [pattern]`: Remove a mock network route.
-- `rod-cli requests`: List all intercepted network requests.
-- `rod-cli request [index]`: Show details for a specific request.
+- `rod-cli requests`: List all captured network requests. Only works when the session was started with `--request-capture` (off by default) — pass it on the session's first command.
+- `rod-cli request [index]`: Show details for a specific request (also requires the session started with `--request-capture`).
 
 ### Evaluation & Export
 - `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context. Use it for reading/extracting page state (attributes, computed values, JSON data) — prefer the Interaction commands above (`click`, `fill`, `type`, etc.) for anything that acts on the page; see **Prefer Native Actions over `eval`** in Core Concepts.
@@ -121,7 +123,7 @@ rod-cli goto https://example.com
 rod-cli sessions
 
 # Interact
-rod-cli fill "#search-input" "go-rod automation" --submit
+rod-cli fill --submit "#search-input" "go-rod automation"
 rod-cli click "#submit-button"
 
 # Extract state
@@ -138,7 +140,7 @@ rod-cli ships two first-class host extensions alongside this Skill. All three pa
 | | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (this file) |
 |---|---|---|---|
 | **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant |
-| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy this `SKILL.md` to the assistant's skills dir |
+| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy this skill directory (`SKILL.md` + `references/`) to the assistant's skills dir |
 | **Tools** | 13 typed `browse_*` (injected `pi.zod`) | 13 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
 | **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
 | **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
@@ -147,7 +149,7 @@ rod-cli ships two first-class host extensions alongside this Skill. All three pa
 
 **OMP Extension** (recommended for OMP users): The same 13 typed browser tools with injected `pi.zod` schemas, guidance folded into tool descriptions, and ungated idempotent daemon cleanup. See [extensions/omp/README.md](../../extensions/omp/README.md) for the full tool catalog.
 
-**Skill path** (this file): Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) with zero npm dependencies. Copy this `SKILL.md` to the assistant's skills directory.
+**Skill path** (this file): Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) with zero npm dependencies. Copy this entire skill directory — this `SKILL.md` together with its `references/` folder — to the assistant's skills directory, so the links under "Specific tasks" below keep resolving.
 
 ## Specific tasks
 

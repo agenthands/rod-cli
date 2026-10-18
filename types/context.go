@@ -107,10 +107,10 @@ func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) 
 	return cfg, nil
 }
 
-// launchBrowser returns the browser plus a proxyCleanup func. proxyCleanup is
-// non-nil only when an authenticated proxy spun up a local godoll relay; the
-// caller MUST invoke it on session close to stop that relay (T-25-07). It is nil
-// for the no-proxy and no-auth-proxy paths.
+// launchBrowser returns the browser plus a session cleanup func. The caller
+// MUST invoke it on session close: it stops the local godoll relay when an
+// authenticated proxy spun one up (T-25-07) and removes the per-session browser
+// profile dir. It is nil only on the CDPEndpoint path, which owns neither.
 func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 
 	if cfg.CDPEndpoint != "" {
@@ -124,6 +124,7 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 
 	// browser must own a unique temp dir
 	cfg.BrowserTempDir = fmt.Sprintf("%s/%s", cfg.BrowserTempDir, utils.RandomString(10))
+	browserTempDir := cfg.BrowserTempDir
 	// Create basic launcher manually so we can set Headless, Proxy, UserDataDir
 	browserLauncher := launcher.New().
 		Context(context.Background()).
@@ -204,11 +205,18 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		opts = opts.WithWebRTCLeakProtection(true)
 	}
 
-	browserInstance, err := browser.NewBrowserE(context.Background(), opts)
-	if err != nil {
+	// The launcher creates browserTempDir per session and never reaps it; without
+	// this the profile dirs accumulate under BrowserTempDir forever.
+	sessionCleanup := func() {
 		if proxyCleanup != nil {
 			proxyCleanup()
 		}
+		os.RemoveAll(browserTempDir)
+	}
+
+	browserInstance, err := browser.NewBrowserE(context.Background(), opts)
+	if err != nil {
+		sessionCleanup()
 		return nil, nil, nil, errors.Wrap(err, "launch local browser failed via godoll")
 	}
 
@@ -216,7 +224,7 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		proxyCfg.SetupBrowserAuth(browserInstance)
 	}
 
-	return browserInstance, cdpProxyInstance, proxyCleanup, nil
+	return browserInstance, cdpProxyInstance, sessionCleanup, nil
 }
 
 func controlBrowser(ctx context.Context, controlURL string) (*rod.Browser, error) {

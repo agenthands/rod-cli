@@ -18,7 +18,7 @@ Modern web applications often use "Dropzones" instead of standard file inputs. T
 
 ```bash
 # Drop a file directly onto a Dropzone element
-rod-cli drop s1e45 --path="/tmp/avatar.jpg"
+rod-cli drop --path="/tmp/avatar.jpg" s1e45
 ```
 
 ## Element-to-Element Dragging
