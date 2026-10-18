@@ -753,7 +753,7 @@ func resolveTab(pages rod.Pages, sel string) (int, error) {
 	return match, nil
 }
 
-func TabSelect(ctx *types.Context, index int) (string, error) {
+func TabSelect(ctx *types.Context, sel string) (string, error) {
 	browser := ctx.GetBrowser()
 	if browser == nil {
 		return "", errors.New("No active browser")
@@ -762,15 +762,19 @@ func TabSelect(ctx *types.Context, index int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if index < 0 || index >= len(pages) {
-		return "", errors.Errorf("Tab index out of range: %d", index)
+	i, err := resolveTab(pages, sel)
+	if err != nil {
+		return "", err
 	}
-	page := pages[index]
+	page := pages[i]
 	if _, err := pageActivate(page); err != nil {
 		return "", errors.Wrap(err, "Failed to activate tab")
 	}
-	ctx.SwitchTo(page)
-	return fmt.Sprintf("Selected tab %d", index), nil
+	out := fmt.Sprintf("Selected tab %d %s", i, tabDesc(page))
+	if ctx.SwitchTo(page) {
+		out += "; adopted, stealth applies from next navigation (reload to apply)"
+	}
+	return out, nil
 }
 
 // parseKey parses a string to input.Key

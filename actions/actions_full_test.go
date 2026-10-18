@@ -751,11 +751,11 @@ func TestTabs(t *testing.T) {
 	if _, err := TabNew(ctx, ""); err != nil {
 		t.Errorf("TabNew blank: %v", err)
 	}
-	if _, err := TabSelect(ctx, 0); err != nil {
+	if _, err := TabSelect(ctx, "0"); err != nil {
 		t.Errorf("TabSelect: %v", err)
 	}
 	// out of range
-	if _, err := TabSelect(ctx, 999); err == nil {
+	if _, err := TabSelect(ctx, "999"); err == nil {
 		t.Error("TabSelect expected error out of range")
 	}
 	if _, err := TabClose(ctx, "999"); err == nil {
@@ -775,7 +775,7 @@ func TestTabs(t *testing.T) {
 	if _, err := TabClose(freshCtx(), "0"); err == nil {
 		t.Error("TabClose expected error no browser")
 	}
-	if _, err := TabSelect(freshCtx(), 0); err == nil {
+	if _, err := TabSelect(freshCtx(), "0"); err == nil {
 		t.Error("TabSelect expected error no browser")
 	}
 }
@@ -1223,5 +1223,30 @@ func TestTabCloseCurrentSwitches(t *testing.T) {
 	}
 	if _, err := Snapshot(ctx); err != nil {
 		t.Fatalf("Snapshot after closing current tab: %v", err)
+	}
+}
+
+func TestTabSelectAdoptsForeignTab(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	raw, err := ctx.GetBrowser().Page(proto.TargetCreateTarget{URL: srv.URL + "/page2"})
+	if err != nil {
+		t.Fatalf("create raw page: %v", err)
+	}
+	if err := raw.WaitLoad(); err != nil {
+		t.Fatalf("wait load: %v", err)
+	}
+	out, err := TabSelect(ctx, shortID(raw))
+	if err != nil {
+		t.Fatalf("TabSelect: %v", err)
+	}
+	if !strings.Contains(out, "adopted") {
+		t.Fatalf("TabSelect output = %q, want it to report the tab as adopted", out)
+	}
+	if _, err := Snapshot(ctx); err != nil {
+		t.Fatalf("Snapshot on adopted tab: %v", err)
 	}
 }

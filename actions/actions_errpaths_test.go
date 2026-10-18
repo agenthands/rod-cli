@@ -474,7 +474,7 @@ func TestErrPaths_Tabs(t *testing.T) {
 	if _, err := TabClose(ctx, "0"); err == nil {
 		t.Error("TabClose Pages expected error")
 	}
-	if _, err := TabSelect(ctx, 0); err == nil {
+	if _, err := TabSelect(ctx, "0"); err == nil {
 		t.Error("TabSelect Pages expected error")
 	}
 	browserPages = origPages
@@ -490,7 +490,7 @@ func TestErrPaths_Tabs(t *testing.T) {
 	// TabSelect: Activate failure
 	origAct := pageActivate
 	pageActivate = func(p *rod.Page) (*rod.Page, error) { return nil, errBoom }
-	if _, err := TabSelect(ctx, 0); err == nil {
+	if _, err := TabSelect(ctx, "0"); err == nil {
 		t.Error("TabSelect Activate expected wrapped error")
 	}
 	pageActivate = origAct

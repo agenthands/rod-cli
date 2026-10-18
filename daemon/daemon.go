@@ -339,9 +339,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "tab-close":
 		return actions.TabClose(ctx, req.Args["index"])
 	case "tab-select":
-		var index int
-		fmt.Sscanf(req.Args["index"], "%d", &index)
-		return actions.TabSelect(ctx, index)
+		return actions.TabSelect(ctx, req.Args["index"])
 	case "dialog-accept":
 		return actions.HandleDialog(ctx, true, req.Args["promptText"])
 	case "dialog-dismiss":
