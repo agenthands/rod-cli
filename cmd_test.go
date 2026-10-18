@@ -12,8 +12,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-rod/rod/lib/launcher"
+	"pgregory.net/rapid"
 )
 
 // newCDPEndpoint launches a headless browser and returns its CDP websocket URL.
@@ -850,4 +852,30 @@ func TestMouseWheelCLIArgs(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "dx and dy are required together") {
 		t.Fatalf("mousewheel 5: err = %v", err)
 	}
+}
+
+// TestCapOutputProperties: under the cap the message is untouched; over it the
+// output is a valid-UTF-8 prefix of at most max bytes plus a [truncated: line.
+// The generated string starts with "x" so it is never a JSON value (JSON is
+// passed through uncapped; see TestCapOutputSkipsJSON).
+func TestCapOutputProperties(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		s := "x" + rapid.String().Draw(t, "s")
+		max := rapid.IntRange(1, 4096).Draw(t, "max")
+		out := capOutput(s, max)
+		if len(s) <= max {
+			if out != s {
+				t.Fatalf("under cap: got %q, want %q", out, s)
+			}
+			return
+		}
+		i := strings.LastIndex(out, "\n[truncated:")
+		if i < 0 {
+			t.Fatalf("over cap: no [truncated: suffix in %q", out)
+		}
+		kept := out[:i]
+		if !strings.HasPrefix(s, kept) || len(kept) > max || !utf8.ValidString(kept) {
+			t.Fatalf("over cap: kept %q is not a valid-UTF-8 prefix of %q within %d bytes", kept, s, max)
+		}
+	})
 }

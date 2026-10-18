@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/agenthands/rod-cli/banner"
 	"github.com/agenthands/rod-cli/daemon"
@@ -1043,4 +1044,23 @@ func getApp() *cli.App {
 			return cli.ShowAppHelp(c)
 		},
 	}
+}
+
+// capOutput hard-caps a command's output at max bytes (0 = unlimited) so agent
+// tool results stay bounded. It cuts at the last newline within the cap (else
+// at max, backed up to a rune boundary) and appends a [truncated: ...] line
+// saying how to narrow the read. JSON values pass through whole: a cut would
+// make them unparseable.
+func capOutput(msg string, max int) string {
+	if max <= 0 || len(msg) <= max {
+		return msg
+	}
+	cut := strings.LastIndexByte(msg[:max], '\n')
+	if cut < 0 {
+		cut = max
+		for cut > 0 && !utf8.RuneStart(msg[cut]) {
+			cut--
+		}
+	}
+	return fmt.Sprintf("%s\n[truncated: %d of %d bytes; narrow with snapshot -i / snapshot <ref>, or --max-output 0]", msg[:cut], cut, len(msg))
 }

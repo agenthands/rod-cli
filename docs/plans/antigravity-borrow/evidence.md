@@ -77,3 +77,6 @@ tdd: TestSnapshotSubtreeCSS — red: snapshot_scope_test.go:40: subtree snapshot
 tdd: TestSnapshotSubtreeStaleRef — red (generation check mutated off; ref code landed with cycle 3): snapshot_scope_test.go:56: Snapshot(s1e11) after newer snapshot: err = <nil>, want stale ref — green: go test ./actions/ -run TestSnapshotSubtreeStaleRef -count=1 passed
 tdd: buildSnapshotArgs vitest (passes interactive before -- and the scope after it) — red: AssertionError: expected [ 'snapshot' ] to deeply equal [ 'snapshot', '-i', '--', 's1e3' ] — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed
 verify: T10 — pass — go test ./types/ ./actions/ -run Prune|Snapshot ok (types, actions); core vitest 140/140, tsc clean (pi/omp tsc also clean)
+
+## T11
+tdd: TestCapOutputProperties — red: seed 2167098811415620920: draw s: "A", draw max: 1 — over cap: no [truncated: suffix in "xA" — green: go test ./ -run TestCapOutputProperties -count=1 passed
