@@ -222,7 +222,7 @@ func (ctx *Context) SwitchTo(p *rod.Page) (adopted bool)
 
 **Done when:** `go build -o rod-cli . && go test ./daemon/ ./actions/ -run 'Select|Upload|ExecuteAction' -count=1 && go test ./tests/ -run TestInputsAndForms -count=1` prints only `ok`.
 
-### T06 [ ] mousewheel: real wheel input, scroll feedback, optional dx/dy
+### T06 [~] mousewheel: real wheel input, scroll feedback, optional dx/dy
 **Seams:** `actions.MouseWheel` (live on a `/scroll` fixture; unit with a fake scroller via the seams below); CLI `mousewheel` (`tests/tabs_view_test.go`).
 **Interface:**
 
