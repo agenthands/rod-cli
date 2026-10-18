@@ -72,7 +72,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ -run 'TestEvaluate' -count=1 && go test ./tests/ -run 'TestEvalCLIBareValue|TestDetection|TestProxy' -count=1` ends with `ok` lines only, and `grep -rn "Evaluate code successfully" --include=*.go --include=*.ts --include=*.md . | grep -v node_modules | grep -v docs/plans | grep -v '\.planning/'` prints nothing (`.planning/` holds historical records that keep the old text).
 
-### T02 [ ] Snapshot: frame-index off-by-one, no page-console logging, portable build script
+### T02 [~] Snapshot: frame-index off-by-one, no page-console logging, portable build script
 **Seams:** `types.Snapshot.LocatorInFrame` (unit); `actions.Snapshot` + `actions.ConsoleLogs` (live, `newLiveCtxCfg` with console capture on).
 **Change:**
 - `types/snapshot.go:229`: `frameIndex > len(s.frames)` → `frameIndex >= len(s.frames)`.
