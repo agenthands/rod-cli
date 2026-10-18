@@ -226,7 +226,7 @@ func (s *Snapshot) LocatorInFrame(ref string) (*rod.Element, error) {
 			return nil, errors.Wrapf(err, "locator frame failed, because of frame index is not number")
 		}
 
-		if frameIndex < 0 || frameIndex > len(s.frames) {
+		if frameIndex < 0 || frameIndex >= len(s.frames) {
 			return nil, errors.Errorf("locator frame failed, because of frame index is out of range")
 		}
 		frame = s.frames[frameIndex]

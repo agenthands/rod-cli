@@ -15,3 +15,6 @@ verify: T00 — pass — done-check `grep -c '^## Baseline'` printed 1; Baseline
 tdd: TestEvaluate_BareValue — red: actions_full_test.go:515: Evaluate("1+1") = "Evaluate code successfully with result: 2", want "2" — green: go test ./actions/ -run TestEvaluate_BareValue -count=1 passed
 tdd: TestEvalCLIBareValue — red: eval_test.go:21: eval output = "Evaluate code successfully with result: 2", want "2" — green: go build -o rod-cli . && go test ./tests/ -run TestEvalCLIBareValue -count=1 passed
 verify: T01 — pass — go build ok; go test ./actions -run TestEvaluate ok; go test ./tests -run 'TestEvalCLIBareValue|TestDetection|TestProxy' ok (158s); prefix grep prints nothing
+
+## T02
+tdd: TestLocatorInFrame_IndexEqualsLen — red: snapshot_test.go:135: LocatorInFrame panicked: runtime error: index out of range [1] with length 1 — green: go test ./types/ -run TestLocatorInFrame_IndexEqualsLen -count=1 passed

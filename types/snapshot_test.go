@@ -3,6 +3,8 @@ package types
 import (
 	"strings"
 	"testing"
+
+	"github.com/go-rod/rod"
 )
 
 func TestBuildSnapshot_RichDOM(t *testing.T) {
@@ -124,4 +126,16 @@ func firstRef(s string) string {
 		return ""
 	}
 	return rest[:end]
+}
+
+func TestLocatorInFrame_IndexEqualsLen(t *testing.T) {
+	s := &Snapshot{frames: []*rod.Page{nil}}
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("LocatorInFrame panicked: %v", r)
+		}
+	}()
+	if _, err := s.LocatorInFrame("f1s1e1"); err == nil {
+		t.Fatal("expected out-of-range error for frame index == len(frames)")
+	}
 }
