@@ -56,6 +56,10 @@ func newFixtureServer() *httptest.Server {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(page2HTML))
 	})
+	mux.HandleFunc("/scroll", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<body style="margin:0"><div id="box" style="height:200px;overflow:auto"><div style="height:2000px">in</div></div><div style="height:5000px">tall</div></body>`))
+	})
 	mux.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<html><head><title>Submitted</title></head><body>OK</body></html>`))

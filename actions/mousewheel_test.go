@@ -2,6 +2,7 @@ package actions
 
 import (
 	"math"
+	"regexp"
 	"testing"
 
 	"github.com/agenthands/godoll/humanize"
@@ -29,5 +30,19 @@ func TestMouseWheelReportsEndOnFakeScroller(t *testing.T) {
 	}
 	if got, err := MouseWheel(ctx, 0, 0, "", 0); err != nil || got != "scrolled dy=200 y=1000/1000 end" {
 		t.Fatalf("call 2: got %q, err %v", got, err)
+	}
+}
+
+func TestMouseWheelPageDefault(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	if _, err := Navigate(ctx, srv.URL+"/scroll"); err != nil {
+		t.Fatalf("Navigate: %v", err)
+	}
+	got, err := MouseWheel(ctx, 0, 0, "", 0)
+	if err != nil || !regexp.MustCompile(`^scrolled dy=([1-9]\d*) y=\d+/\d+$`).MatchString(got) {
+		t.Fatalf("MouseWheel = %q, %v", got, err)
 	}
 }
