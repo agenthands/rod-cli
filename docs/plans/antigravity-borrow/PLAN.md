@@ -41,7 +41,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 ---
 
-### T00 [ ] Baseline: record the suite state before any change
+### T00 [~] Baseline: record the suite state before any change
 **Seams:** none (no code).
 **Change:** Run the Full suite command once. Under `## Baseline` in evidence.md, write:
 - the Go version (`go version`);
