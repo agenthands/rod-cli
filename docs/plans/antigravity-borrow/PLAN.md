@@ -70,7 +70,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
    - `Evaluate(ctx,"() => this.tagName", refFor(t, ctx, "Click Me"))` == `"BUTTON"`
 2. `TestEvalCLIBareValue` (new `tests/eval_test.go`): `runCli("--raw","goto",ts.URL+"/page1")`, then `runCli("--raw","eval","1+1")`. Trimmed output == `"2"`.
 
-**Done when:** `go build -o rod-cli . && go test ./actions/ -run 'TestEvaluate' -count=1 && go test ./tests/ -run 'TestEvalCLIBareValue|TestDetection|TestProxy' -count=1` ends with `ok` lines only, and `grep -rn "Evaluate code successfully" --include=*.go --include=*.ts --include=*.md . | grep -v node_modules | grep -v docs/plans | grep -v '^./.planning/'` prints nothing (`.planning/` holds historical records that keep the old text).
+**Done when:** `go build -o rod-cli . && go test ./actions/ -run 'TestEvaluate' -count=1 && go test ./tests/ -run 'TestEvalCLIBareValue|TestDetection|TestProxy' -count=1` ends with `ok` lines only, and `grep -rn "Evaluate code successfully" --include=*.go --include=*.ts --include=*.md . | grep -v node_modules | grep -v docs/plans | grep -v '\.planning/'` prints nothing (`.planning/` holds historical records that keep the old text).
 
 ### T02 [ ] Snapshot: frame-index off-by-one, no page-console logging, portable build script
 **Seams:** `types.Snapshot.LocatorInFrame` (unit); `actions.Snapshot` + `actions.ConsoleLogs` (live, `newLiveCtxCfg` with console capture on).
