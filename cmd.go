@@ -738,7 +738,7 @@ func getApp() *cli.App {
 			},
 			{
 				Name:  "tab-close",
-				Usage: "Close a browser tab",
+				Usage: "Close a tab by index or 8-char id",
 				Action: func(c *cli.Context) error {
 					index := c.Args().First()
 					if index == "" {
@@ -749,7 +749,7 @@ func getApp() *cli.App {
 			},
 			{
 				Name:  "tab-select",
-				Usage: "Select a browser tab",
+				Usage: "Select a tab by index or 8-char id",
 				Action: func(c *cli.Context) error {
 					index := c.Args().First()
 					if index == "" {
