@@ -96,3 +96,4 @@ verify: T12 — pass — go build + go test ./actions/ -run 'Screenshot|Pdf' ok 
 ## T13
 
 tdd: TestConsoleRecordsUncaughtException — red: console_test.go:28: ConsoleLogs = "No console logs", err=<nil>; want [exception] ... boom — green: go test ./actions/ -run TestConsoleRecordsUncaughtException -count=1 passed
+tdd: TestConsoleClear — red: console_test.go:41: ConsoleLogs after clear = "[log] keep me", err=<nil>; want "No console logs" — green: go test ./actions/ -run TestConsoleClear -count=1 passed

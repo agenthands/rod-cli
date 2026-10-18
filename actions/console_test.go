@@ -28,3 +28,16 @@ func TestConsoleRecordsUncaughtException(t *testing.T) {
 		t.Errorf("ConsoleLogs = %q, err=%v; want [exception] ... boom", out, err)
 	}
 }
+
+func TestConsoleClear(t *testing.T) {
+	ctx, cleanup := newConsoleCtx(t)
+	defer cleanup()
+	_, _ = Evaluate(ctx, "console.log('keep me')", "")
+	time.Sleep(200 * time.Millisecond)
+	if out, err := ConsoleLogs(ctx, true); err != nil || !strings.Contains(out, "[log] keep me") {
+		t.Fatalf("ConsoleLogs(clear) = %q, err=%v; want the entries", out, err)
+	}
+	if out, err := ConsoleLogs(ctx, false); err != nil || out != "No console logs" {
+		t.Errorf("ConsoleLogs after clear = %q, err=%v; want \"No console logs\"", out, err)
+	}
+}

@@ -944,15 +944,17 @@ func getApp() *cli.App {
 			{
 				Name:  "console",
 				Usage: "List console messages (requires the session spawned with --console-capture; off by default)",
+				Flags: []cli.Flag{&cli.BoolFlag{Name: "clear", Usage: "print the entries, then clear them"}},
 				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "console"})
+					return runClientCommand(c, daemon.Request{Command: "console", Args: map[string]string{"clear": strconv.FormatBool(c.Bool("clear"))}})
 				},
 			},
 			{
 				Name:  "requests",
 				Usage: "List network requests (requires the session spawned with --request-capture; off by default)",
+				Flags: []cli.Flag{&cli.BoolFlag{Name: "clear", Usage: "print the entries, then clear them"}},
 				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "requests"})
+					return runClientCommand(c, daemon.Request{Command: "requests", Args: map[string]string{"clear": strconv.FormatBool(c.Bool("clear"))}})
 				},
 			},
 			{

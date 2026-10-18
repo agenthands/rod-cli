@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -854,13 +855,25 @@ func (ctx *Context) GetEnabledCDPDomains() map[string]bool {
 func (ctx *Context) GetConsoleLogs() []string {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	return ctx.consoleLogs
+	return slices.Clone(ctx.consoleLogs)
 }
 
 func (ctx *Context) GetRequests() []string {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	return ctx.requests
+	return slices.Clone(ctx.requests)
+}
+
+func (ctx *Context) ClearConsoleLogs() {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	ctx.consoleLogs = nil
+}
+
+func (ctx *Context) ClearRequests() {
+	ctx.stateLock.Lock()
+	defer ctx.stateLock.Unlock()
+	ctx.requests = nil
 }
 
 // GetCDPProxy returns the CDP proxy instance (nil if proxy is not enabled).
