@@ -1250,3 +1250,25 @@ func TestTabSelectAdoptsForeignTab(t *testing.T) {
 		t.Fatalf("Snapshot on adopted tab: %v", err)
 	}
 }
+
+func TestRoutesFollowTabSwitch(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	navFixture(t, ctx, srv)
+	if _, err := Route(ctx, "*mock-target*", "MOCKED-ON-NEW-TAB"); err != nil {
+		t.Fatalf("Route: %v", err)
+	}
+	if _, err := TabNew(ctx, srv.URL); err != nil {
+		t.Fatalf("TabNew: %v", err)
+	}
+	out, err := Evaluate(ctx, "async () => (await fetch('/mock-target')).text()", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if !strings.Contains(out, "MOCKED-ON-NEW-TAB") {
+		t.Errorf("route did not follow the tab switch; fetch got: %s", out)
+	}
+}
