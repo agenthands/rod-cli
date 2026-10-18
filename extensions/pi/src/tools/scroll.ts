@@ -9,32 +9,27 @@ export function registerBrowseScroll(pi: ExtensionAPI, execFn: ExecFn) {
     name: "browse_scroll",
     label: "Browse Scroll",
     description:
-      "Scroll the page viewport using the mouse wheel. " +
-      "Use browse_eval for element-level scrolling.",
+      'Scroll with real wheel input. Returns what moved: "scrolled dy=800 y=1600/4600"; " end" means nothing more in that direction. Pass selector (ref or CSS) to scroll an inner pane.',
     promptSnippet:
-      'Scroll: browse_scroll(direction="down", distance=500) or browse_scroll(direction="up")',
+      'Scroll: browse_scroll() (one viewport down), browse_scroll(direction="up", distance=500), or browse_scroll(selector="s1e4")',
     promptGuidelines: [
-      "Use browse_scroll to scroll the page viewport up or down.",
-      "The scroll is viewport-level via mousewheel -- for element-level scrolling, use browse_eval with element.scrollBy().",
-      "Default distance is 300px. Increase for longer scrolls.",
+      "With no distance, browse_scroll scrolls one viewport down; up, left and right need a distance.",
+      "Stop scrolling in a direction once the result ends with \" end\".",
     ],
     parameters: Type.Object({
       direction: Type.Optional(
-        StringEnum(["down", "up"] as const, {
-          description: "Scroll direction",
-          default: "down",
+        StringEnum(["up", "down", "left", "right"] as const, {
+          description: "Scroll direction (default down)",
         }),
       ),
       distance: Type.Optional(
         Type.Number({
-          description: "Scroll distance in pixels",
-          default: 300,
+          description: "Scroll distance in pixels; omit for one viewport down",
         }),
       ),
       selector: Type.Optional(
         Type.String({
-          description:
-            "CSS selector (not yet supported -- use browse_eval for element scrolling)",
+          description: "Snapshot ref (e.g. \"s1e4\") or CSS selector of an inner scrollable pane; omit to scroll the page",
         }),
       ),
       session: SessionParam,

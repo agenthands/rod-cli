@@ -13,6 +13,9 @@ import { registerBrowseScroll } from "./scroll";
 import { registerBrowseCookies } from "./cookies";
 import { registerBrowseStorage } from "./storage";
 import { registerBrowseFillForm } from "./fill_form";
+import { registerBrowsePress } from "./press";
+import { registerBrowseSelect } from "./select";
+import { registerBrowseHover } from "./hover";
 
 export function registerAllTools(pi: ExtensionAPI, execFn: ExecFn) {
   registerBrowseGoto(pi, execFn);
@@ -28,4 +31,7 @@ export function registerAllTools(pi: ExtensionAPI, execFn: ExecFn) {
   registerBrowseCookies(pi, execFn);
   registerBrowseStorage(pi, execFn);
   registerBrowseFillForm(pi, execFn);
+  registerBrowsePress(pi, execFn);
+  registerBrowseSelect(pi, execFn);
+  registerBrowseHover(pi, execFn);
 }

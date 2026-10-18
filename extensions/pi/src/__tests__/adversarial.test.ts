@@ -3,7 +3,7 @@
  *
  * Tests:
  *   1. registerLifecycle — hook registration and behavior
- *   2. Tool registration — all 13 tools registered with correct names
+ *   2. Tool registration — all 16 tools registered with correct names
  *   3. Per-tool execute() → argv via mock execFn
  *   4. index.ts default export — wiring
  */
@@ -175,11 +175,11 @@ describe("registerLifecycle — hook registration", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Tool registration — all 13 tools registered with correct names
+// 2. Tool registration — all 16 tools registered with correct names
 // ---------------------------------------------------------------------------
 
-describe("tool registration — all 13 tools present", () => {
-  it("registers all 13 browse_* tools", () => {
+describe("tool registration — all 16 tools present", () => {
+  it("registers all 16 browse_* tools", () => {
     const pi = mockPi();
     const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "", stderr: "" });
 
@@ -193,9 +193,12 @@ describe("tool registration — all 13 tools present", () => {
       "browse_eval",
       "browse_fill_form",
       "browse_goto",
+      "browse_hover",
       "browse_navigate",
+      "browse_press",
       "browse_screenshot",
       "browse_scroll",
+      "browse_select",
       "browse_snapshot",
       "browse_storage",
       "browse_tabs",
@@ -281,7 +284,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_scroll");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "--max-output", "51200", "mousewheel", "--", "0", "300"],
+      ["--raw", "--max-output", "51200", "mousewheel"],
       expect.anything(),
     );
   });
@@ -347,13 +350,13 @@ describe("index.ts — default export (wiring)", () => {
     expect(() => extensionDefault(asExt(pi))).not.toThrow();
   });
 
-  it("registers lifecycle hooks and all 13 tools", () => {
+  it("registers lifecycle hooks and all 16 tools", () => {
     const pi = mockPi();
 
     extensionDefault(asExt(pi));
 
     expect(pi.on).toHaveBeenCalledWith("session_start", expect.any(Function));
     expect(pi.on).toHaveBeenCalledWith("session_shutdown", expect.any(Function));
-    expect(pi.registerTool).toHaveBeenCalledTimes(13);
+    expect(pi.registerTool).toHaveBeenCalledTimes(16);
   });
 });

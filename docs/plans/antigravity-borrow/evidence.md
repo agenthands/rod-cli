@@ -113,3 +113,4 @@ verify: T14 — pass — go build + vet clean; go test fails only Baseline-liste
 
 tdd: buildScrollArgs cases — red: AssertionError: expected [ 'mousewheel', '--', '0', '300' ] to deeply equal [ 'mousewheel' ] — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed
 tdd: press/select/hover builders — red: TypeError: (0 , buildPressArgs) is not a function — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed
+tdd: Pi and OMP 16 tools registered — red: AssertionError: expected [ 'browse_click', …(12) ] to deeply equal [ 'browse_click', …(15) ] (pi); (fail) tool registration > registers all 16 browse_* tools (omp) — green: (cd extensions/pi && npx vitest run src/__tests__/adversarial.test.ts) and (cd extensions/omp && /home/john/bin/bun test src/__tests__/registration.test.ts) passed
