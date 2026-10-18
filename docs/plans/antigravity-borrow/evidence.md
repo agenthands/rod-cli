@@ -47,3 +47,4 @@ verify: T05 — pass — done-when: ok daemon (58.2s), ok actions (44.4s), ok te
 tdd: TestMouseWheelReportsEndOnFakeScroller — red: actions/mousewheel_test.go:16:39: undefined: measureScroll — green: go test ./actions/ -run TestMouseWheelReportsEndOnFakeScroller -count=1 passed
 tdd: TestMouseWheelPageDefault — red: mousewheel_test.go:46: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelPageDefault -count=1 passed
 tdd: TestMouseWheelCLIArgs — red: cmd_test.go:850: mousewheel 5: err = dx and dy are required — green: go test . -run TestMouseWheelCLIArgs -count=1 passed
+verify: T06 — pass — done-check printed only ok for actions, root and tests packages; go vet clean
