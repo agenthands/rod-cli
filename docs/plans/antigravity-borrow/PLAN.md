@@ -49,7 +49,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `grep -c '^## Baseline' docs/plans/antigravity-borrow/evidence.md` prints `1`.
 
-### T01 [ ] eval prints the bare value
+### T01 [~] eval prints the bare value
 **Why:** It saves tokens on every call and fixes `browse_wait`, which compares stdout to `"true"` (`extensions/core/src/wait.ts:50`).
 **Seams:** `actions.Evaluate` (live, `newLiveCtx`); CLI `rod-cli eval` (`./tests/`).
 **Change:**
