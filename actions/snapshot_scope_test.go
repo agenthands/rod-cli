@@ -40,3 +40,19 @@ func TestSnapshotSubtreeCSS(t *testing.T) {
 		t.Fatalf("subtree snapshot wrong:\n%s", out)
 	}
 }
+
+func TestSnapshotSubtreeStaleRef(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	oldRef := refFor(t, ctx, "Select Box")
+	if _, err := Snapshot(ctx, "", false); err != nil {
+		t.Fatalf("second Snapshot: %v", err)
+	}
+	if _, err := Snapshot(ctx, oldRef, false); err == nil || !strings.Contains(err.Error(), "stale ref") {
+		t.Fatalf("Snapshot(%s) after newer snapshot: err = %v, want stale ref", oldRef, err)
+	}
+}
