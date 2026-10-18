@@ -333,7 +333,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ -run 'MouseMove|Hover|Drag|Mouse' -count=1 && go test ./tests/ -run 'TestClickAndHover|TestRawInputs|TestHumanize' -count=1` prints only `ok`.
 
-### T10 [~] Cheaper reads: `snapshot -i` (interactive only) and `snapshot <ref|css>` (subtree)
+### T10 [x] Cheaper reads: `snapshot -i` (interactive only) and `snapshot <ref|css>` (subtree)
 **Seams:** `types.pruneInteractive` (pure, unit, on `*yaml.Node`); `actions.Snapshot` (live).
 **Change:**
 - **types/snapshot.go:** `pruneInteractive(n *yaml.Node) *yaml.Node`. It runs after `walk`, before marshal, when `o.Interactive` is set. It keeps:
