@@ -449,7 +449,7 @@ Cause, reproduced by hand:
 **Change:** Run the Full suite command. If a test outside the Baseline fails, return `blocked` and name the task whose files it touches.
 **Done when:** the Full suite command exits 0, apart from Baseline-listed failures.
 
-### T15 [ ] Extensions: scroll feedback, press/select/hover tools, screenshot returns the image
+### T15 [~] Extensions: scroll feedback, press/select/hover tools, screenshot returns the image
 **Seams:**
 - core `build*Args` (vitest, `extensions/core/src/__tests__/argv.test.ts`);
 - Pi registration and argv (`pi/src/__tests__/adversarial.test.ts`);
