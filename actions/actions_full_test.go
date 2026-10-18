@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/agenthands/rod-cli/types"
+	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
@@ -1200,11 +1201,15 @@ func TestTabNewIsPrepared(t *testing.T) {
 	if _, err := TabNew(ctx, srv.URL+"/page2"); err != nil {
 		t.Fatalf("TabNew: %v", err)
 	}
-	out, err := Evaluate(ctx, "typeof snapshotEngine", "")
+	page, err := ctx.ControlledPage()
 	if err != nil {
-		t.Fatalf("Evaluate: %v", err)
+		t.Fatalf("ControlledPage: %v", err)
 	}
-	if out != "object" {
+	res, err := utils.EngineEval(page, "() => typeof snapshotEngine")
+	if err != nil {
+		t.Fatalf("EngineEval: %v", err)
+	}
+	if out := res.Value.Str(); out != "object" {
 		t.Fatalf("typeof snapshotEngine = %q, want %q", out, "object")
 	}
 }

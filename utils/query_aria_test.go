@@ -11,19 +11,16 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
-// ariaServerHTML is a minimal fixture page. It defines a stub `snapshotEngine`
-// whose queryAll() mirrors the production contract used by QueryEleByAria's
-// injected JS (types/js.QueryEleByAria) by returning a single DOM node for the
-// given CSS selector. This lets us exercise QueryEleByAria end-to-end without
-// loading the full (embedded) snapshot engine.
+// ariaServerHTML is a minimal fixture page. The test installs a stub
+// `snapshotEngine` in the EngineWorld (stubEngine) whose queryAll() mirrors the
+// production contract used by QueryEleByAria's injected JS
+// (types/js.QueryEleByAria) by returning a single DOM node for the given CSS
+// selector. This exercises QueryEleByAria end-to-end without loading the full
+// (embedded) snapshot engine.
+const stubEngine = `() => { window.snapshotEngine = { queryAll: s => document.querySelector(s) } }`
+
 const ariaServerHTML = `<!DOCTYPE html>
-<html><head><title>aria</title>
-<script>
-  window.snapshotEngine = {
-    queryAll: function(selector) { return document.querySelector(selector); }
-  };
-</script>
-</head>
+<html><head><title>aria</title></head>
 <body>
   <button id="go" aria-label="Submit">Submit</button>
 </body></html>`
@@ -69,6 +66,9 @@ func TestQueryEleByAria_Found(t *testing.T) {
 	}
 	_ = page.Timeout(5 * time.Second).WaitLoad()
 	time.Sleep(150 * time.Millisecond)
+	if _, err := EngineEval(page, stubEngine); err != nil {
+		t.Fatalf("install stub engine: %v", err)
+	}
 
 	el, err := QueryEleByAria(page, "#go")
 	if err != nil {
