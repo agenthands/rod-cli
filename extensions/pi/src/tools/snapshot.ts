@@ -28,7 +28,7 @@ export function registerBrowseSnapshot(pi: ExtensionAPI, execFn: ExecFn) {
         Type.Boolean({ description: "Keep only interactive elements and their ancestors" }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildSnapshotArgs({ selector: params.selector, interactive: params.interactive, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

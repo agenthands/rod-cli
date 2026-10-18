@@ -25,7 +25,7 @@ export function registerBrowseEval(pi: ExtensionAPI, execFn: ExecFn) {
           "JavaScript expression to evaluate on the page (max 10KB)",
       }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildEvalArgs({ expression: params.expression, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

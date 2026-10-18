@@ -34,7 +34,7 @@ export function registerBrowseStorage(pi: ExtensionAPI, execFn: ExecFn) {
         Type.String({ description: "Storage value (required for set)" }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildStorageArgs({
         action: params.action,

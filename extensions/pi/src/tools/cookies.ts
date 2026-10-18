@@ -28,7 +28,7 @@ export function registerBrowseCookies(pi: ExtensionAPI, execFn: ExecFn) {
         Type.String({ description: "Cookie value (required for set)" }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildCookiesArgs({
         action: params.action,

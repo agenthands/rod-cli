@@ -8,7 +8,7 @@ export function registerBrowsePress(pi: ExtensionAPI, execFn: ExecFn) {
   const parameters = z.object({
     key: z.string().describe("Key name: Enter, Tab, Backspace, Escape, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, or a single character"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_press",
     label: "Browse Press",

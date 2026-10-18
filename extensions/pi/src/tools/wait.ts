@@ -28,7 +28,7 @@ export function registerBrowseWait(pi: ExtensionAPI, execFn: ExecFn) {
         }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const timeoutMs = params.timeout ?? 30_000;
 

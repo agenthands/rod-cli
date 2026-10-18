@@ -9,7 +9,7 @@ export function registerBrowseClick(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().describe("CSS selector (e.g. \"#submit-btn\") or a snapshot ref copied from browse_snapshot's [ref=sNeM] output (e.g. \"s1e5\")"),
     doubleClick: z.boolean().optional().default(false).describe("Perform a double click instead of single click"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_click",
     label: "Browse Click",

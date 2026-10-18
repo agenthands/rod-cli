@@ -33,7 +33,7 @@ export function registerBrowseFillForm(pi: ExtensionAPI, execFn: ExecFn) {
         }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildFillFormArgs({
         selector: params.selector,

@@ -26,7 +26,7 @@ export function registerBrowseSelect(pi: ExtensionAPI, execFn: ExecFn) {
         minItems: 1,
       }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildSelectArgs({ selector: params.selector, values: params.values, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

@@ -9,7 +9,7 @@ export function registerBrowseSnapshot(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().optional().describe("Snapshot ref (e.g. s1e3) or CSS selector; only that subtree is captured"),
     interactive: z.boolean().optional().describe("Keep only interactive elements and their ancestors"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_snapshot",
     label: "Browse Snapshot",

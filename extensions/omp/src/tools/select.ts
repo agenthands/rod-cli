@@ -9,7 +9,7 @@ export function registerBrowseSelect(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().describe("CSS selector (e.g. \"#country\") or a snapshot ref copied from browse_snapshot's [ref=sNeM] output (e.g. \"s1e7\")"),
     values: z.array(z.string()).min(1).describe("Options to select, by visible text or value"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_select",
     label: "Browse Select",

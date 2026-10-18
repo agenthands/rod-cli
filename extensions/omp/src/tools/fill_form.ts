@@ -10,7 +10,7 @@ export function registerBrowseFillForm(pi: ExtensionAPI, execFn: ExecFn) {
     text: z.string().describe("Text to fill into the element"),
     submit: z.boolean().optional().default(false).describe("Press Enter after filling to submit the form"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_fill_form",
     label: "Browse Fill Form",

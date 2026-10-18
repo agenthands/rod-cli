@@ -8,7 +8,7 @@ export function registerBrowseGoto(pi: ExtensionAPI, execFn: ExecFn) {
   const parameters = z.object({
     url: z.string().describe("Full URL to navigate to (https://...)"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_goto",
     label: "Browse Goto",

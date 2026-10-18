@@ -31,7 +31,7 @@ export function registerBrowseClick(pi: ExtensionAPI, execFn: ExecFn) {
         }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildClickArgs({ selector: params.selector, doubleClick: params.doubleClick, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

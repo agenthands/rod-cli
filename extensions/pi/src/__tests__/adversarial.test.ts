@@ -213,6 +213,26 @@ describe("tool registration — all 16 tools present", () => {
   });
 });
 
+describe("TestAllToolSchemasStrict", () => {
+  it("every tool rejects unknown keys and describes every property", () => {
+    const pi = mockPi();
+    const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "", stderr: "" });
+    registerAllCoreTools(asExt(pi), execFn);
+    registerAllExtendedTools(asExt(pi), execFn);
+
+    expect(pi._tools).toHaveLength(16);
+    for (const tool of pi._tools as unknown as Array<{
+      name: string;
+      parameters: { additionalProperties?: boolean; properties: Record<string, { description?: string }> };
+    }>) {
+      expect(tool.parameters.additionalProperties, tool.name).toBe(false);
+      for (const [key, prop] of Object.entries(tool.parameters.properties)) {
+        expect(prop.description?.trim(), `${tool.name}.${key}`).toBeTruthy();
+      }
+    }
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 3. Per-tool execute() → argv via mock execFn
 // ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ export function registerBrowseType(pi: ExtensionAPI, execFn: ExecFn) {
       }),
       text: Type.String({ description: "Text to type into the element" }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildTypeArgs({ selector: params.selector, text: params.text, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

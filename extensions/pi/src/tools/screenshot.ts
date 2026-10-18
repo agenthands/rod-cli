@@ -28,7 +28,7 @@ export function registerBrowseScreenshot(pi: ExtensionAPI, execFn: ExecFn) {
         }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const content = await captureScreenshot(execFn, { selector: params.selector, fullPage: params.fullPage, session: params.session }, signal);
       return { content, details: {} };

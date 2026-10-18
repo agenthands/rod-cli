@@ -10,7 +10,7 @@ export function registerBrowseTabs(pi: ExtensionAPI, execFn: ExecFn) {
     url: z.string().optional().describe("URL to open in a new tab (required for action 'new')"),
     index: z.number().optional().describe("Tab index to close or select (required for actions 'close' and 'select')"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_tabs",
     label: "Browse Tabs",

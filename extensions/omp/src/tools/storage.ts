@@ -11,7 +11,7 @@ export function registerBrowseStorage(pi: ExtensionAPI, execFn: ExecFn) {
     key: z.string().optional().describe("Storage key (required for set and delete)"),
     value: z.string().optional().describe("Storage value (required for set)"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_storage",
     label: "Browse Storage",

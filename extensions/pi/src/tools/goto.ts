@@ -20,7 +20,7 @@ export function registerBrowseGoto(pi: ExtensionAPI, execFn: ExecFn) {
     parameters: Type.Object({
       url: Type.String({ description: "Full URL to navigate to (https://...)" }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildGotoArgs({ url: params.url, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

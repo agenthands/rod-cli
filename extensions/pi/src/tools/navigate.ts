@@ -21,7 +21,7 @@ export function registerBrowseNavigate(pi: ExtensionAPI, execFn: ExecFn) {
         description: "Navigation action to perform",
       }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildNavigateArgs({ action: params.action, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

@@ -21,7 +21,7 @@ export function registerBrowsePress(pi: ExtensionAPI, execFn: ExecFn) {
         description: "Key name: Enter, Tab, Backspace, Escape, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, or a single character",
       }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildPressArgs({ key: params.key, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

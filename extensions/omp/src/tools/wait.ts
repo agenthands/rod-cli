@@ -9,7 +9,7 @@ export function registerBrowseWait(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().optional().describe("CSS selector to wait for"),
     timeout: z.number().optional().describe("Maximum time to wait in milliseconds"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_wait",
     label: "Browse Wait",

@@ -10,7 +10,7 @@ export function registerBrowseCookies(pi: ExtensionAPI, execFn: ExecFn) {
     name: z.string().optional().describe("Cookie name (required for set and delete)"),
     value: z.string().optional().describe("Cookie value (required for set)"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_cookies",
     label: "Browse Cookies",

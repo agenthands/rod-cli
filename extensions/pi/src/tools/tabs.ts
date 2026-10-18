@@ -32,7 +32,7 @@ export function registerBrowseTabs(pi: ExtensionAPI, execFn: ExecFn) {
         }),
       ),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildTabsArgs({
         action: params.action,

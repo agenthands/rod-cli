@@ -8,7 +8,7 @@ export function registerBrowseEval(pi: ExtensionAPI, execFn: ExecFn) {
   const parameters = z.object({
     expression: z.string().describe("JavaScript expression to evaluate on the page (max 10KB)"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_eval",
     label: "Browse Eval",

@@ -10,7 +10,7 @@ export function registerBrowseScroll(pi: ExtensionAPI, execFn: ExecFn) {
     distance: z.number().optional().describe("Scroll distance in pixels; omit for one viewport down"),
     selector: z.string().optional().describe("Snapshot ref (e.g. \"s1e4\") or CSS selector of an inner scrollable pane; omit to scroll the page"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_scroll",
     label: "Browse Scroll",

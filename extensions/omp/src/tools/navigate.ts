@@ -8,7 +8,7 @@ export function registerBrowseNavigate(pi: ExtensionAPI, execFn: ExecFn) {
   const parameters = z.object({
     action: z.enum(["reload", "back", "forward"]).describe("Navigation action to perform"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_navigate",
     label: "Browse Navigate",

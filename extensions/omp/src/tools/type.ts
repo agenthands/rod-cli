@@ -9,7 +9,7 @@ export function registerBrowseType(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().describe("CSS selector (e.g. \"#input\") or a snapshot ref copied from browse_snapshot's [ref=sNeM] output (e.g. \"s1e5\")"),
     text: z.string().describe("Text to type into the element"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_type",
     label: "Browse Type",

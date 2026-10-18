@@ -20,7 +20,7 @@ export function registerBrowseHover(pi: ExtensionAPI, execFn: ExecFn) {
           "CSS selector (e.g. \"nav .menu\") or a snapshot ref copied from browse_snapshot's [ref=sNeM] output (e.g. \"s1e3\")",
       }),
       session: SessionParam,
-    }),
+    }, { additionalProperties: false }),
     async execute(_toolCallId, params, signal) {
       const result = await execRodCli(execFn, buildHoverArgs({ selector: params.selector, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };

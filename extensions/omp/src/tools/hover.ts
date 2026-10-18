@@ -8,7 +8,7 @@ export function registerBrowseHover(pi: ExtensionAPI, execFn: ExecFn) {
   const parameters = z.object({
     selector: z.string().describe("CSS selector (e.g. \"nav .menu\") or a snapshot ref copied from browse_snapshot's [ref=sNeM] output (e.g. \"s1e3\")"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_hover",
     label: "Browse Hover",

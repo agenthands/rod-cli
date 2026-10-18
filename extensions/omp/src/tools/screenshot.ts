@@ -9,7 +9,7 @@ export function registerBrowseScreenshot(pi: ExtensionAPI, execFn: ExecFn) {
     selector: z.string().optional().describe("Snapshot ref (e.g. \"s1e4\") or CSS selector of one element to capture"),
     fullPage: z.boolean().optional().default(false).describe("Capture the whole scrollable page instead of the viewport"),
     session: z.string().optional().describe(SESSION_DESC),
-  });
+  }).strict();
   pi.registerTool({
     name: "browse_screenshot",
     label: "Browse Screenshot",
