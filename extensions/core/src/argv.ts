@@ -63,16 +63,28 @@ export function buildScrollArgs(p: {
   selector?: string;
   session?: string;
 }): string[] {
-  if (p.selector) {
-    throw new Error(
-      "browse_scroll does not support element-level scrolling. " +
-        "Use browse_eval with element.scrollBy() for element-level scrolling.",
-    );
-  }
   const direction = p.direction ?? "down";
-  const distance = p.distance ?? 300;
-  const dy = direction === "down" ? distance : -distance;
-  return withSession(p.session, ["mousewheel", "--", "0", String(dy)]);
+  const args = ["mousewheel"];
+  if (p.distance !== undefined) {
+    const d = p.distance;
+    const delta: Record<string, [number, number]> = {
+      down: [0, d],
+      up: [0, -d],
+      right: [d, 0],
+      left: [-d, 0],
+    };
+    const xy = delta[direction];
+    if (!xy) throw new Error(`Unknown scroll direction: ${direction}`);
+    args.push("--", String(xy[0]), String(xy[1]));
+  } else if (direction !== "down") {
+    // rod-cli's bare mousewheel scrolls one viewport down; other directions need explicit deltas.
+    throw new Error(`direction '${direction}' requires a 'distance' parameter`);
+  }
+  if (p.selector) {
+    if (args.length === 1) args.push("--");
+    args.push(p.selector);
+  }
+  return withSession(p.session, args);
 }
 
 export function buildTabsArgs(p: {

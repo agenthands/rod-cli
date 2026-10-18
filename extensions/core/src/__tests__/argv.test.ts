@@ -122,36 +122,31 @@ describe("buildScreenshotArgs", () => {
 });
 
 describe("buildScrollArgs", () => {
-  it("builds scroll down argv with default distance", () => {
-    expect(buildScrollArgs({})).toEqual(["mousewheel", "--", "0", "300"]);
+  it("with no distance scrolls one viewport down", () => {
+    expect(buildScrollArgs({})).toEqual(["mousewheel"]);
+    expect(buildScrollArgs({ direction: "down" })).toEqual(["mousewheel"]);
   });
 
-  it("builds scroll up argv with negative dy", () => {
-    expect(buildScrollArgs({ direction: "up" })).toEqual(["mousewheel", "--", "0", "-300"]);
+  it("requires a distance for any direction but down", () => {
+    expect(() => buildScrollArgs({ direction: "up" })).toThrow("requires a 'distance'");
   });
 
-  it("builds scroll down with custom distance", () => {
-    expect(buildScrollArgs({ direction: "down", distance: 500 })).toEqual([
-      "mousewheel", "--", "0", "500",
+  it("maps direction and distance to dx/dy after --", () => {
+    expect(buildScrollArgs({ direction: "left", distance: 200 })).toEqual(["mousewheel", "--", "-200", "0"]);
+    expect(buildScrollArgs({ direction: "right", distance: 200 })).toEqual(["mousewheel", "--", "200", "0"]);
+    expect(buildScrollArgs({ direction: "up", distance: 300 })).toEqual(["mousewheel", "--", "0", "-300"]);
+    expect(buildScrollArgs({ direction: "down", distance: 500 })).toEqual(["mousewheel", "--", "0", "500"]);
+  });
+
+  it("passes the selector as the trailing ref", () => {
+    expect(buildScrollArgs({ selector: "s1e4" })).toEqual(["mousewheel", "--", "s1e4"]);
+    expect(buildScrollArgs({ selector: "s1e4", direction: "up", distance: 100 })).toEqual([
+      "mousewheel", "--", "0", "-100", "s1e4",
     ]);
-  });
-
-  it("builds scroll up with custom distance", () => {
-    expect(buildScrollArgs({ direction: "up", distance: 200 })).toEqual([
-      "mousewheel", "--", "0", "-200",
-    ]);
-  });
-
-  it("throws when selector is provided", () => {
-    expect(() => buildScrollArgs({ selector: "#el" })).toThrow(
-      "browse_scroll does not support element-level scrolling",
-    );
   });
 
   it("includes session prefix", () => {
-    expect(buildScrollArgs({ session: "admin" })).toEqual([
-      "-s", "admin", "mousewheel", "--", "0", "300",
-    ]);
+    expect(buildScrollArgs({ session: "admin" })).toEqual(["-s", "admin", "mousewheel"]);
   });
 });
 

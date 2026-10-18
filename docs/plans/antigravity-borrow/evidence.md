@@ -108,3 +108,7 @@ verify: T13b — pass — cold daemon (./rod-cli close): pi vitest 3 files / 39 
 ## T14
 
 verify: T14 — pass — go build + vet clean; go test fails only Baseline-listed TestStartServerWithPpid (daemon) and TestStorageCommands (tests); core vitest 140/140, pi vitest 39/39, omp bun 30/30, all tsc --noEmit clean
+
+## T15
+
+tdd: buildScrollArgs cases — red: AssertionError: expected [ 'mousewheel', '--', '0', '300' ] to deeply equal [ 'mousewheel' ] — green: (cd extensions/core && npx vitest run src/__tests__/argv.test.ts) passed
