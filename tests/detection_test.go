@@ -90,9 +90,6 @@ func liveEval(t *testing.T, expr string) string {
 		t.Fatalf("eval %s failed: %v\nOutput: %s", expr, err, out)
 	}
 	val := out
-	if i := strings.Index(out, evalResultPrefix); i >= 0 {
-		val = out[i+len(evalResultPrefix):]
-	}
 	return strings.TrimSpace(val)
 }
 
@@ -213,10 +210,6 @@ func restoreDefaultDaemon(t *testing.T, url string) {
 	waitForDetectReady(t)
 }
 
-// evalResultPrefix is what the `eval` command prepends to every value it prints
-// (actions/actions.go: "Evaluate code successfully with result: <value>").
-const evalResultPrefix = "Evaluate code successfully with result:"
-
 // evalDetect reads a single window.__detect.<signal> back from the LIVE page via
 // the eval command and returns the trimmed string value. It wraps the read in
 // String(...) so booleans/numbers/objects all serialize to a comparable string.
@@ -228,9 +221,6 @@ func evalDetect(t *testing.T, signal string) string {
 		t.Fatalf("eval window.__detect.%s failed: %v\nOutput: %s", signal, err, out)
 	}
 	val := out
-	if i := strings.Index(out, evalResultPrefix); i >= 0 {
-		val = out[i+len(evalResultPrefix):]
-	}
 	return strings.TrimSpace(val)
 }
 
@@ -427,9 +417,6 @@ func TestDetectionHarness(t *testing.T) {
 			t.Fatalf("eval canvas stability expr failed: %v\nOutput: %s", err, out)
 		}
 		val := out
-		if i := strings.Index(out, evalResultPrefix); i >= 0 {
-			val = out[i+len(evalResultPrefix):]
-		}
 		val = strings.TrimSpace(val)
 		if val == "UNSTABLE" {
 			t.Errorf("canvas noise is not stable-per-session: two reads differ")
@@ -459,9 +446,6 @@ func TestDetectionHarness(t *testing.T) {
 			t.Fatalf("eval canvas-applied expr failed: %v\nOutput: %s", err, out2)
 		}
 		v2 := out2
-		if i := strings.Index(out2, evalResultPrefix); i >= 0 {
-			v2 = out2[i+len(evalResultPrefix):]
-		}
 		v2 = strings.TrimSpace(v2)
 		if v2 == "perturbed:0" {
 			t.Errorf("canvas noise was NOT applied: a flat rgb(128) fill read back "+
@@ -494,9 +478,6 @@ func TestDetectionHarness(t *testing.T) {
 			t.Fatalf("eval audio stability expr failed: %v\nOutput: %s", err, out)
 		}
 		val := out
-		if i := strings.Index(out, evalResultPrefix); i >= 0 {
-			val = out[i+len(evalResultPrefix):]
-		}
 		val = strings.TrimSpace(val)
 		if val == "no-AudioContext" {
 			t.Fatalf("AudioContext surface unobservable (no constructor) — cannot verify audio stability")
@@ -1225,8 +1206,5 @@ func evalFontHash(t *testing.T) string {
 		t.Fatalf("eval font-probe failed: %v\nOutput: %s", err, out)
 	}
 	val := out
-	if i := strings.Index(out, evalResultPrefix); i >= 0 {
-		val = out[i+len(evalResultPrefix):]
-	}
 	return strings.TrimSpace(val)
 }

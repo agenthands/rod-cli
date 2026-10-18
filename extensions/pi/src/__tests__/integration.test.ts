@@ -85,7 +85,7 @@ describe("integration workflow", () => {
 
     it("eval returns page title", async () => {
       const result = await execRodCli(execFn, ["eval", "--", "document.title"], { signal: AbortSignal.timeout(10000) });
-      expect(result.stdout).toContain("Integration Fixture");
+      expect(result.stdout.trim()).toBe("Integration Fixture");
     });
 
     it("screenshot produces output", async () => {

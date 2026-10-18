@@ -13,3 +13,4 @@ verify: T00 — pass — done-check `grep -c '^## Baseline'` printed 1; Baseline
 
 ## T01
 tdd: TestEvaluate_BareValue — red: actions_full_test.go:515: Evaluate("1+1") = "Evaluate code successfully with result: 2", want "2" — green: go test ./actions/ -run TestEvaluate_BareValue -count=1 passed
+tdd: TestEvalCLIBareValue — red: eval_test.go:21: eval output = "Evaluate code successfully with result: 2", want "2" — green: go build -o rod-cli . && go test ./tests/ -run TestEvalCLIBareValue -count=1 passed

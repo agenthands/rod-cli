@@ -25,9 +25,8 @@ A failing `click <ref-or-selector>` (or `fill`/`type`/etc.) almost always means 
 
 ## Extracting Data
 
-You can use standard DOM APIs to extract complex data structures. `eval`'s result is always prefixed with `Evaluate code successfully with result: ` (neither `--raw` nor `--json` strips it — `--json` just re-wraps the same prefixed string inside `{"result": "…"}`), so strip the prefix before parsing:
+You can use standard DOM APIs to extract complex data structures. eval prints the bare value. With --json, a JSON object/array value prints as-is; any other value prints as {"result": "<value>"}.
 
 ```bash
-rod-cli eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))" \
-  | sed -n 's/^Evaluate code successfully with result: //p'
+rod-cli eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))"
 ```

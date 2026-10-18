@@ -26,7 +26,7 @@ rod-cli eval "() => this.getAttribute('aria-expanded')" s1e2
 ```
 
 ## Extracting just the value
-`eval`'s result is always prefixed with `Evaluate code successfully with result: ` — no flag strips this (`--raw` is a no-op for `eval`; `--json` just re-wraps the same prefixed string inside `{"result": "…"}`). To pipe just the value into another script, strip the prefix yourself:
+eval prints the bare value. With --json, a JSON object/array value prints as-is; any other value prints as {"result": "<value>"}.
 ```bash
-rod-cli eval "() => this.href" s1e12 | sed -n 's/^Evaluate code successfully with result: //p'
+rod-cli eval "() => this.href" s1e12
 ```

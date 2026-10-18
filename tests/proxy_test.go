@@ -54,9 +54,6 @@ func evalText(t *testing.T, session, expr string) string {
 		return ""
 	}
 	val := out
-	if i := strings.Index(out, evalResultPrefix); i >= 0 {
-		val = out[i+len(evalResultPrefix):]
-	}
 	return strings.TrimSpace(val)
 }
 
@@ -250,11 +247,11 @@ func TestProfileRoundTripInherited(t *testing.T) {
 	// proving the spawn-time profile was inherited (the daemon stayed up with the
 	// resolved Stealth config). A bad profile would have failed the daemon at
 	// spawn, so reaching here on a live second command is the inheritance proof.
-	out, err := runCliSession("prof_s", "eval", "document.title")
+	out, err := runCliSession("prof_s", "eval", "1+1")
 	if err != nil {
 		t.Fatalf("second command on the --profile session failed; profile not inherited: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, evalResultPrefix) {
+	if strings.TrimSpace(out) != "2" {
 		t.Errorf("second command did not return a live eval result; session not healthy: %s", out)
 	}
 }

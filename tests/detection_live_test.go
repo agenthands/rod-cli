@@ -67,9 +67,6 @@ func liveEvalBestEffort(t *testing.T, expr string) (string, bool) {
 		return out, false
 	}
 	val := out
-	if i := strings.Index(out, evalResultPrefix); i >= 0 {
-		val = out[i+len(evalResultPrefix):]
-	}
 	return strings.TrimSpace(val), true
 }
 
