@@ -136,6 +136,8 @@ tdd: TestSmokeAntigravity — red: smoke_antigravity_test.go:66: screenshot: out
 - govulncheck: `No vulnerabilities found.` (0 affecting code; 2 in required modules, not called).
 - smoke: `go test ./tests/ -run TestSmokeAntigravity -count=1` → ok.
 
+- verify: T18 — pass — Go suite fails only Baseline TestStartServerWithPpid (3/3 in isolation), extensions core 142/142, pi 40/40, omp 32/0 + tsc clean; govulncheck: No vulnerabilities found.; TestSmokeAntigravity ok
+
 ## Summary
 
 - Tasks done: T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T10, T11, T12, T13, T13b, T14, T15, T16, T17 (implemented: snapshot engine in an isolated world), T18 (pending verifier tick).

@@ -548,7 +548,7 @@ Cause, reproduced by hand:
 
 **Done when:** either `go test ./types/ ./actions/ -count=1` passes with both tests included, or `grep -c '^## T17 no-go' docs/plans/antigravity-borrow/evidence.md` prints `1` and `go test ./types/ ./actions/ -count=1` passes.
 
-### T18 [~] Final verification: full suite, vulnerability scan, live smoke
+### T18 [x] Final verification: full suite, vulnerability scan, live smoke
 **Seams:** CLI end-to-end (`./tests/`, `runCli` + `SetupTestServer`). Write `TestSmokeAntigravity` with sf-tdd: run it red first (assert one output format from a not-yet-asserted step), then green.
 **Change:**
 0. Clear the govulncheck findings, all of which predate this branch: 15 are Go stdlib issues on toolchain go1.26.4, and one is golang.org/x/text v0.3.8, pulled in via goja. Run exactly:
