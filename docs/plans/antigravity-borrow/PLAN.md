@@ -530,7 +530,7 @@ Cause, reproduced by hand:
 - `grep -rc "Read recipes" skills/rod-cli/references/running-code.md` prints `1`.
 - `go build -o rod-cli . && ./rod-cli mousewheel --help && ./rod-cli snapshot --help && ./rod-cli screenshot --help` shows `--end`, `--interactive` and `--full-page`.
 
-### T17 [~] Hide snapshotEngine from page scripts (isolated world): spike, then implement or record no-go
+### T17 [x] Hide snapshotEngine from page scripts (isolated world): spike, then implement or record no-go
 **Why:** `window.snapshotEngine` is a global that any page script can detect.
 **Deliverable:** one of these two counts as done:
 - (a) the implementation passes the checks below, or

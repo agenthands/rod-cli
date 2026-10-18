@@ -126,3 +126,4 @@ verify: T16 — pass — greps print isTrusted=false 1, --max-output 1, mousewhe
 
 tdd: TestSnapshotEngineNotVisibleToPage — red: actions_full_test.go:1339: typeof window.snapshotEngine = "object", want "undefined" — green: go test ./actions/ -run 'TestSnapshotEngineNotVisibleToPage$' -count=1 passed
 tdd: TestRefClickStillWorksFromIsolatedWorld — red: actions_full_test.go:1351: Click: Failed to find element by ref s1e5: locator frame failed, because of query element by aria failed: eval js error: ReferenceError: snapshotEngine is not defined (QueryEleByAria temporarily reverted to the main world) — green: go test ./actions/ -run 'TestRefClickStillWorksFromIsolatedWorld$' -count=1 passed
+verify: T17 — pass — `go test ./types/ ./actions/ -count=1`: ok types 18.4s, ok actions 317.1s; both T17 tests PASS under -v; no Runtime.enable added (PageCreateIsolatedWorld + RuntimeEvaluate with ContextID); per-frame context cache deferred via ponytail comment in utils/utils.go
