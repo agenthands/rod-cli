@@ -234,7 +234,7 @@ func TestSnapshotAndPdf(t *testing.T) {
 
 	// Case 4: Valid PDF
 	out, err = runCli("--raw", "pdf", "--name", "testpdf")
-	if err != nil || !strings.Contains(out, "Save to") {
+	if err != nil || !strings.Contains(out, "saved ") {
 		t.Errorf("Valid PDF failed: err=%v out=%s", err, out)
 	}
 

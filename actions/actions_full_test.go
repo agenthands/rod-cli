@@ -634,7 +634,7 @@ func TestPdf(t *testing.T) {
 	if err != nil {
 		t.Errorf("Pdf: %v", err)
 	}
-	if !strings.Contains(out, "Save to") {
+	if !strings.Contains(out, "saved ") {
 		t.Errorf("unexpected: %s", out)
 	}
 	if _, err := Pdf(freshCtx(), "x"); err == nil {

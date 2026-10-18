@@ -88,3 +88,4 @@ verify: T11 — pass — go test CapOutput|RunClientCommand ok (3 PASS); core vi
 ## T12
 
 tdd: TestScreenshotSelectorIsCropped — red: actions/screenshot_test.go:37:43: cannot use "" (untyped string constant) as float64 value in argument to Screenshot — green: go test ./actions/ -run TestScreenshotSelectorIsCropped -count=1 passed
+tdd: TestScreenshotNameCannotEscape — red: screenshot_test.go:58: saved to "/tmp/TestScreenshotNameCannotEscape1624854895/001/tmp/evil.png", want "/tmp/TestScreenshotNameCannotEscape1624854895/001/tmp/screenshots/evil.png" — green: go test ./actions/ -run TestScreenshotNameCannotEscape -count=1 passed

@@ -344,15 +344,7 @@ func Screenshot(ctx *types.Context, name, selector, out string, fullPage bool) (
 			return "", errors.Wrap(err, "Failed to screenshot")
 		}
 	}
-	toFile := []string{"tmp", "screenshots", name + ".png"}
-	filePath := filepath.Join(toFile...)
-	if err := osMkdirAll(filepath.Dir(filePath), 0755); err != nil {
-		return "", err
-	}
-	if err := osWriteFile(filePath, bin, 0664); err != nil {
-		return "", errors.Wrap(err, "Failed to save screenshot")
-	}
-	abs, err := filepath.Abs(filePath)
+	abs, err := saveArtifact(out, filepath.Join("tmp", "screenshots"), name, ".png", bin)
 	if err != nil {
 		return "", err
 	}
@@ -653,15 +645,28 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	toFile := []string{"tmp", "pdfs", name + ".pdf"}
-	filePath := filepath.Join(toFile...)
+	abs, err := saveArtifact("", filepath.Join("tmp", "pdfs"), name, ".pdf", b)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("saved %s", abs), nil
+}
+
+// saveArtifact writes data to dir/<base of name>+ext and returns the absolute
+// path. The base-name rule keeps a hostile --name inside dir.
+func saveArtifact(out, dir, name, ext string, data []byte) (string, error) {
+	base := filepath.Base(name)
+	if base == "." || base == ".." || base == "" || base == string(filepath.Separator) {
+		return "", fmt.Errorf("invalid name %q", name)
+	}
+	filePath := filepath.Join(dir, base+ext)
 	if err := osMkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		return "", err
 	}
-	if err := osWriteFile(filePath, b, 0664); err != nil {
-		return "", errors.Wrap(err, "Failed to save pdf")
+	if err := osWriteFile(filePath, data, 0664); err != nil {
+		return "", errors.Wrap(err, "Failed to save "+ext[1:])
 	}
-	return fmt.Sprintf("Save to %s", filePath), nil
+	return filepath.Abs(filePath)
 }
 
 // scrollBox is one scroll container's position, limits and viewport size.

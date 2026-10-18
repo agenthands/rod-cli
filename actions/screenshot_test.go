@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -41,4 +43,25 @@ func TestScreenshotSelectorIsCropped(t *testing.T) {
 	if viewport == 0 || w >= viewport {
 		t.Errorf("selector shot width %d, want < viewport %d", w, viewport)
 	}
+}
+
+func TestScreenshotNameCannotEscape(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	withTempCwd(t, func(dir string) {
+		out, err := Screenshot(ctx, "../evil", "", "", false)
+		if err != nil {
+			t.Fatalf("Screenshot: %v", err)
+		}
+		want := filepath.Join(dir, "tmp", "screenshots", "evil.png")
+		if path, _, _ := shotDims(t, out); path != want {
+			t.Errorf("saved to %q, want %q", path, want)
+		}
+		if _, err := os.Stat(want); err != nil {
+			t.Errorf("missing %s: %v", want, err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "tmp", "evil.png")); err == nil {
+			t.Error("file escaped tmp/screenshots/")
+		}
+	})
 }

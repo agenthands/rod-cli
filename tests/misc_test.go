@@ -130,7 +130,7 @@ func TestScreenshotCommand(t *testing.T) {
 	// Case 2: Valid Screenshot
 	runCli("--raw", "goto", ts.URL)
 	out, err = runCli("--raw", "screenshot", "--name", "test_screenshot")
-	if err != nil || !strings.Contains(out, "Save to") || !strings.Contains(out, "test_screenshot.png") {
+	if err != nil || !strings.Contains(out, "saved ") || !strings.Contains(out, "test_screenshot.png") {
 		t.Errorf("Valid screenshot failed: err=%v out=%s", err, out)
 	}
 
