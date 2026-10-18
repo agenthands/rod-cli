@@ -20,7 +20,7 @@ Status marks, in the heading `### Tnn [s] title`:
 ## Conventions (every task)
 
 - **Repo and branch.** Work in `/home/john/go/src/github.com/agenthands/rod-cli` on branch `feat/antigravity-borrow`.
-- **TDD.** Call the Skill tool with skill `sf-tdd` before the first test. Write tests only at the task's **Seams**; the user has confirmed them. Work one red→green cycle at a time. Append one line per cycle to `docs/plans/antigravity-borrow/evidence.md` under `## Tnn`:
+- **TDD.** Every code change, including test-only code, is written with sf-tdd: call the Skill tool with skill `sf-tdd` before the first test. Only tasks whose Seams line says "none" change no code at all; if such a task turns out to need a code change, return `blocked` instead of coding without sf-tdd. Write tests only at the task's **Seams**; the user has confirmed them. Work one red→green cycle at a time. Append one line per cycle to `docs/plans/antigravity-borrow/evidence.md` under `## Tnn`:
   `tdd: <test name> — red: <copied failure line> — green: <single-file command> passed`
 - **Commits.** Stage by explicit path, never `git add -A` or `git add .`. End every message with the attribution line, using exactly this form:
   `git commit -m "<subject>" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"`
@@ -529,7 +529,7 @@ Output is one line: `scrolled dy=<moved> y=<pos>/<max>`.
 **Done when:** either `go test ./types/ ./actions/ -count=1` passes with both tests included, or `grep -c '^## T17 no-go' docs/plans/antigravity-borrow/evidence.md` prints `1` and `go test ./types/ ./actions/ -count=1` passes.
 
 ### T18 [ ] Final verification: full suite, vulnerability scan, live smoke
-**Seams:** none (no code).
+**Seams:** CLI end-to-end (`./tests/`, `runCli` + `SetupTestServer`). Write `TestSmokeAntigravity` with sf-tdd: run it red first (assert one output format from a not-yet-asserted step), then green.
 **Change:**
 1. Run the Full suite command.
 2. Run `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`.
