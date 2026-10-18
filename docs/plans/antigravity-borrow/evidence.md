@@ -69,3 +69,6 @@ tdd: TestMouseMoveTracksPosition — red: pointer_test.go:17: GetMousePos = {100
 tdd: TestHoverDoesNotTeleport — red: pointer_test.go:36: page saw "127,90" (err <nil>), tracked pointer 100,100 — green: go test ./actions/ -run TestHoverDoesNotTeleport -count=1 passed (compares truncated coords: Chrome truncates fractional clientX/Y)
 tdd: TestDragHonoursTuning — red: pointer_test.go:77: moveToElement option counts = [], want two moves with 1 (non-zero) — green: go test ./actions/ -run TestDragHonoursTuning -count=1 passed
 verify: T09 — pass — done-check: build ok; go test ./actions/ (MouseMove|Hover|Drag|Mouse) ok 75.8s; go test ./tests/ (TestClickAndHover|TestRawInputs|TestHumanize) ok 46.0s; also TestErrPaths ok, go vet ./actions clean
+
+## T10
+tdd: TestPruneInteractiveKeepsControlsAndAncestors — red: types/prune_test.go:20:25: undefined: pruneInteractive — green: go test ./types/ -run TestPruneInteractive -count=1 passed

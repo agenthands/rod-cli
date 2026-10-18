@@ -263,3 +263,62 @@ func (s *Snapshot) LocatorInFrame(ref string) (*rod.Element, error) {
 	return ele, nil
 
 }
+
+var interactiveRoles = strings.Fields("button link textbox searchbox checkbox radio combobox listbox option menuitem tab switch slider spinbutton heading")
+
+func isInteractive(v string) bool {
+	for _, r := range interactiveRoles {
+		if strings.HasPrefix(v, r) && (len(v) == len(r) || v[len(r)] == ' ' || v[len(r)] == '[') {
+			return true
+		}
+	}
+	return false
+}
+
+// pruneInteractive keeps interactive nodes (whole subtree) and their ancestors,
+// dropping everything else. Returns nil when nothing under n is kept (a document
+// node is returned with an empty sequence instead).
+// ponytail: keeps unnamed wrapper ancestors; flatten them if output is still too large
+func pruneInteractive(n *yaml.Node) *yaml.Node {
+	switch n.Kind {
+	case yaml.DocumentNode:
+		if len(n.Content) > 0 {
+			if c := pruneInteractive(n.Content[0]); c != nil {
+				n.Content[0] = c
+			} else {
+				n.Content[0] = &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+			}
+		}
+		return n
+	case yaml.SequenceNode:
+		kept := n.Content[:0]
+		for _, c := range n.Content {
+			if p := pruneInteractive(c); p != nil {
+				kept = append(kept, p)
+			}
+		}
+		n.Content = kept
+	case yaml.MappingNode:
+		kept := n.Content[:0]
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			k, v := n.Content[i], n.Content[i+1]
+			if isInteractive(k.Value) {
+				kept = append(kept, k, v)
+			} else if p := pruneInteractive(v); p != nil {
+				kept = append(kept, k, p)
+			}
+		}
+		n.Content = kept
+	case yaml.ScalarNode:
+		if isInteractive(n.Value) {
+			return n
+		}
+		return nil
+	default:
+		return nil
+	}
+	if len(n.Content) == 0 {
+		return nil
+	}
+	return n
+}
