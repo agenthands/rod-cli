@@ -125,3 +125,4 @@ verify: T16 — pass — greps print isTrusted=false 1, --max-output 1, mousewhe
 ## T17
 
 tdd: TestSnapshotEngineNotVisibleToPage — red: actions_full_test.go:1339: typeof window.snapshotEngine = "object", want "undefined" — green: go test ./actions/ -run 'TestSnapshotEngineNotVisibleToPage$' -count=1 passed
+tdd: TestRefClickStillWorksFromIsolatedWorld — red: actions_full_test.go:1351: Click: Failed to find element by ref s1e5: locator frame failed, because of query element by aria failed: eval js error: ReferenceError: snapshotEngine is not defined (QueryEleByAria temporarily reverted to the main world) — green: go test ./actions/ -run 'TestRefClickStillWorksFromIsolatedWorld$' -count=1 passed

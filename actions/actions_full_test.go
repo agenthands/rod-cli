@@ -1339,3 +1339,22 @@ func TestSnapshotEngineNotVisibleToPage(t *testing.T) {
 		t.Fatalf("typeof window.snapshotEngine = %q, want %q", out, "undefined")
 	}
 }
+
+func TestRefClickStillWorksFromIsolatedWorld(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	if _, err := Click(ctx, refFor(t, ctx, "Click Me")); err != nil {
+		t.Fatalf("Click: %v", err)
+	}
+	out, err := Evaluate(ctx, "document.getElementById('heading').textContent", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if out != "clicked" {
+		t.Fatalf("heading text = %q, want %q", out, "clicked")
+	}
+}
