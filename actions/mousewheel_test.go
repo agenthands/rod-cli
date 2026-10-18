@@ -3,6 +3,7 @@ package actions
 import (
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/agenthands/godoll/humanize"
@@ -79,6 +80,16 @@ func TestMouseWheelEndAbsorbsLazyGrowth(t *testing.T) {
 		}
 	})
 	if got, err := MouseWheel(ctx, 0, 0, "", 10); err != nil || got != "scrolled dy=1500 y=1500/1500 end" {
+		t.Fatalf("got %q, err %v", got, err)
+	}
+}
+
+func TestMouseWheelEndCap(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	max := 100000.0
+	fakeScroller(t, &max, nil)
+	if got, err := MouseWheel(ctx, 0, 0, "", 2); err != nil || !strings.HasSuffix(got, " cap") {
 		t.Fatalf("got %q, err %v", got, err)
 	}
 }

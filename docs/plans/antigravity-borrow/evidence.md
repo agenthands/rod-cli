@@ -57,3 +57,4 @@ verify: T07 — pass — go build+vet clean; go test ./... only failure tests/Te
 
 ## T08
 tdd: TestMouseWheelEndAbsorbsLazyGrowth — red: mousewheel_test.go:80: got "scrolled dy=800 y=800/1000", err <nil> — green: go test ./actions/ -run TestMouseWheelEndAbsorbsLazyGrowth -count=1 passed
+tdd: TestMouseWheelEndCap — red not observed (cap landed with cycle 1; mutation check with the " cap" suffix removed failed: mousewheel_test.go:93: got "scrolled dy=1600 y=1600/100000", err <nil>) — green: go test ./actions/ -run TestMouseWheelEndCap -count=1 passed
