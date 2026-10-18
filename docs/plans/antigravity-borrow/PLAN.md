@@ -427,8 +427,18 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1` prints `ok` for both.
 
-### T14 [!] Checkpoint 2: Go work complete, full suite green
-Blocked: BLOCKED: one test file fails that is not on the Baseline list: extensions/pi/src/__tests__/integration.test.ts (6 tests). No task in this plan caused it, and the code on main does the same thing.
+### T13b [ ] pi integration tests run headless, like the Go e2e suite
+**Why:** `extensions/pi/src/__tests__/integration.test.ts` runs rod-cli without `--headless`. With no warm default daemon, the first `goto` spawns a headed Chrome. Under Wayland its first `screenshot` hangs 20-30 s, so the 6 tests after it hit vitest's 5000 ms timeout. This also fails on main. `tests/cli_test.go` `runCli` already defaults to `--headless` for this reason.
+**Seams:** the pi integration suite (`extensions/pi/src/__tests__/integration.test.ts`) run from a cold default session.
+**Change:** in `createRealExecFn` (integration.test.ts), replace `execFile(bin, args, { timeout: opts?.timeout }, ` with `execFile(bin, ["--headless", ...args], { timeout: opts?.timeout }, `.
+**TDD cycles:**
+1. `pi integration cold start` (red is the existing suite, cold):
+   `cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && ./rod-cli close; export ROD_CLI_PATH="$PWD/rod-cli" && (cd extensions/pi && npx vitest run src/__tests__/integration.test.ts)`
+   Red: at least one test fails with `Test timed out in 5000ms`. Green after the Change: the same command passes every test.
+
+**Done when:** `cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && ./rod-cli close; export ROD_CLI_PATH="$PWD/rod-cli" && (cd extensions/pi && npx vitest run && npx tsc --noEmit)` passes, run straight after `./rod-cli close` (cold daemon).
+
+### T14 [~] Checkpoint 2: Go work complete, full suite green
 
 The Go side is fine. go build and go vet are clean. go test fails only on tests the Baseline already lists: TestStartServerWithPpid in both runs, and TestStorageCommands in run 2.
 
