@@ -197,7 +197,7 @@ func (ctx *Context) SwitchTo(p *rod.Page) (adopted bool)
 
 **Done when:** `go build -o rod-cli . && go test ./types/ ./actions/ ./daemon/ -count=1 && go test ./tests/ -run TestTabsAndViewCommands -count=1` prints only `ok` lines.
 
-### T05 [ ] select and upload: real lists, text→value→substring matching
+### T05 [~] select and upload: real lists, text→value→substring matching
 **Seams:** `daemon.executeAction` (in-process, the `TestExecuteActionDispatch` style at daemon_more_test.go:354); `actions.Select` (live).
 **Change:**
 - **cmd.go** `upload` (:544) and `select` (:556): send `json.Marshal(c.Args().Slice()[1:])` in `Args["files"]` / `Args["values"]`.
