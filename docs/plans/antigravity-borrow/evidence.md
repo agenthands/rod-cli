@@ -50,3 +50,7 @@ tdd: TestMouseWheelReportsEndOnFakeScroller — red: actions/mousewheel_test.go:
 tdd: TestMouseWheelPageDefault — red: mousewheel_test.go:46: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelPageDefault -count=1 passed
 tdd: TestMouseWheelCLIArgs — red: cmd_test.go:850: mousewheel 5: err = dx and dy are required — green: go test . -run TestMouseWheelCLIArgs -count=1 passed
 verify: T06 — pass — done-check printed only ok for actions, root and tests packages; go vet clean
+
+## T07
+
+verify: T07 — pass — go build+vet clean; go test ./... only failure tests/TestStorageCommands "failed to start daemon" (Baseline-listed flake), all other packages ok; core vitest 139/139, pi 39/39, omp bun 30/30, all tsc clean; no code diff since wip(T07): start
