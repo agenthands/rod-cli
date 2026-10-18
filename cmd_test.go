@@ -879,3 +879,10 @@ func TestCapOutputProperties(t *testing.T) {
 		}
 	})
 }
+
+// TestCapOutputSkipsJSON: a JSON value is never cut, since a cut breaks parsing.
+func TestCapOutputSkipsJSON(t *testing.T) {
+	if got := capOutput(`{"a":1}`, 3); got != `{"a":1}` {
+		t.Fatalf("got %q, want {\"a\":1}", got)
+	}
+}

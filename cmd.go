@@ -1052,7 +1052,7 @@ func getApp() *cli.App {
 // saying how to narrow the read. JSON values pass through whole: a cut would
 // make them unparseable.
 func capOutput(msg string, max int) string {
-	if max <= 0 || len(msg) <= max {
+	if max <= 0 || len(msg) <= max || isJSONValue(msg) {
 		return msg
 	}
 	cut := strings.LastIndexByte(msg[:max], '\n')
