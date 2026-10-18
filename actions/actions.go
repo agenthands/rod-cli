@@ -652,21 +652,32 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 	if err != nil {
 		return "", err
 	}
+	// ponytail: moving the pointer onto the target fires hover effects (menus,
+	// tooltips) like a real user would; add a no-move mode if that bites.
+	var anchor *rod.Element
 	if ref != "" {
-		return "", errors.New("mousewheel by ref is not supported yet")
-	}
-	m, err := proto.PageGetLayoutMetrics{}.Call(page)
-	if err != nil {
-		return "", errors.Wrap(err, "Failed to read viewport")
-	}
-	w, h := float64(m.CSSLayoutViewport.ClientWidth), float64(m.CSSLayoutViewport.ClientHeight)
-	pt := humanize.Point{X: w * (0.4 + 0.2*rand.Float64()), Y: h * (0.4 + 0.2*rand.Float64())}
-	if err := moveToPoint(page, pt, mouseOpts(ctx.HumanizeTuning())...); err != nil {
-		return "", errors.Wrap(err, "Failed to move pointer")
-	}
-	anchor, err := page.ElementByJS(rod.Eval(`(x,y)=>document.elementFromPoint(x,y)||document.scrollingElement`, pt.X, pt.Y))
-	if err != nil {
-		return "", errors.Wrap(err, "Failed to find scroll target")
+		if anchor, err = getElementByRef(ctx, ref); err != nil {
+			return "", err
+		}
+		// MoveTo scrolls the element into view and lands inside it.
+		if err := humanize.MoveTo(page, anchor, mouseOpts(ctx.HumanizeTuning())...); err != nil {
+			return "", errors.Wrap(err, "Failed to move pointer")
+		}
+	} else {
+		m, err := proto.PageGetLayoutMetrics{}.Call(page)
+		if err != nil {
+			return "", errors.Wrap(err, "Failed to read viewport")
+		}
+		w, h := float64(m.CSSLayoutViewport.ClientWidth), float64(m.CSSLayoutViewport.ClientHeight)
+		pt := humanize.Point{X: w * (0.4 + 0.2*rand.Float64()), Y: h * (0.4 + 0.2*rand.Float64())}
+		if err := moveToPoint(page, pt, mouseOpts(ctx.HumanizeTuning())...); err != nil {
+			return "", errors.Wrap(err, "Failed to move pointer")
+		}
+		// ponytail: an iframe under the pointer is measured from the parent
+		// document; recurse into a same-origin contentDocument if that matters.
+		if anchor, err = page.ElementByJS(rod.Eval(`(x,y)=>document.elementFromPoint(x,y)||document.scrollingElement`, pt.X, pt.Y)); err != nil {
+			return "", errors.Wrap(err, "Failed to find scroll target")
+		}
 	}
 
 	first, err := measureScroll(anchor)
