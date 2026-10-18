@@ -578,10 +578,15 @@ func getApp() *cli.App {
 				},
 			},
 			{
-				Name:  "snapshot",
-				Usage: "Take a snapshot of the current page",
+				Name:      "snapshot",
+				Usage:     "Take a snapshot of the current page, or of the subtree under a ref/CSS selector",
+				ArgsUsage: "[ref|css]",
+				Flags:     []cli.Flag{&cli.BoolFlag{Name: "interactive", Aliases: []string{"i"}, Usage: "only interactive elements and their ancestors"}},
 				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "snapshot"})
+					return runClientCommand(c, daemon.Request{Command: "snapshot", Args: map[string]string{
+						"root":        c.Args().First(),
+						"interactive": fmt.Sprint(c.Bool("interactive")),
+					}})
 				},
 			},
 			{

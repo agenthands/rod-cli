@@ -8,26 +8,29 @@ export function registerBrowseSnapshot(pi: ExtensionAPI, execFn: ExecFn) {
     name: "browse_snapshot",
     label: "Browse Snapshot",
     description:
-      "Capture a token-efficient accessibility-tree markdown snapshot of the current page. " +
+      "Capture a token-efficient accessibility-tree markdown snapshot of the current page, " +
+      "or of the subtree under a ref/CSS selector; interactive=true keeps only controls. " +
       "Output is truncated to 50KB/2000 lines.",
     promptSnippet:
       "Get page content: browse_snapshot()",
     promptGuidelines: [
       "Prefer browse_snapshot over browse_screenshot for reading page structure and text content.",
       "Do NOT call browse_snapshot after every action to confirm results -- use it when you need to read the page.",
-      "The snapshot captures the full page; element-scoped snapshots are not yet supported.",
+      "To read less, pass interactive=true (controls only) or selector=<ref|css> (one subtree).",
     ],
     parameters: Type.Object({
       selector: Type.Optional(
         Type.String({
-          description:
-            "CSS selector to scope snapshot (not yet supported -- captures full page)",
+          description: "Snapshot ref (e.g. s1e3) or CSS selector; only that subtree is captured",
         }),
+      ),
+      interactive: Type.Optional(
+        Type.Boolean({ description: "Keep only interactive elements and their ancestors" }),
       ),
       session: SessionParam,
     }),
     async execute(_toolCallId, params, signal) {
-      const result = await execRodCli(execFn, buildSnapshotArgs({ selector: params.selector, session: params.session }), { signal });
+      const result = await execRodCli(execFn, buildSnapshotArgs({ selector: params.selector, interactive: params.interactive, session: params.session }), { signal });
       return { content: [{ type: "text", text: result.stdout }], details: {} };
     },
   });
