@@ -225,9 +225,9 @@ describe("per-tool execute() produces correct argv", () => {
   it("browse_goto execute passes correct argv", async () => {
     const { tool, execFn } = getTool("browse_goto");
     await tool.execute("id", { url: "https://example.com" }, undefined);
-    // execRodCli prepends --raw, so execFn receives ["--raw", "goto", "--", "https://example.com"]
+    // execRodCli prepends --raw --max-output 51200, so execFn receives ["--raw", "--max-output", "51200", "goto", "--", "https://example.com"]
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "goto", "--", "https://example.com"],
+      ["--raw", "--max-output", "51200", "goto", "--", "https://example.com"],
       expect.anything(),
     );
   });
@@ -236,7 +236,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_snapshot");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "snapshot"],
+      ["--raw", "--max-output", "51200", "snapshot"],
       expect.anything(),
     );
   });
@@ -245,7 +245,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_click");
     await tool.execute("id", { selector: "#btn" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "click", "--", "#btn"],
+      ["--raw", "--max-output", "51200", "click", "--", "#btn"],
       expect.anything(),
     );
   });
@@ -254,7 +254,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_type");
     await tool.execute("id", { selector: "#input", text: "hello" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "type", "--", "#input", "hello"],
+      ["--raw", "--max-output", "51200", "type", "--", "#input", "hello"],
       expect.anything(),
     );
   });
@@ -263,7 +263,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_eval");
     await tool.execute("id", { expression: "1+1" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "eval", "--", "1+1"],
+      ["--raw", "--max-output", "51200", "eval", "--", "1+1"],
       expect.anything(),
     );
   });
@@ -272,7 +272,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_fill_form");
     await tool.execute("id", { selector: "#name", text: "John" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "fill", "--", "#name", "John"],
+      ["--raw", "--max-output", "51200", "fill", "--", "#name", "John"],
       expect.anything(),
     );
   });
@@ -281,7 +281,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_scroll");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "mousewheel", "--", "0", "300"],
+      ["--raw", "--max-output", "51200", "mousewheel", "--", "0", "300"],
       expect.anything(),
     );
   });
@@ -290,7 +290,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_tabs");
     await tool.execute("id", { action: "list" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "tab-list"],
+      ["--raw", "--max-output", "51200", "tab-list"],
       expect.anything(),
     );
   });
@@ -299,7 +299,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_navigate");
     await tool.execute("id", { action: "reload" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "reload"],
+      ["--raw", "--max-output", "51200", "reload"],
       expect.anything(),
     );
   });
@@ -308,7 +308,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_cookies");
     await tool.execute("id", { action: "get" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "cookie-get"],
+      ["--raw", "--max-output", "51200", "cookie-get"],
       expect.anything(),
     );
   });
@@ -317,7 +317,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_storage");
     await tool.execute("id", { action: "clear" }, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "localstorage-clear"],
+      ["--raw", "--max-output", "51200", "localstorage-clear"],
       expect.anything(),
     );
   });
@@ -326,7 +326,7 @@ describe("per-tool execute() produces correct argv", () => {
     const { tool, execFn } = getTool("browse_screenshot");
     await tool.execute("id", {}, undefined);
     expect(execFn).toHaveBeenCalledWith(
-      ["--raw", "screenshot"],
+      ["--raw", "--max-output", "51200", "screenshot"],
       expect.anything(),
     );
   });

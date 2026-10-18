@@ -25,6 +25,8 @@ export type ExecFn = (args: string[], opts?: ExecOptions) => Promise<ExecResult>
  *   it only changes anything for `install`/`stealth-check`, which this
  *   extension never calls. Kept for forward-compat should either land in
  *   the typed tool surface later, not because it currently does anything).
+ * - Prepends `--max-output 51200`: rod-cli hard-caps every result at 50KB and
+ *   ends an oversized one with a `[truncated: …]` line saying how to narrow it.
  * - Throws on non-zero exit status.
  * - Propagates AbortSignal.
  */
@@ -36,7 +38,7 @@ export async function execRodCli(
   validateInput(args);
 
   const timeout = timeoutFor(args);
-  const result = await execFn(["--raw", ...args], {
+  const result = await execFn(["--raw", "--max-output", "51200", ...args], {
     signal: opts?.signal,
     timeout,
   });

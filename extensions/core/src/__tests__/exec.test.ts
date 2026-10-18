@@ -11,11 +11,11 @@ function mockExecFn(result?: Partial<{ code: number; stdout: string; stderr: str
 }
 
 describe("execRodCli — integration behavior", () => {
-  it("prepends --raw to args", async () => {
+  it("TestExecPrependsMaxOutput: prepends --raw --max-output 51200 to args", async () => {
     const fn = mockExecFn();
     await execRodCli(fn, ["goto", "https://example.com"]);
     expect(fn).toHaveBeenCalledWith(
-      ["--raw", "goto", "https://example.com"],
+      ["--raw", "--max-output", "51200", "goto", "https://example.com"],
       expect.anything(),
     );
   });

@@ -10,7 +10,7 @@ export function registerBrowseSnapshot(pi: ExtensionAPI, execFn: ExecFn) {
     description:
       "Capture a token-efficient accessibility-tree markdown snapshot of the current page, " +
       "or of the subtree under a ref/CSS selector; interactive=true keeps only controls. " +
-      "Output is truncated to 50KB/2000 lines.",
+      "Output is capped at 50KB; an oversized result ends with a [truncated: …] line saying how to narrow it.",
     promptSnippet:
       "Get page content: browse_snapshot()",
     promptGuidelines: [
