@@ -427,7 +427,14 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1` prints `ok` for both.
 
-### T14 [~] Checkpoint 2: Go work complete, full suite green
+### T14 [!] Checkpoint 2: Go work complete, full suite green
+Blocked: BLOCKED: one test file fails that is not on the Baseline list: extensions/pi/src/__tests__/integration.test.ts (6 tests). No task in this plan caused it, and the code on main does the same thing.
+
+The Go side is fine. go build and go vet are clean. go test fails only on tests the Baseline already lists: TestStartServerWithPpid in both runs, and TestStorageCommands in run 2.
+
+Cause, reproduced by hand:
+- The pi integration tests run rod-cli without --headless on the default session. When no default daemon is running, the first `goto` starts a headed Chrome under Wayland.
+- On a freshly started 
 **Seams:** none (no code).
 **Change:** Run the Full suite command. If a test outside the Baseline fails, return `blocked` and name the task whose files it touches.
 **Done when:** the Full suite command exits 0, apart from Baseline-listed failures.
