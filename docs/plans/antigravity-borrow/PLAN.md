@@ -307,7 +307,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go build -o rod-cli . && go test ./actions/ ./daemon/ ./ -run 'MouseWheel|ExecuteAction' -count=1` prints only `ok`.
 
-### T09 [~] Humanized pointer: mousemove, hover and drag use tuned curves, no settle on raw steps
+### T09 [x] Humanized pointer: mousemove, hover and drag use tuned curves, no settle on raw steps
 **Why:**
 - `MouseMove` uses the raw `Mouse.MoveTo`. It ignores `--mouse-*` and never updates godoll's tracked position, so the next humanized click curves from a stale point.
 - `Hover` teleports to the centre after its curve, because godoll `Hover` calls `el.Hover()`.
