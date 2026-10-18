@@ -49,7 +49,8 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `grep -c '^## Baseline' docs/plans/antigravity-borrow/evidence.md` prints `1`.
 
-### T01 [~] eval prints the bare value
+### T01 [!] eval prints the bare value
+Blocked: The code work is done and the tests pass. Only the plan's grep check cannot pass as written. It expects no output, but it scans the whole repo, including the tracked historical records under .planning/ (two phase-24 files, one phase-26 file and one phase-51 file). Those records quote the old prefix. No change listed in the plan touches them, and I did not rewrite historical records just to make a grep pass. Two ways to fix it: add `| grep -v '^./.planning/'` to the Done-when grep (my recommendation), or approve editing those four .planning files. Every remaining hit is in .planning/. No code, 
 **Why:** It saves tokens on every call and fixes `browse_wait`, which compares stdout to `"true"` (`extensions/core/src/wait.ts:50`).
 **Seams:** `actions.Evaluate` (live, `newLiveCtx`); CLI `rod-cli eval` (`./tests/`).
 **Change:**
