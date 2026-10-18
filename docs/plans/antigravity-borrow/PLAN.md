@@ -283,7 +283,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 **Change:** Run the Full suite command. Fix nothing here. If a test outside the Baseline fails, return `blocked` and name the task whose files it touches.
 **Done when:** the Full suite command exits 0, apart from Baseline-listed failures.
 
-### T08 [ ] mousewheel: scroll an inner pane by ref, `--end` with a cap
+### T08 [~] mousewheel: scroll an inner pane by ref, `--end` with a cap
 **Seams:** `actions.MouseWheel` (live `/scroll` + fake scroller); CLI `mousewheel --end`.
 **Change:**
 - **ref path:** `getElementByRef(ctx, ref)` → `humanize.MoveTo(page, el, mouseOpts(...)...)`, which scrolls it into view and lands at a random point inside it. The anchor is that element. Scroll and measure as in T06.
