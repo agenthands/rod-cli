@@ -117,3 +117,7 @@ tdd: Pi and OMP 16 tools registered — red: AssertionError: expected [ 'browse_
 tdd: Screenshot execute — red: AssertionError: expected [ '--raw', '--max-output', …(2) ] to include '--full-page' (pi); (fail) tool argv mapping > Screenshot execute returns the PNG as an image and deletes the temp file (omp) — green: (cd extensions/pi && npx vitest run src/__tests__/adversarial.test.ts) and (cd extensions/omp && /home/john/bin/bun test src/__tests__/argv.test.ts) passed
 tdd: TestAllToolSchemasStrict — red: AssertionError: browse_goto: expected undefined to be false // Object.is equality (pi); error: browse_goto bogus Expected: false Received: true (omp) — green: (cd extensions/pi && npx vitest run src/__tests__/adversarial.test.ts) and (cd extensions/omp && /home/john/bin/bun test src/__tests__/registration.test.ts) passed
 verify: T15 — pass — core vitest 142/142 + tsc clean; pi vitest 40/40 + tsc clean; omp bun 32/32 + tsc clean; 5 tdd lines with red failures; 16 tools strict
+
+## T16
+
+verify: T16 — pass — greps print isTrusted=false 1, --max-output 1, mousewheel [--end 1, snapshot [-i] 1, Read recipes 1; build ok and --help shows --end, --interactive, --full-page; docs-only diff (SKILL.md, running-code.md, tabs-and-windows.md)

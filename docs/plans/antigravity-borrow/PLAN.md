@@ -497,7 +497,7 @@ Cause, reproduced by hand:
 
 **Done when:** `(cd extensions/core && npx vitest run && npx tsc --noEmit) && (cd extensions/pi && npx vitest run && npx tsc --noEmit) && (cd extensions/omp && /home/john/bin/bun test && npx tsc --noEmit)` all pass.
 
-### T16 [~] Skill and references: document what shipped, fix false claims, add read recipes
+### T16 [x] Skill and references: document what shipped, fix false claims, add read recipes
 **Seams:** none (docs). The check is the greps below plus `--help` parity.
 **Change (`skills/rod-cli/SKILL.md`, references):**
 - **Line 26:**
