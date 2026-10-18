@@ -2,7 +2,7 @@ module github.com/agenthands/rod-cli
 
 go 1.26.1
 
-toolchain go1.26.4
+toolchain go1.26.9
 
 require (
 	github.com/agenthands/godoll v0.0.0-20260314193512-b7f2b1da0553
@@ -43,7 +43,7 @@ require (
 	github.com/ysmood/leakless v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )
 
 replace github.com/agenthands/godoll => ../godoll
