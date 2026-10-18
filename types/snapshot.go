@@ -36,7 +36,7 @@ const snapshotTpl = `
 
 // SnapshotOpts controls one snapshot capture. Gen is the ref generation
 // (s<Gen>e<N>). Root is a JS expression for the root element; empty means
-// document.body. Interactive is reserved for interactive-only output.
+// document.body. Interactive keeps only interactive nodes and their ancestors.
 type SnapshotOpts struct {
 	Gen         int
 	Root        string
@@ -55,6 +55,9 @@ func BuildSnapshot(p *rod.Page, o SnapshotOpts) (*Snapshot, error) {
 	yamlDoc, err := snapshot.captureSnapshotWithFrames(p, o)
 	if err != nil {
 		return nil, err
+	}
+	if o.Interactive {
+		yamlDoc = pruneInteractive(yamlDoc)
 	}
 
 	yamlBytes, err := yamlMarshal(yamlDoc)
@@ -275,8 +278,8 @@ func isInteractive(v string) bool {
 	return false
 }
 
-// pruneInteractive keeps interactive nodes (whole subtree) and their ancestors,
-// dropping everything else. Returns nil when nothing under n is kept (a document
+// pruneInteractive keeps interactive nodes and their ancestors, dropping
+// everything else (including a control's non-interactive children). Returns nil when nothing under n is kept (a document
 // node is returned with an empty sequence instead).
 // ponytail: keeps unnamed wrapper ancestors; flatten them if output is still too large
 func pruneInteractive(n *yaml.Node) *yaml.Node {
@@ -302,10 +305,13 @@ func pruneInteractive(n *yaml.Node) *yaml.Node {
 		kept := n.Content[:0]
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			k, v := n.Content[i], n.Content[i+1]
-			if isInteractive(k.Value) {
-				kept = append(kept, k, v)
-			} else if p := pruneInteractive(v); p != nil {
+			if p := pruneInteractive(v); p != nil {
 				kept = append(kept, k, p)
+			} else if isInteractive(k.Value) {
+				if len(n.Content) == 2 {
+					return k // `- link "x": {/url: ...}` collapses to `- link "x"`
+				}
+				kept = append(kept, k, v)
 			}
 		}
 		n.Content = kept

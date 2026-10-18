@@ -298,7 +298,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "eval":
 		return actions.Evaluate(ctx, req.Args["script"], req.Args["ref"])
 	case "snapshot":
-		return actions.Snapshot(ctx)
+		return actions.Snapshot(ctx, req.Args["root"], req.Args["interactive"] == "true")
 	case "stealth-check":
 		return actions.StealthCheck(ctx, req.Args["url"], req.Args["raw"] == "true", req.Args["json"] == "true")
 	case "cdp-traffic":

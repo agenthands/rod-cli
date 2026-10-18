@@ -106,7 +106,7 @@ var refRe = regexp.MustCompile(`\[ref=((?:f\d+)?s\d+e\d+)\]`)
 // whose snapshot line contains the given substring (e.g. accessible name).
 func refFor(t *testing.T, ctx *types.Context, substr string) string {
 	t.Helper()
-	snap, err := Snapshot(ctx)
+	snap, err := Snapshot(ctx, "", false)
 	if err != nil {
 		t.Fatalf("Snapshot failed: %v", err)
 	}
@@ -649,10 +649,10 @@ func TestSnapshot(t *testing.T) {
 	defer srv.Close()
 	navFixture(t, ctx, srv)
 
-	if _, err := Snapshot(ctx); err != nil {
+	if _, err := Snapshot(ctx, "", false); err != nil {
 		t.Errorf("Snapshot: %v", err)
 	}
-	if _, err := Snapshot(freshCtx()); err == nil {
+	if _, err := Snapshot(freshCtx(), "", false); err == nil {
 		t.Error("Snapshot expected error no page")
 	}
 }
@@ -665,7 +665,7 @@ func TestSnapshotDoesNotLogToConsole(t *testing.T) {
 	defer srv.Close()
 	navFixture(t, ctx, srv)
 
-	if _, err := Snapshot(ctx); err != nil {
+	if _, err := Snapshot(ctx, "", false); err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}
 	time.Sleep(200 * time.Millisecond) // console events arrive asynchronously
@@ -1182,7 +1182,7 @@ func TestSnapshotInjectsMissingEngine(t *testing.T) {
 		t.Fatalf("wait load: %v", err)
 	}
 	ctx.SwitchTo(raw)
-	out, err := Snapshot(ctx)
+	out, err := Snapshot(ctx, "", false)
 	if err != nil {
 		t.Fatalf("Snapshot on unprepared page: %v", err)
 	}
@@ -1269,7 +1269,7 @@ func TestTabCloseCurrentSwitches(t *testing.T) {
 	if !strings.Contains(out, "; current: [") {
 		t.Fatalf("TabClose output = %q, want it to name the new current tab", out)
 	}
-	if _, err := Snapshot(ctx); err != nil {
+	if _, err := Snapshot(ctx, "", false); err != nil {
 		t.Fatalf("Snapshot after closing current tab: %v", err)
 	}
 }
@@ -1294,7 +1294,7 @@ func TestTabSelectAdoptsForeignTab(t *testing.T) {
 	if !strings.Contains(out, "adopted") {
 		t.Fatalf("TabSelect output = %q, want it to report the tab as adopted", out)
 	}
-	if _, err := Snapshot(ctx); err != nil {
+	if _, err := Snapshot(ctx, "", false); err != nil {
 		t.Fatalf("Snapshot on adopted tab: %v", err)
 	}
 }

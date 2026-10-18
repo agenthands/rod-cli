@@ -57,7 +57,7 @@ func TestDragHonoursTuning(t *testing.T) {
 	defer func() { moveToElement = orig }()
 
 	// Both refs must come from one snapshot: a second snapshot retires the first's refs.
-	snap, err := Snapshot(ctx)
+	snap, err := Snapshot(ctx, "", false)
 	if err != nil {
 		t.Fatalf("Snapshot: %v", err)
 	}

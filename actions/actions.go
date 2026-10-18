@@ -341,8 +341,8 @@ func Screenshot(ctx *types.Context, name string, selector string, width, height 
 	return fmt.Sprintf("Save to %s", filePath), nil
 }
 
-func Snapshot(ctx *types.Context) (string, error) {
-	snapshot, err := ctx.BuildSnapshot(types.SnapshotOpts{})
+func Snapshot(ctx *types.Context, root string, interactive bool) (string, error) {
+	snapshot, err := ctx.BuildSnapshot(types.SnapshotOpts{Interactive: interactive})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to capture snapshot")
 	}

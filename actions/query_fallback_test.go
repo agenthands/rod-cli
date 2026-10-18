@@ -60,7 +60,7 @@ func clickBounded(t *testing.T, ctx *types.Context, ref string, timeout time.Dur
 // TestClickFillType_CSSSelector_NoPriorSnapshot is the headline regression
 // test for the fix: click/fill/type must work against a plain CSS selector
 // immediately after navigation, with NO prior `snapshot` call in the
-// session. Nothing here calls Snapshot(ctx) before these actions, so
+// session. Nothing here calls Snapshot(ctx, "", false) before these actions, so
 // getElementByRef is exercised purely via its direct-page fallback branch
 // (ctx.LatestSnapshot() errors -> queryElementDirect against
 // ctx.ControlledPage()).
