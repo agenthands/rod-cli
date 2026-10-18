@@ -51,6 +51,10 @@ describe("buildSnapshotArgs", () => {
   it("includes session prefix", () => {
     expect(buildSnapshotArgs({ session: "admin" })).toEqual(["-s", "admin", "snapshot"]);
   });
+
+  it("passes interactive before -- and the scope after it", () => {
+    expect(buildSnapshotArgs({ selector: "s1e3", interactive: true })).toEqual(["snapshot", "-i", "--", "s1e3"]);
+  });
 });
 
 describe("buildClickArgs", () => {

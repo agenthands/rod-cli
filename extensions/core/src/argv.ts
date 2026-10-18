@@ -13,10 +13,11 @@ export function buildGotoArgs(p: { url: string; session?: string }): string[] {
   return withSession(p.session, ["goto", "--", p.url]);
 }
 
-export function buildSnapshotArgs(p: { selector?: string; session?: string }): string[] {
-  // Note: rod-cli snapshot currently has no --selector flag.
-  // The selector param is accepted for future compatibility.
-  return withSession(p.session, ["snapshot"]);
+export function buildSnapshotArgs(p: { selector?: string; interactive?: boolean; session?: string }): string[] {
+  const args = ["snapshot"];
+  if (p.interactive) args.push("-i");
+  if (p.selector) args.push("--", p.selector);
+  return withSession(p.session, args);
 }
 
 export function buildClickArgs(p: {
