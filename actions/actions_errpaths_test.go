@@ -424,12 +424,12 @@ func TestErrPaths_MouseAndResize(t *testing.T) {
 	}
 	pageSetViewport = origVP
 
-	origMove := pageMouseMoveTo
-	pageMouseMoveTo = func(p *rod.Page, pt proto.Point) error { return errBoom }
+	origMove := moveToPoint
+	moveToPoint = func(p *rod.Page, pt humanize.Point, opts ...humanize.MouseOption) error { return errBoom }
 	if _, err := MouseMove(ctx, 1, 1); err == nil {
 		t.Error("MouseMove expected wrapped error")
 	}
-	pageMouseMoveTo = origMove
+	moveToPoint = origMove
 
 	origDown := pageMouseDown
 	pageMouseDown = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return errBoom }

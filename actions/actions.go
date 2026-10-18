@@ -94,7 +94,6 @@ var (
 	browserPage          = func(b *rod.Browser, opts proto.TargetCreateTarget) (*rod.Page, error) { return b.Page(opts) }
 	pageActivate         = func(p *rod.Page) (*rod.Page, error) { return p.Activate() }
 	pageClose            = func(p *rod.Page) error { return p.Close() }
-	pageMouseMoveTo      = func(p *rod.Page, pt proto.Point) error { return p.Mouse.MoveTo(pt) }
 	pageMouseDown        = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Down(btn, clicks) }
 	pageMouseUp          = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return p.Mouse.Up(btn, clicks) }
 	ioReadAll            = io.ReadAll
@@ -980,16 +979,15 @@ func Press(ctx *types.Context, key string) (string, error) {
 	return fmt.Sprintf("Pressed key: %s", key), nil
 }
 
-// MouseMove triggers a raw mouse move
+// MouseMove moves the pointer along a humanized curve (honours --mouse-*).
 func MouseMove(ctx *types.Context, x, y float64) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
 	}
-	if err := pageMouseMoveTo(page, proto.Point{X: x, Y: y}); err != nil {
+	if err := moveToPoint(page, humanize.Point{X: x, Y: y}, mouseOpts(ctx.HumanizeTuning())...); err != nil {
 		return "", fmt.Errorf("failed to move mouse: %w", err)
 	}
-	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
 	return fmt.Sprintf("Moved mouse to %f, %f", x, y), nil
 }
 
@@ -1008,7 +1006,6 @@ func MouseDown(ctx *types.Context, button string) (string, error) {
 	if err := pageMouseDown(page, btn, 1); err != nil {
 		return "", fmt.Errorf("failed to mousedown: %w", err)
 	}
-	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
 	return "Mouse down", nil
 }
 

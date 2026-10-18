@@ -62,3 +62,7 @@ tdd: TestMouseWheelRefScrollsInnerBox — red: mousewheel_test.go:107: MouseWhee
 tdd: TestMouseWheelEndLive — red not observed (loop landed with cycle 1; mutation check with the loop forced to one scroll failed: mousewheel_test.go:122: MouseWheel = "scrolled dy=800 y=800/4400", <nil>) — green: go test ./actions/ -run TestMouseWheelEndLive -count=1 passed
 tdd: TestAllCommandActionsHappyPath/mousewheel_--end_--max_5_--_0_-300 (CLI seam, new row) — red: cmd_test.go:639: command [mousewheel --end --max 5 -- 0 -300] failed: flag provided but not defined: -end — green: go test . -run TestAllCommandActionsHappyPath/mousewheel -count=1 passed
 verify: T08 — pass — done-check printed only ok (actions 24.4s, daemon 58.7s, root); CLI TestAllCommandActionsHappyPath ok; go vet clean; cycles 2 and 4 red shown via mutation check (code landed with cycle 1)
+
+## T09
+
+tdd: TestMouseMoveTracksPosition — red: pointer_test.go:17: GetMousePos = {100 100}, want {120 340} — green: go test ./actions/ -run TestMouseMoveTracksPosition -count=1 passed

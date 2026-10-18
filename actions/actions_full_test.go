@@ -41,6 +41,7 @@ const fixtureHTML = `<!DOCTYPE html>
   <div id="dragsrc" role="button" tabindex="0" draggable="true" aria-label="Drag Source" style="width:50px;height:50px;background:red">SRC</div>
   <div id="dragdst" role="button" tabindex="0" aria-label="Drag Dest" style="width:50px;height:50px;background:blue">DST</div>
   <button id="dlgbtn" onclick="window.__r = confirm('ok?')" aria-label="Dialog Button">Dialog</button>
+  <script>addEventListener('mousemove',e=>{window.__mx=e.clientX;window.__my=e.clientY})</script>
 </body>
 </html>`
 
