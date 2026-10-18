@@ -103,3 +103,4 @@ verify: T13 — pass — go test ./types/ ./actions/ -run 'Console|Request|Netwo
 ## T13b
 
 tdd: pi integration cold start — red: FAIL  src/__tests__/integration.test.ts > integration workflow > with rod-cli > screenshot produces output — Error: Test timed out in 5000ms. (6 failed | 3 passed) — green: (cd extensions/pi && npx vitest run src/__tests__/integration.test.ts) after ./rod-cli close passed (9 passed)
+verify: T13b — pass — cold daemon (./rod-cli close): pi vitest 3 files / 39 tests passed (integration 9/9), tsc --noEmit clean
