@@ -427,7 +427,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1` prints `ok` for both.
 
-### T14 [ ] Checkpoint 2: Go work complete, full suite green
+### T14 [~] Checkpoint 2: Go work complete, full suite green
 **Seams:** none (no code).
 **Change:** Run the Full suite command. If a test outside the Baseline fails, return `blocked` and name the task whose files it touches.
 **Done when:** the Full suite command exits 0, apart from Baseline-listed failures.
