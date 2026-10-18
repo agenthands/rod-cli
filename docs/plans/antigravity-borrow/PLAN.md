@@ -438,7 +438,7 @@ Main failure: tests/TestStorageCommands (tests/cli_test.go) failed in 2 of 3 ful
 
 **Done when:** `cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && ./rod-cli close; export ROD_CLI_PATH="$PWD/rod-cli" && (cd extensions/pi && npx vitest run && npx tsc --noEmit)` passes, run straight after `./rod-cli close` (cold daemon).
 
-### T14 [~] Checkpoint 2: Go work complete, full suite green
+### T14 [x] Checkpoint 2: Go work complete, full suite green
 
 The Go side is fine. go build and go vet are clean. go test fails only on tests the Baseline already lists: TestStartServerWithPpid in both runs, and TestStorageCommands in run 2.
 
