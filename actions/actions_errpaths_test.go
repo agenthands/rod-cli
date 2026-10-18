@@ -261,12 +261,12 @@ func TestErrPaths_ElementOps(t *testing.T) {
 		}
 	})
 
-	// Hover via humanizeHover
+	// Hover via moveToElement
 	t.Run("Hover", func(t *testing.T) {
 		ref := refFor(t, ctx, "Click Me")
-		orig := humanizeHover
-		humanizeHover = func(el *rod.Element) error { return errBoom }
-		defer func() { humanizeHover = orig }()
+		orig := moveToElement
+		moveToElement = func(p *rod.Page, el *rod.Element, opts ...humanize.MouseOption) error { return errBoom }
+		defer func() { moveToElement = orig }()
 		if _, err := Hover(ctx, ref); err == nil {
 			t.Error("Hover expected wrapped error")
 		}

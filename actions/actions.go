@@ -78,7 +78,7 @@ var (
 	osWriteFile         = os.WriteFile
 	clickWithMouse      = humanize.ClickWithMouse
 	typeWithHumanize    = humanize.TypeWithHumanize
-	humanizeHover       = humanize.Hover
+	moveToElement       = humanize.MoveTo
 	humanizeDragAndDrop = humanize.DragAndDrop
 	elementClick        = func(el *rod.Element, button proto.InputMouseButton, n int) error { return el.Click(button, n) }
 	elementSelect       = func(el *rod.Element, selectors []string, selected bool, t rod.SelectorType) error {
@@ -552,7 +552,7 @@ func Hover(ctx *types.Context, ref string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := humanizeHover(element); err != nil {
+	if err := moveToElement(page, element, mouseOpts(ctx.HumanizeTuning())...); err != nil {
 		return "", errors.Wrap(err, "Failed to hover element")
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
