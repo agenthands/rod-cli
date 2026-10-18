@@ -195,7 +195,7 @@ func TestErrPaths_Pdf(t *testing.T) {
 	pagePDF = func(p *rod.Page, req *proto.PagePrintToPDF) (*rod.StreamReader, error) {
 		return nil, errBoom
 	}
-	if _, err := Pdf(ctx, "x"); err == nil {
+	if _, err := Pdf(ctx, "x", ""); err == nil {
 		t.Error("Pdf op expected wrapped error")
 	}
 	pagePDF = origPDF
@@ -203,7 +203,7 @@ func TestErrPaths_Pdf(t *testing.T) {
 	// ReadAll failure
 	origRead := ioReadAll
 	ioReadAll = func(r io.Reader) ([]byte, error) { return nil, errBoom }
-	if _, err := Pdf(ctx, "x"); err == nil {
+	if _, err := Pdf(ctx, "x", ""); err == nil {
 		t.Error("Pdf ReadAll expected error")
 	}
 	ioReadAll = origRead
@@ -213,7 +213,7 @@ func TestErrPaths_Pdf(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, "tmp"), []byte("x"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Pdf(ctx, "p"); err == nil {
+		if _, err := Pdf(ctx, "p", ""); err == nil {
 			t.Error("Pdf mkdir expected error")
 		}
 	})
@@ -224,7 +224,7 @@ func TestErrPaths_Pdf(t *testing.T) {
 		if err := os.MkdirAll(target, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Pdf(ctx, "p"); err == nil {
+		if _, err := Pdf(ctx, "p", ""); err == nil {
 			t.Error("Pdf write expected error")
 		}
 	})

@@ -630,14 +630,14 @@ func TestPdf(t *testing.T) {
 	defer srv.Close()
 	navFixture(t, ctx, srv)
 
-	out, err := Pdf(ctx, "test_pdf")
+	out, err := Pdf(ctx, "test_pdf", "")
 	if err != nil {
 		t.Errorf("Pdf: %v", err)
 	}
 	if !strings.Contains(out, "saved ") {
 		t.Errorf("unexpected: %s", out)
 	}
-	if _, err := Pdf(freshCtx(), "x"); err == nil {
+	if _, err := Pdf(freshCtx(), "x", ""); err == nil {
 		t.Error("Pdf expected error no page")
 	}
 }

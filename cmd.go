@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -618,14 +619,22 @@ func getApp() *cli.App {
 				Usage: "Take a screenshot of the current page",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "name", Usage: "Name of the screenshot"},
-					&cli.StringFlag{Name: "selector", Usage: "CSS selector"},
+					&cli.StringFlag{Name: "selector", Usage: "Capture only this element (snapshot ref or CSS selector)"},
+					&cli.StringFlag{Name: "out", Usage: "Write the PNG to this path instead of tmp/screenshots/"},
+					&cli.BoolFlag{Name: "full-page", Usage: "Capture the whole scrollable page"},
 				},
 				Action: func(c *cli.Context) error {
 					name := c.String("name")
 					if name == "" {
 						name = "screenshot"
 					}
-					return runClientCommand(c, daemon.Request{Command: "screenshot", Args: map[string]string{"name": name, "selector": c.String("selector")}})
+					out, err := absOut(c)
+					if err != nil {
+						return err
+					}
+					return runClientCommand(c, daemon.Request{Command: "screenshot", Args: map[string]string{
+						"name": name, "selector": c.String("selector"), "out": out, "full-page": fmt.Sprint(c.Bool("full-page")),
+					}})
 				},
 			},
 			{
@@ -633,13 +642,18 @@ func getApp() *cli.App {
 				Usage: "Export page to PDF",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "name", Usage: "Name of the pdf"},
+					&cli.StringFlag{Name: "out", Usage: "Write the PDF to this path instead of tmp/pdfs/"},
 				},
 				Action: func(c *cli.Context) error {
 					name := c.String("name")
 					if name == "" {
 						name = "page"
 					}
-					return runClientCommand(c, daemon.Request{Command: "pdf", Args: map[string]string{"name": name}})
+					out, err := absOut(c)
+					if err != nil {
+						return err
+					}
+					return runClientCommand(c, daemon.Request{Command: "pdf", Args: map[string]string{"name": name, "out": out}})
 				},
 			},
 			{
@@ -1065,4 +1079,12 @@ func capOutput(msg string, max int) string {
 		}
 	}
 	return fmt.Sprintf("%s\n[truncated: %d of %d bytes; narrow with snapshot -i / snapshot <ref>, or --max-output 0]", msg[:cut], cut, len(msg))
+}
+
+// absOut resolves --out against the client's cwd; the daemon's cwd differs.
+func absOut(c *cli.Context) (string, error) {
+	if c.String("out") == "" {
+		return "", nil
+	}
+	return filepath.Abs(c.String("out"))
 }

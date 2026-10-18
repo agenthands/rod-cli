@@ -632,7 +632,7 @@ func Type(ctx *types.Context, ref string, text string) (string, error) {
 	return fmt.Sprintf("Typed text into element %s successfully", ref), nil
 }
 
-func Pdf(ctx *types.Context, name string) (string, error) {
+func Pdf(ctx *types.Context, name, out string) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
@@ -645,21 +645,25 @@ func Pdf(ctx *types.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	abs, err := saveArtifact("", filepath.Join("tmp", "pdfs"), name, ".pdf", b)
+	abs, err := saveArtifact(out, filepath.Join("tmp", "pdfs"), name, ".pdf", b)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("saved %s", abs), nil
 }
 
-// saveArtifact writes data to dir/<base of name>+ext and returns the absolute
-// path. The base-name rule keeps a hostile --name inside dir.
+// saveArtifact writes data to out when set, else to dir/<base of name>+ext,
+// and returns the absolute path. The base-name rule keeps a hostile --name
+// inside dir; out is an explicit caller-chosen path and is used as given.
 func saveArtifact(out, dir, name, ext string, data []byte) (string, error) {
-	base := filepath.Base(name)
-	if base == "." || base == ".." || base == "" || base == string(filepath.Separator) {
-		return "", fmt.Errorf("invalid name %q", name)
+	filePath := out
+	if filePath == "" {
+		base := filepath.Base(name)
+		if base == "." || base == ".." || base == "" || base == string(filepath.Separator) {
+			return "", fmt.Errorf("invalid name %q", name)
+		}
+		filePath = filepath.Join(dir, base+ext)
 	}
-	filePath := filepath.Join(dir, base+ext)
 	if err := osMkdirAll(filepath.Dir(filePath), 0755); err != nil {
 		return "", err
 	}

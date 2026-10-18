@@ -306,7 +306,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "screenshot":
 		return actions.Screenshot(ctx, req.Args["name"], req.Args["selector"], req.Args["out"], req.Args["full-page"] == "true")
 	case "pdf":
-		return actions.Pdf(ctx, req.Args["name"])
+		return actions.Pdf(ctx, req.Args["name"], req.Args["out"])
 	case "press":
 		return actions.Press(ctx, req.Args["key"])
 	case "mousemove":

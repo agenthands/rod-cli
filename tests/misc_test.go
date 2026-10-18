@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -135,4 +137,21 @@ func TestScreenshotCommand(t *testing.T) {
 	}
 
 	runCli("close")
+}
+
+func TestScreenshotOutAbsolute(t *testing.T) {
+	ts := SetupTestServer()
+	defer ts.Close()
+	runCli("close")
+	defer runCli("close")
+
+	runCli("--raw", "goto", ts.URL)
+	want := filepath.Join(t.TempDir(), "a.png")
+	out, err := runCli("--raw", "screenshot", "--out", want)
+	if err != nil || !strings.HasPrefix(out, "saved /") {
+		t.Fatalf("screenshot --out: err=%v out=%s", err, out)
+	}
+	if _, err := os.Stat(want); err != nil {
+		t.Errorf("missing %s: %v", want, err)
+	}
 }
