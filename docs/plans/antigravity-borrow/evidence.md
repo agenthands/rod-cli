@@ -29,3 +29,4 @@ verify: T03 — pass — go test ./types/ ./actions/ -run 'Snapshot|LocatorInFra
 ## T04
 tdd: TestTabNewIsPrepared — red: actions_full_test.go:1160: typeof snapshotEngine = "undefined", want "object" — green: go test ./actions/ -run TestTabNewIsPrepared -count=1 passed
 tdd: TestTabSelectInvalidatesOldRefs — red: (switchTo snapshot-clear removed, since cycle 1 shipped it) panic: test timed out after 1m0s — running tests: TestTabSelectInvalidatesOldRefs (1m0s) — green: go test ./actions/ -run TestTabSelectInvalidatesOldRefs -count=1 passed
+tdd: TestTabListMarksCurrentWithID — red: actions_full_test.go:1199: TabList does not mark the current tab with its id: [0] Page 2 (http://127.0.0.1:44333/page2) — green: go test ./actions/ -run TestTabListMarksCurrentWithID -count=1 passed

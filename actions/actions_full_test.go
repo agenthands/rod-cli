@@ -1180,3 +1180,22 @@ func TestTabSelectInvalidatesOldRefs(t *testing.T) {
 		t.Fatalf("Click(%q) on new tab: %v", newRef, err)
 	}
 }
+
+func TestTabListMarksCurrentWithID(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	navFixture(t, ctx, srv)
+	if _, err := TabNew(ctx, srv.URL+"/page2"); err != nil {
+		t.Fatalf("TabNew: %v", err)
+	}
+	out, err := TabList(ctx)
+	if err != nil {
+		t.Fatalf("TabList: %v", err)
+	}
+	if !regexp.MustCompile(`(?m)^\* \[\d+\] [0-9A-F]{8} Page 2`).MatchString(out) {
+		t.Fatalf("TabList does not mark the current tab with its id:\n%s", out)
+	}
+}

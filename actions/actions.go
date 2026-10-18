@@ -641,10 +641,17 @@ func TabList(ctx *types.Context) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to list tabs")
 	}
+	var cur proto.TargetTargetID
+	if p, err := ctx.ControlledPage(); err == nil {
+		cur = p.TargetID
+	}
 	var res strings.Builder
 	for i, p := range pages {
-		info, _ := p.Info()
-		res.WriteString(fmt.Sprintf("[%d] %s (%s)\n", i, info.Title, info.URL))
+		mark := " "
+		if p.TargetID == cur {
+			mark = "*"
+		}
+		fmt.Fprintf(&res, "%s [%d] %s\n", mark, i, tabDesc(p))
 	}
 	return res.String(), nil
 }
