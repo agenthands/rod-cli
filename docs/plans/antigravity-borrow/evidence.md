@@ -10,3 +10,6 @@
 ## T00
 
 verify: T00 — pass — done-check `grep -c '^## Baseline'` printed 1; Baseline has go1.26.4 + named daemon TestStartServerWithPpid flake (isolated rerun ok); no code changed outside docs/plans
+
+## T01
+tdd: TestEvaluate_BareValue — red: actions_full_test.go:515: Evaluate("1+1") = "Evaluate code successfully with result: 2", want "2" — green: go test ./actions/ -run TestEvaluate_BareValue -count=1 passed

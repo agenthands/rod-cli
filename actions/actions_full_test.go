@@ -494,6 +494,29 @@ func TestEvaluate(t *testing.T) {
 	}
 }
 
+func TestEvaluate_BareValue(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	cases := []struct{ script, ref, want string }{
+		{"1+1", "", "2"},
+		{"() => document.title", "", "Fixture"},
+		{"() => this.tagName", refFor(t, ctx, "Click Me"), "BUTTON"},
+	}
+	for _, c := range cases {
+		out, err := Evaluate(ctx, c.script, c.ref)
+		if err != nil {
+			t.Fatalf("Evaluate(%q): %v", c.script, err)
+		}
+		if out != c.want {
+			t.Errorf("Evaluate(%q) = %q, want %q", c.script, out, c.want)
+		}
+	}
+}
+
 func TestEvalStorage(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()

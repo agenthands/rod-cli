@@ -276,7 +276,7 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 		} else {
 			valStr = "null"
 		}
-		return fmt.Sprintf("Evaluate code successfully with result: %s", valStr), nil
+		return valStr, nil
 	}
 
 	// Global page evaluation
@@ -325,7 +325,7 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 		}
 	}
 
-	return fmt.Sprintf("Evaluate code successfully with result: %s", valStr), nil
+	return valStr, nil
 }
 
 func Screenshot(ctx *types.Context, name string, selector string, width, height float64) (string, error) {
