@@ -645,7 +645,8 @@ func measureScrollBoxes(el *rod.Element) ([]scrollBox, error) {
 
 // MouseWheel scrolls with real wheel input and reports what actually moved.
 // dx=dy=0 → one viewport down. ref=="" → page; ref → the ref's nearest
-// scrollable ancestor (T08). maxSteps 0 = one scroll; n>0 = until end (T08).
+// scrollable ancestor. maxSteps 0 = one scroll; n>0 = until end, at most n
+// scrolls or wheelEndBudget (then " cap").
 func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
@@ -668,14 +669,85 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 		return "", errors.Wrap(err, "Failed to find scroll target")
 	}
 
-	before, err := measureScroll(anchor)
-	if err != nil || len(before) == 0 {
+	first, err := measureScroll(anchor)
+	if err != nil || len(first) == 0 {
 		return "", errors.Wrap(err, "Failed to measure scroll")
 	}
 	dxReq := dx != 0
 	if dx == 0 && dy == 0 {
-		dy = before[0].VH
+		dy = first[0].VH
 	}
+	// atLimit: the requested direction sits at its limit. atEnd: or moved 0 px.
+	atLimit := func(a scrollBox) bool {
+		if dy == 0 {
+			return dx > 0 && a.X >= a.MaxX || dx < 0 && a.X <= 0
+		}
+		return dy > 0 && a.Y >= a.MaxY || dy < 0 && a.Y <= 0
+	}
+	atEnd := func(b, a scrollBox) bool {
+		moved := a.Y - b.Y
+		if dy == 0 {
+			moved = a.X - b.X
+		}
+		return moved == 0 || atLimit(a)
+	}
+
+	before, i, suffix := first, -1, ""
+	var a scrollBox
+	deadline := time.Now().Add(wheelEndBudget)
+	for step := 1; ; step++ {
+		after, err := wheelScroll(ctx, page, anchor, dx, dy)
+		if err != nil {
+			return "", err
+		}
+		if i < 0 { // report the innermost box that moved, else the innermost
+			i = 0
+			for j := 0; j < len(before) && j < len(after); j++ {
+				if before[j].X != after[j].X || before[j].Y != after[j].Y {
+					i = j
+					break
+				}
+			}
+		}
+		if i >= len(after) || i >= len(before) {
+			return "", errors.New("Failed to measure scroll")
+		}
+		a = after[i]
+		end := atEnd(before[i], a)
+		if end && maxSteps > 0 {
+			// Lazy loads grow the page after the limit: settle and re-measure once.
+			time.Sleep(wheelSettle)
+			if again, err := measureScroll(anchor); err == nil && i < len(again) {
+				end = again[i] == a || atLimit(again[i])
+				a, after[i] = again[i], again[i]
+			}
+		}
+		if end {
+			suffix = " end"
+			break
+		}
+		if maxSteps == 0 {
+			break
+		}
+		if step >= maxSteps || time.Now().After(deadline) {
+			suffix = " cap"
+			break
+		}
+		before = after
+	}
+
+	b := first[min(i, len(first)-1)]
+	movedX, movedY := a.X-b.X, a.Y-b.Y
+	out := fmt.Sprintf("dy=%.0f y=%.0f/%.0f", movedY, a.Y, a.MaxY)
+	if dxReq || movedX != 0 {
+		out = fmt.Sprintf("dx=%.0f x=%.0f/%.0f ", movedX, a.X, a.MaxX) + out
+	}
+	return "scrolled " + out + suffix, nil
+}
+
+// wheelScroll sends dx,dy as ~100px wheel notches, then re-measures until two
+// reads agree (smooth scrolling animates; max 1s).
+func wheelScroll(ctx *types.Context, page *rod.Page, anchor *rod.Element, dx, dy float64) ([]scrollBox, error) {
 	n := int(math.Ceil(math.Max(math.Abs(dx), math.Abs(dy)) / 100))
 	for i := 0; i < n; i++ {
 		if i > 0 {
@@ -686,11 +758,9 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 			time.Sleep(gap)
 		}
 		if err := mouseScroll(page, dx/float64(n), dy/float64(n)); err != nil {
-			return "", errors.Wrap(err, "Failed to scroll mouse wheel")
+			return nil, errors.Wrap(err, "Failed to scroll mouse wheel")
 		}
 	}
-
-	// Smooth scrolling animates: re-measure until two reads agree (max 1s).
 	after, err := measureScroll(anchor)
 	for deadline := time.Now().Add(time.Second); err == nil && time.Now().Before(deadline); {
 		time.Sleep(50 * time.Millisecond)
@@ -701,35 +771,9 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 		after = next
 	}
 	if err != nil {
-		return "", errors.Wrap(err, "Failed to measure scroll")
+		return nil, errors.Wrap(err, "Failed to measure scroll")
 	}
-
-	i := 0
-	for j := 0; j < len(before) && j < len(after); j++ {
-		if before[j].X != after[j].X || before[j].Y != after[j].Y {
-			i = j
-			break
-		}
-	}
-	if i >= len(after) {
-		return "", errors.New("Failed to measure scroll")
-	}
-	b, a := before[min(i, len(before)-1)], after[i]
-	movedX, movedY := a.X-b.X, a.Y-b.Y
-
-	out := fmt.Sprintf("dy=%.0f y=%.0f/%.0f", movedY, a.Y, a.MaxY)
-	if dxReq || movedX != 0 {
-		out = fmt.Sprintf("dx=%.0f x=%.0f/%.0f ", movedX, a.X, a.MaxX) + out
-	}
-	out = "scrolled " + out
-	moved, req, pos, max := movedY, dy, a.Y, a.MaxY
-	if dy == 0 {
-		moved, req, pos, max = movedX, dx, a.X, a.MaxX
-	}
-	if moved == 0 || (req > 0 && pos >= max) || (req < 0 && pos <= 0) {
-		out += " end"
-	}
-	return out, nil
+	return after, nil
 }
 
 func Resize(ctx *types.Context, width, height int) (string, error) {

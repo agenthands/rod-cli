@@ -54,3 +54,6 @@ verify: T06 — pass — done-check printed only ok for actions, root and tests 
 ## T07
 
 verify: T07 — pass — go build+vet clean; go test ./... only failure tests/TestStorageCommands "failed to start daemon" (Baseline-listed flake), all other packages ok; core vitest 139/139, pi 39/39, omp bun 30/30, all tsc clean; no code diff since wip(T07): start
+
+## T08
+tdd: TestMouseWheelEndAbsorbsLazyGrowth — red: mousewheel_test.go:80: got "scrolled dy=800 y=800/1000", err <nil> — green: go test ./actions/ -run TestMouseWheelEndAbsorbsLazyGrowth -count=1 passed
