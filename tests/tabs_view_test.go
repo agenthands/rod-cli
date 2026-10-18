@@ -23,7 +23,7 @@ func TestTabsAndViewCommands(t *testing.T) {
 
 	// 2. Mousewheel
 	out, err = runCli("--raw", "mousewheel", "0", "100")
-	if err != nil || !strings.Contains(out, "Mouse wheel scrolled") {
+	if err != nil || !strings.Contains(out, "scrolled dy=") {
 		t.Errorf("Mousewheel failed: err=%v out=%s", err, out)
 	}
 
