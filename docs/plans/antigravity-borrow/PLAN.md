@@ -126,7 +126,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 **Done when:** `go test ./types/ ./actions/ -run 'Snapshot|LocatorInFrame' -count=1` prints `ok` for both packages.
 
-### T04 [ ] Page lifecycle: one switch point, prepared tabs, tab IDs
+### T04 [~] Page lifecycle: one switch point, prepared tabs, tab IDs
 **Seams:** `actions.TabNew/TabSelect/TabClose/TabList` + `actions.Snapshot/Click` (live, `newLiveCtx`); CLI `tab-*` (`tests/tabs_view_test.go`).
 **Interface:** rename `(*Context).SetPage` to:
 
