@@ -541,8 +541,9 @@ func getApp() *cli.App {
 				Usage: "Upload files to an element",
 				Action: func(c *cli.Context) error {
 					ref := c.Args().First()
-					files := strings.Join(c.Args().Slice()[1:], ",")
-					if ref == "" || files == "" {
+					filesJSON, _ := json.Marshal(c.Args().Slice()[1:])
+					files := string(filesJSON)
+					if ref == "" || c.NArg() < 2 {
 						return fmt.Errorf("element ref and at least one file are required")
 					}
 					return runClientCommand(c, daemon.Request{Command: "upload", Args: map[string]string{"ref": ref, "files": files}})
@@ -553,8 +554,9 @@ func getApp() *cli.App {
 				Usage: "Select options in an element",
 				Action: func(c *cli.Context) error {
 					ref := c.Args().First()
-					values := strings.Join(c.Args().Slice()[1:], ",")
-					if ref == "" || values == "" {
+					valuesJSON, _ := json.Marshal(c.Args().Slice()[1:])
+					values := string(valuesJSON)
+					if ref == "" || c.NArg() < 2 {
 						return fmt.Errorf("element ref and values are required")
 					}
 					return runClientCommand(c, daemon.Request{Command: "select", Args: map[string]string{"ref": ref, "values": values}})

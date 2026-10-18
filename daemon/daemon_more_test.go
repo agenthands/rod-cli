@@ -603,3 +603,31 @@ func TestExecAcquireTimeoutBoundsAHungCommand(t *testing.T) {
 		t.Fatalf("expected B to fail around execAcquireTimeout (%v), took %v", execAcquireTimeout, elapsed)
 	}
 }
+
+// liveCtxWithHTML launches headless Chrome, serves html, and opens it.
+func liveCtxWithHTML(t *testing.T, html string) *types.Context {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, html)
+	}))
+	t.Cleanup(srv.Close)
+	u := launcher.New().Headless(true).MustLaunch()
+	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
+	t.Cleanup(func() { _ = ctx.CloseBrowser() })
+	if _, err := executeAction(ctx, Request{Command: "open", Args: map[string]string{"url": srv.URL}}); err != nil {
+		t.Fatalf("open failed: %v", err)
+	}
+	return ctx
+}
+
+func TestExecuteActionSelectPassesList(t *testing.T) {
+	ctx := liveCtxWithHTML(t, `<select id="multi" multiple aria-label="Multi Box"><option value="a">Apple</option><option value="b">Banana</option><option value="c">Cherry</option></select>`)
+	if _, err := executeAction(ctx, Request{Command: "select", Args: map[string]string{"ref": "#multi", "values": `["Apple","Banana"]`}}); err != nil {
+		t.Fatalf("select failed: %v", err)
+	}
+	got, err := executeAction(ctx, Request{Command: "eval", Args: map[string]string{"script": "document.getElementById('multi').selectedOptions.length"}})
+	if err != nil || got != "2" {
+		t.Fatalf("selected count = %q (err %v), want 2", got, err)
+	}
+}

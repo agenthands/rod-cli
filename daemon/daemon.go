@@ -292,13 +292,9 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "plugin-run":
 		return actions.PluginRun(ctx, req.Args["name"])
 	case "upload":
-		files := strings.Split(req.Args["files"], ",")
-		return actions.Upload(ctx, req.Args["ref"], files)
+		return actions.Upload(ctx, req.Args["ref"], argList(req.Args["files"]))
 	case "select":
-		// select values are separated by comma in our generic arg format for simplicity
-		// wait, actually we can pass JSON array in the args map? No, map[string]string.
-		// Let's assume values are passed directly or not supported multiple right now.
-		return actions.Select(ctx, req.Args["ref"], []string{req.Args["values"]})
+		return actions.Select(ctx, req.Args["ref"], argList(req.Args["values"]))
 	case "eval":
 		return actions.Evaluate(ctx, req.Args["script"], req.Args["ref"])
 	case "snapshot":
@@ -401,4 +397,13 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown command: %s", req.Command)
 	}
+}
+
+// argList decodes a JSON string array arg; a non-JSON value (older client) is one item.
+func argList(raw string) []string {
+	var list []string
+	if err := json.Unmarshal([]byte(raw), &list); err != nil {
+		return []string{raw}
+	}
+	return list
 }
