@@ -10,7 +10,7 @@ import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
 function createRealExecFn(bin: string): ExecFn {
   return (args, opts) => {
     return new Promise((resolve, reject) => {
-      const child = execFile(bin, args, { timeout: opts?.timeout }, (err, stdout, stderr) => {
+      const child = execFile(bin, ["--headless", ...args], { timeout: opts?.timeout }, (err, stdout, stderr) => {
         if (err) {
           // Non-zero exit is NOT an error here — we return it as a result.
           if (err.code === undefined) {

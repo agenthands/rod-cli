@@ -99,3 +99,7 @@ tdd: TestConsoleRecordsUncaughtException — red: console_test.go:28: ConsoleLog
 tdd: TestConsoleClear — red: console_test.go:41: ConsoleLogs after clear = "[log] keep me", err=<nil>; want "No console logs" — green: go test ./actions/ -run TestConsoleClear -count=1 passed
 tdd: TestConsoleBufferCapped — red: console_test.go:63: got 2100 entries, first "[log] 0"; want 2000, first "[log] 100" — green: go test ./actions/ -run TestConsoleBufferCapped -count=1 passed
 verify: T13 — pass — go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1: ok types (no tests to run), ok actions 10.2s; TestConsole* stable over -count=3; daemon pkg ok
+
+## T13b
+
+tdd: pi integration cold start — red: FAIL  src/__tests__/integration.test.ts > integration workflow > with rod-cli > screenshot produces output — Error: Test timed out in 5000ms. (6 failed | 3 passed) — green: (cd extensions/pi && npx vitest run src/__tests__/integration.test.ts) after ./rod-cli close passed (9 passed)
