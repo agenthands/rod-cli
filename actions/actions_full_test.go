@@ -1160,3 +1160,23 @@ func TestTabNewIsPrepared(t *testing.T) {
 		t.Fatalf("typeof snapshotEngine = %q, want %q", out, "object")
 	}
 }
+
+func TestTabSelectInvalidatesOldRefs(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	navFixture(t, ctx, srv)
+	oldRef := refFor(t, ctx, "Click Me")
+	if _, err := TabNew(ctx, srv.URL); err != nil {
+		t.Fatalf("TabNew: %v", err)
+	}
+	if _, err := Click(ctx, oldRef); err == nil {
+		t.Fatalf("Click(%q) with ref from the previous tab succeeded, want error", oldRef)
+	}
+	newRef := refFor(t, ctx, "Click Me")
+	if _, err := Click(ctx, newRef); err != nil {
+		t.Fatalf("Click(%q) on new tab: %v", newRef, err)
+	}
+}
