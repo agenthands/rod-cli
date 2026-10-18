@@ -262,7 +262,7 @@ type Context struct {
 	routes      map[string]string
 	fingerprint *rodfingerprint.Fingerprint
 	// profile is the active stealth.Profile that drives BOTH godoll's evasion JS
-	// injection and the rod-cli network interceptor. It is built in createPage by
+	// injection and the rod-cli network interceptor. It is built in preparePage by
 	// overlaying the config-pinned cfg.Stealth identity onto stealth.DefaultProfile,
 	// making the resolved cfg.Stealth the SINGLE source of truth for the live page
 	// (FINGERPRINT-01 wiring). Nil until the first page is created.
@@ -291,6 +291,9 @@ type Context struct {
 	// records NONE of these — the falsifiable CDP-01 baseline gate.
 	cdpProxy    *cdpproxy.Proxy
 	cdpDomains map[string]bool
+	// prepared records the TargetIDs preparePage has run on, so switchTo prepares
+	// each tab exactly once.
+	prepared map[proto.TargetTargetID]bool
 }
 
 // CDP domain ledger keys (Phase 30 D-04). String constants so the instrumentation
@@ -312,7 +315,7 @@ func NewContext(ctx context.Context, cfg Config) *Context {
 	}
 	// Generate the per-session canvas/audio noise seed ONCE (crypto/rand for an
 	// unpredictable value). Generating it here guarantees the same seed across
-	// every createPage call for the life of the daemon, so re-reads of a canvas
+	// every preparePage call for the life of the daemon, so re-reads of a canvas
 	// within the session are stable (HARDEN-02).
 	var b [8]byte
 	if _, err := rand.Read(b[:]); err != nil {
@@ -354,21 +357,15 @@ func (ctx *Context) initial() error {
 			return err
 		}
 		ctx.proxyCleanup = proxyCleanup
-		ctx.page, err = ctx.createPage()
-		if err != nil {
-			return err
-		}
-		return nil
 	}
 	if ctx.page == nil {
-		ctx.page, err = ctx.createPage()
+		page, err := ctx.browser.Page(proto.TargetCreateTarget{})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "create page failed")
 		}
+		ctx.switchTo(page)
 	}
-
-	return err
-
+	return nil
 }
 
 func (ctx *Context) CurrentMode() Mode {
@@ -401,10 +398,44 @@ func (ctx *Context) GetBrowser() *rod.Browser {
 	return ctx.browser
 }
 
-func (ctx *Context) SetPage(p *rod.Page) {
+// SwitchTo makes p the current tab — the only way to change it. Prepares p
+// (stealth, emulation, snapshot engine, capture) the first time it is seen,
+// clears the snapshot, moves mock routes to p. Selecting the current tab is a
+// no-op. p == nil means no current tab (next EnsurePage opens one).
+// adopted = p was opened outside rod-cli; its loaded document has no evasions
+// until the next navigation.
+func (ctx *Context) SwitchTo(p *rod.Page) (adopted bool) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	ctx.page = p
+	return ctx.switchTo(p)
+}
+
+// switchTo is SwitchTo with stateLock held.
+//
+// ponytail: popups (window.open, target=_blank) are prepared when first
+// selected, so their first document runs without evasions. Upgrade path:
+// Target.setAutoAttach{waitForDebuggerOnStart:true} to prepare every target
+// before it runs.
+func (ctx *Context) switchTo(p *rod.Page) (adopted bool) {
+	if p == nil && ctx.page == nil || p != nil && ctx.page != nil && p.TargetID == ctx.page.TargetID {
+		return false
+	}
+	if p != nil && !ctx.prepared[p.TargetID] {
+		adopted = true
+		ctx.preparePage(p)
+		if _, err := p.Eval(js.InjectEngine); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: snapshot engine inject failed: %v\n", err)
+		}
+	}
+	if ctx.interceptor != nil {
+		ctx.interceptor.Disable()
+		ctx.interceptor = nil
+	}
+	ctx.snapshot, ctx.page = nil, p
+	if p != nil && len(ctx.routes) > 0 {
+		ctx.ensureInterceptorEnabled(p)
+	}
+	return adopted
 }
 
 func (ctx *Context) GetPluginEngine() *plugin.PluginEngine {
@@ -466,23 +497,14 @@ func (ctx *Context) closePage() error {
 	if ctx.page == nil {
 		return nil
 	}
-	// Tear down the lazy network interceptor bound to this page (CR fix): it is
-	// bound to the page being closed, and Disable() cancels its context + stops the
-	// router.Run() goroutine. Without this, a later EnsurePage→createPage would
-	// inherit a stale interceptor pointing at the closed page (so new mock routes
-	// would silently not apply) and leak the old router goroutine. The mock-route
-	// set (ctx.routes) is intentionally preserved so createPage re-establishes the
-	// interceptor, bound to the fresh page, from those routes.
-	if ctx.interceptor != nil {
-		ctx.interceptor.Disable()
-		ctx.interceptor = nil
-	}
-	err := ctx.page.Close()
-	if err != nil {
+	// switchTo(nil) tears down the interceptor bound to this page; ctx.routes is
+	// kept so the next page re-establishes it.
+	p := ctx.page
+	ctx.switchTo(nil)
+	if err := p.Close(); err != nil {
 		return errors.Wrap(err, "close page failed")
 	}
-	ctx.page = nil
-	return err
+	return nil
 }
 func (ctx *Context) closeBrowser() error {
 	// Stop the per-session proxy relay (if any) regardless of page/browser state,
@@ -673,141 +695,129 @@ func (ctx *Context) applyEmulationIdentity(page *rod.Page, prof *stealth.Profile
 	}
 }
 
-func (ctx *Context) createPage(urls ...string) (*rod.Page, error) {
-	page, err := ctx.browser.Page(proto.TargetCreateTarget{URL: strings.Join(urls, "/")})
-	if page != nil {
-		// Apply stealth evasion
-		em := stealth.NewEvasionManager(page)
-		// Build the active stealth.Profile from the resolved cfg.Stealth: the
-		// config-pinned identity is the SINGLE source of truth that drives both
-		// godoll's evasion JS and rod-cli's interceptor (FINGERPRINT-01 wiring).
-		// With an empty cfg.Stealth identity the overlay equals DefaultProfile(),
-		// so the no-pin path is unchanged from the prior default.
-		prof := profileFromStealth(ctx.config.Stealth)
-		ctx.profile = &prof
-		// EVAD-01/02 (Phase 33): generate the godoll fingerprint CONSTRAINED to the
-		// profile's OS + locale so the dormant dimension injectors (fonts/media
-		// devices/codecs/battery/plugins) tell the SAME OS story as the profile —
-		// Windows fonts on a Windows profile, macOS fonts on a Mac profile. NEVER an
-		// unconstrained random draw on a pinned identity (the coherent-not-random
-		// lens: an incoherent dimension is a NEW tell, worse than not hardening).
-		// The generator is SEEDED with the per-session noiseSeed so a page recreated
-		// within this session reproduces identical dimensions (stability, EVAD
-		// criterion 4).
-		fpOpts := []rodfingerprint.Option{
-			rodfingerprint.FPWithBrowserNames("chrome"),
-			rodfingerprint.FPWithOS(osForPlatform(prof.Platform)),
-		}
-		if prof.Locale != "" {
-			fpOpts = append(fpOpts, rodfingerprint.FPWithLocales(prof.Locale))
-		}
-		fg := rodfingerprint.NewFingerprintGeneratorSeeded(int64(ctx.noiseSeed), fpOpts...)
-		fp, fpErr := fg.Generate()
-		if fpErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
-		} else if fp != nil {
-			ctx.fingerprint = fp
-			// Order matters: em.SetFingerprint derives a profile from the fp
-			// (FromFingerprint) and overwrites em.profile, so SetProfile MUST run
-			// AFTER it to restore the config-pinned identity as the source of truth.
-			// em.fingerprint stays set, which is what activates the dormant
-			// applyFingerprintDimensions path (skipped today because it was nil).
-			em.SetFingerprint(fp)
-			// EVAD-02 per-vector gating: a toggle OFF skips that dimension's injection
-			// entirely so the vector reverts to the un-hardened browser default
-			// (provably effective, not cosmetic). Each defaults ON. `plugins` rides
-			// the same godoll path (no separate toggle — see CONTEXT D-01).
-			em.SetDimensionOptions(stealth.DimensionOptions{
-				Fonts:        boolVal(ctx.config.Stealth.FontSpoof, true),
-				MediaDevices: boolVal(ctx.config.Stealth.MediaDevicesSpoof, true),
-				Battery:      boolVal(ctx.config.Stealth.BatterySpoof, true),
-				Codecs:       boolVal(ctx.config.Stealth.CodecSpoof, true),
-				Plugins:      true,
-			})
-		}
-		em.SetProfile(prof)
-		// HARDEN-02: thread the stable per-session noise seed before Apply() so the
-		// seeded canvas/audio scripts produce identical re-reads within the session.
-		em.SetNoiseSeed(ctx.noiseSeed)
-		if err := em.Apply(); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: evasion Apply failed: %v\n", err)
-		}
+// preparePage applies the per-page session setup (stealth evasions, emulation
+// identity, snapshot engine on new documents, opt-in capture). Caller MUST hold
+// stateLock. Errors are logged and setup continues. Every page goes through it
+// exactly once, from switchTo.
+func (ctx *Context) preparePage(page *rod.Page) {
+	if ctx.prepared == nil {
+		ctx.prepared = make(map[proto.TargetTargetID]bool)
+	}
+	ctx.prepared[page.TargetID] = true
+	// Apply stealth evasion
+	em := stealth.NewEvasionManager(page)
+	// Build the active stealth.Profile from the resolved cfg.Stealth: the
+	// config-pinned identity is the SINGLE source of truth that drives both
+	// godoll's evasion JS and rod-cli's interceptor (FINGERPRINT-01 wiring).
+	// With an empty cfg.Stealth identity the overlay equals DefaultProfile(),
+	// so the no-pin path is unchanged from the prior default.
+	prof := profileFromStealth(ctx.config.Stealth)
+	ctx.profile = &prof
+	// EVAD-01/02 (Phase 33): generate the godoll fingerprint CONSTRAINED to the
+	// profile's OS + locale so the dormant dimension injectors (fonts/media
+	// devices/codecs/battery/plugins) tell the SAME OS story as the profile —
+	// Windows fonts on a Windows profile, macOS fonts on a Mac profile. NEVER an
+	// unconstrained random draw on a pinned identity (the coherent-not-random
+	// lens: an incoherent dimension is a NEW tell, worse than not hardening).
+	// The generator is SEEDED with the per-session noiseSeed so a page recreated
+	// within this session reproduces identical dimensions (stability, EVAD
+	// criterion 4).
+	fpOpts := []rodfingerprint.Option{
+		rodfingerprint.FPWithBrowserNames("chrome"),
+		rodfingerprint.FPWithOS(osForPlatform(prof.Platform)),
+	}
+	if prof.Locale != "" {
+		fpOpts = append(fpOpts, rodfingerprint.FPWithLocales(prof.Locale))
+	}
+	fg := rodfingerprint.NewFingerprintGeneratorSeeded(int64(ctx.noiseSeed), fpOpts...)
+	fp, fpErr := fg.Generate()
+	if fpErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: fingerprint generation failed: %v\n", fpErr)
+	} else if fp != nil {
+		ctx.fingerprint = fp
+		// Order matters: em.SetFingerprint derives a profile from the fp
+		// (FromFingerprint) and overwrites em.profile, so SetProfile MUST run
+		// AFTER it to restore the config-pinned identity as the source of truth.
+		// em.fingerprint stays set, which is what activates the dormant
+		// applyFingerprintDimensions path (skipped today because it was nil).
+		em.SetFingerprint(fp)
+		// EVAD-02 per-vector gating: a toggle OFF skips that dimension's injection
+		// entirely so the vector reverts to the un-hardened browser default
+		// (provably effective, not cosmetic). Each defaults ON. `plugins` rides
+		// the same godoll path (no separate toggle — see CONTEXT D-01).
+		em.SetDimensionOptions(stealth.DimensionOptions{
+			Fonts:        boolVal(ctx.config.Stealth.FontSpoof, true),
+			MediaDevices: boolVal(ctx.config.Stealth.MediaDevicesSpoof, true),
+			Battery:      boolVal(ctx.config.Stealth.BatterySpoof, true),
+			Codecs:       boolVal(ctx.config.Stealth.CodecSpoof, true),
+			Plugins:      true,
+		})
+	}
+	em.SetProfile(prof)
+	// HARDEN-02: thread the stable per-session noise seed before Apply() so the
+	// seeded canvas/audio scripts produce identical re-reads within the session.
+	em.SetNoiseSeed(ctx.noiseSeed)
+	if err := em.Apply(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: evasion Apply failed: %v\n", err)
+	}
 
-		// HARDEN-01 JS leg: wrap RTCPeerConnection so local-IP enumeration cannot
-		// leak past a proxy. Gated on the toggle; log-and-continue (VALIDATE-03) so a
-		// failure never aborts the daemon — matches the em.Apply() discipline above.
-		if boolVal(ctx.config.Stealth.WebRTCLeakProtection, true) {
-			if err := em.EvadeWebRTC(); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: WebRTC evasion failed: %v\n", err)
-			}
+	// HARDEN-01 JS leg: wrap RTCPeerConnection so local-IP enumeration cannot
+	// leak past a proxy. Gated on the toggle; log-and-continue (VALIDATE-03) so a
+	// failure never aborts the daemon — matches the em.Apply() discipline above.
+	if boolVal(ctx.config.Stealth.WebRTCLeakProtection, true) {
+		if err := em.EvadeWebRTC(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: WebRTC evasion failed: %v\n", err)
 		}
+	}
 
-		// CDP-01 (design C+D, CONTEXT D-09): carry the HTTP identity natively via
-		// Chrome's Emulation domain instead of the per-request interceptor catch-all.
-		// Emulation.setUserAgentOverride has NO `enable` command, so this costs ZERO
-		// CDP footprint while Chrome itself emits coherent UA / Sec-Ch-Ua* /
-		// navigator.userAgentData (the FINGERPRINT-01/02 triple-agreement), letting a
-		// plain session run with neither Runtime, Network, nor Fetch enabled. The old
-		// always-on interceptor identity rule is removed (see updateInterceptorRules).
-		ctx.applyEmulationIdentity(page, &prof)
+	// CDP-01 (design C+D, CONTEXT D-09): carry the HTTP identity natively via
+	// Chrome's Emulation domain instead of the per-request interceptor catch-all.
+	// Emulation.setUserAgentOverride has NO `enable` command, so this costs ZERO
+	// CDP footprint while Chrome itself emits coherent UA / Sec-Ch-Ua* /
+	// navigator.userAgentData (the FINGERPRINT-01/02 triple-agreement), letting a
+	// plain session run with neither Runtime, Network, nor Fetch enabled. The old
+	// always-on interceptor identity rule is removed (see updateInterceptorRules).
+	ctx.applyEmulationIdentity(page, &prof)
 
-		page.EvalOnNewDocument(js.InjectedSnapShot)
+	page.EvalOnNewDocument(js.InjectedSnapShot)
 
-		// Console capture (CDP-01): the RuntimeConsoleAPICalled subscription forces
-		// Runtime.enable, so it is OPT-IN (default OFF). When off the subscription is
-		// never registered, so a plain session never enables Runtime. The `console`
-		// command requires the daemon spawned with --console-capture.
-		if boolVal(ctx.config.Stealth.ConsoleCapture, false) {
-			ctx.RecordCDPDomain(CDPDomainRuntime)
-			go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
-				ctx.stateLock.Lock()
-				defer ctx.stateLock.Unlock()
-				var args []string
-				for _, arg := range e.Args {
-					if !arg.Value.Nil() {
-						args = append(args, arg.Value.String())
-					}
+	// Console capture (CDP-01): the RuntimeConsoleAPICalled subscription forces
+	// Runtime.enable, so it is OPT-IN (default OFF). When off the subscription is
+	// never registered, so a plain session never enables Runtime. The `console`
+	// command requires the daemon spawned with --console-capture.
+	if boolVal(ctx.config.Stealth.ConsoleCapture, false) {
+		ctx.RecordCDPDomain(CDPDomainRuntime)
+		go page.EachEvent(func(e *proto.RuntimeConsoleAPICalled) {
+			ctx.stateLock.Lock()
+			defer ctx.stateLock.Unlock()
+			var args []string
+			for _, arg := range e.Args {
+				if !arg.Value.Nil() {
+					args = append(args, arg.Value.String())
 				}
-				ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
-			})()
-		}
-
-		// Request capture (CDP-01): the NetworkRequestWillBeSent subscription forces
-		// Network.enable, so it is OPT-IN (default OFF). The `requests`/`request`
-		// commands require the daemon spawned with --request-capture.
-		if boolVal(ctx.config.Stealth.RequestCapture, false) {
-			ctx.RecordCDPDomain(CDPDomainNetwork)
-			go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
-				ctx.stateLock.Lock()
-				defer ctx.stateLock.Unlock()
-				ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
-			})()
-		}
-
-		// The network interceptor (godoll Fetch.enable) is NOT created unconditionally
-		// here — it is lazily created on the first AddRoute (footprint follows the
-		// feature), so a session that never adds a mock route never enables Fetch.
-		// EXCEPTION: if mock routes already exist — a `route` issued before the first
-		// `goto`, or routes surviving a page recreate — re-establish the interceptor
-		// bound to THIS page so those routes become effective (CR fix: createPage no
-		// longer unconditionally rebuilds the interceptor, so a stale/closed-page
-		// interceptor was previously left behind). ctx.page is not assigned until the
-		// caller stores our return value, so pass the local `page` explicitly.
-		if len(ctx.routes) > 0 {
-			ctx.ensureInterceptorEnabled(page)
-		}
+			}
+			ctx.consoleLogs = append(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+		})()
 	}
-	if err != nil {
-		return nil, errors.Wrap(err, "create page failed")
+
+	// Request capture (CDP-01): the NetworkRequestWillBeSent subscription forces
+	// Network.enable, so it is OPT-IN (default OFF). The `requests`/`request`
+	// commands require the daemon spawned with --request-capture.
+	if boolVal(ctx.config.Stealth.RequestCapture, false) {
+		ctx.RecordCDPDomain(CDPDomainNetwork)
+		go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
+			ctx.stateLock.Lock()
+			defer ctx.stateLock.Unlock()
+			ctx.requests = append(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+		})()
 	}
-	return page, nil
 }
 
 // RecordCDPDomain marks a footprint-adding CDP domain as enabled for this
 // session (Phase 30 D-04 instrumentation). The CALLER MUST HOLD stateLock — every
-// set-point (the console/request subscription branches in createPage, which run
+// set-point (the console/request subscription branches in preparePage, which run
 // under initial()'s lock, and ensureInterceptorEnabled, called from AddRoute /
-// createPage under lock) already does.
+// switchTo under lock) already does.
 func (ctx *Context) RecordCDPDomain(domain string) {
 	if ctx.cdpDomains == nil {
 		ctx.cdpDomains = make(map[string]bool)
@@ -888,10 +898,6 @@ func (ctx *Context) updateInterceptorRules() {
 // (godoll Fetch.enable) bound to the given page and applies the current mock-route
 // rules, so the Fetch footprint follows the feature (CDP-01). No-op when the
 // interceptor already exists or page is nil. Caller MUST hold stateLock.
-//
-// page is passed explicitly because the two callers see different views of the
-// current page: AddRoute uses ctx.page (already assigned), but createPage runs
-// BEFORE its caller assigns ctx.page, so it must pass its freshly-created local.
 func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
 	if ctx.interceptor != nil || page == nil {
 		return
@@ -910,7 +916,7 @@ func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
 // AddRoute registers a mock route, lazily creating + enabling the network
 // interceptor on first use (footprint follows the feature, CDP-01). A session that
 // never adds a route never enables Fetch. A route added BEFORE the first goto is
-// stored and activates when createPage re-establishes it on the new page.
+// stored and activates when switchTo re-establishes it on the new page.
 func (ctx *Context) AddRoute(pattern, body string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()

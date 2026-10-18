@@ -1133,12 +1133,30 @@ func TestSnapshotInjectsMissingEngine(t *testing.T) {
 	if err := raw.WaitLoad(); err != nil {
 		t.Fatalf("wait load: %v", err)
 	}
-	ctx.SetPage(raw)
+	ctx.SwitchTo(raw)
 	out, err := Snapshot(ctx)
 	if err != nil {
 		t.Fatalf("Snapshot on unprepared page: %v", err)
 	}
 	if !strings.Contains(out, "Page Two") {
 		t.Fatalf("snapshot missing %q:\n%s", "Page Two", out)
+	}
+}
+
+func TestTabNewIsPrepared(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	if _, err := TabNew(ctx, srv.URL+"/page2"); err != nil {
+		t.Fatalf("TabNew: %v", err)
+	}
+	out, err := Evaluate(ctx, "typeof snapshotEngine", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if out != "object" {
+		t.Fatalf("typeof snapshotEngine = %q, want %q", out, "object")
 	}
 }

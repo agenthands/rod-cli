@@ -367,7 +367,7 @@ func TestCloseBrowser_CloseError(t *testing.T) {
 		t.Fatalf("EnsurePage: %v", err)
 	}
 	// Clear the page so closeBrowser skips page.Close and reaches browser.Close.
-	ctx.SetPage(nil)
+	ctx.SwitchTo(nil)
 	l.Kill() // kill the process; the CDP connection is now dead
 	if err := ctx.CloseBrowser(); err == nil {
 		t.Log("note: closing browser over a killed process did not error in this environment")
@@ -383,7 +383,7 @@ func TestInitial_CreatePageError(t *testing.T) {
 		t.Fatalf("EnsurePage: %v", err)
 	}
 	br := ctx.GetBrowser()
-	ctx.SetPage(nil) // page nil so initial() takes the createPage branch
+	ctx.SwitchTo(nil) // page nil so initial() takes the createPage branch
 	if err := br.Close(); err != nil {
 		t.Fatalf("browser close: %v", err)
 	}

@@ -654,18 +654,35 @@ func TabNew(ctx *types.Context, url string) (string, error) {
 	if browser == nil {
 		return "", errors.New("No active browser")
 	}
-	var targetURL string
-	if url != "" {
-		targetURL = url
-	} else {
-		targetURL = "about:blank"
-	}
-	page, err := browserPage(browser, proto.TargetCreateTarget{URL: targetURL})
+	page, err := browserPage(browser, proto.TargetCreateTarget{})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to create new tab")
 	}
-	ctx.SetPage(page)
-	return fmt.Sprintf("New tab created: %s", targetURL), nil
+	ctx.SwitchTo(page)
+	if url != "" && url != "about:blank" {
+		if _, err := Navigate(ctx, url); err != nil {
+			return "", err
+		}
+	}
+	return "New tab created: " + tabDesc(page), nil
+}
+
+// shortID is the first 8 characters of p's TargetID: the tab id users type.
+func shortID(p *rod.Page) string {
+	id := string(p.TargetID)
+	if len(id) > 8 {
+		id = id[:8]
+	}
+	return id
+}
+
+// tabDesc is "<ID> <Title> (<url>)"; title and url are empty when Info fails.
+func tabDesc(p *rod.Page) string {
+	var title, url string
+	if info, err := p.Info(); err == nil && info != nil {
+		title, url = info.Title, info.URL
+	}
+	return fmt.Sprintf("%s %s (%s)", shortID(p), title, url)
 }
 
 func TabClose(ctx *types.Context, index int) (string, error) {
@@ -702,7 +719,7 @@ func TabSelect(ctx *types.Context, index int) (string, error) {
 	if _, err := pageActivate(page); err != nil {
 		return "", errors.Wrap(err, "Failed to activate tab")
 	}
-	ctx.SetPage(page)
+	ctx.SwitchTo(page)
 	return fmt.Sprintf("Selected tab %d", index), nil
 }
 

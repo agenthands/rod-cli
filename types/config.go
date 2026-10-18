@@ -98,7 +98,7 @@ type StealthConfig struct {
 
 	// WebRTCLeakProtection prevents the real host IP from leaking past a proxy via
 	// WebRTC ICE candidates. When true (the default) launchBrowser sets the
-	// disable-non-proxied-UDP browser preference AND createPage injects godoll's
+	// disable-non-proxied-UDP browser preference AND preparePage injects godoll's
 	// EvadeWebRTC JS wrapper. A *bool so a yaml-persisted explicit false survives
 	// ResolveStealth (nil = unset = resolve to the default true); a plain bool
 	// could not distinguish "unset" from a deliberate file-set false. Read it via
@@ -115,7 +115,7 @@ type StealthConfig struct {
 	// --- Phase 33: advanced fingerprint-dimension hardening toggles (EVAD-02) ---
 	//
 	// These four gate godoll's per-vector fingerprint-dimension injectors, activated
-	// in createPage via em.SetFingerprint(OS-constrained fp) + SetDimensionOptions.
+	// in preparePage via em.SetFingerprint(OS-constrained fp) + SetDimensionOptions.
 	// Each defaults ON (boolVal(x, true)); a toggle OFF skips that dimension's
 	// injection entirely so the vector reverts to the un-hardened browser default
 	// (provably effective). All four are *bool for the same round-trip reason as

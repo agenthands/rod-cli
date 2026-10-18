@@ -155,7 +155,7 @@ func TestContext_LifecycleAndAccessors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create extra page: %v", err)
 	}
-	ctx.SetPage(newPage)
+	ctx.SwitchTo(newPage)
 	if cp2, err := ctx.ControlledPage(); err != nil || cp2 != newPage {
 		t.Fatalf("SetPage/ControlledPage mismatch: %v err=%v", cp2, err)
 	}
@@ -202,7 +202,7 @@ func TestContext_ClosePageErrorOnStalePage(t *testing.T) {
 	}
 	// Re-attach the now-stale page; ClosePage -> page.Close() should error and
 	// be wrapped, exercising the closePage error branch.
-	ctx.SetPage(page)
+	ctx.SwitchTo(page)
 	if err := ctx.ClosePage(); err == nil {
 		t.Log("note: closing a stale page did not error in this environment")
 	}

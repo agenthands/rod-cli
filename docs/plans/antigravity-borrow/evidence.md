@@ -25,3 +25,6 @@ verify: T02 — pass — go test ./types/ -run TestLocatorInFrame ok; go test ./
 tdd: TestSnapshotGenerationIsMonotonicAcrossNavigations — red: actions_full_test.go:1115: second ref = "s1e5", want prefix s2e — green: go test ./actions/ -run TestSnapshotGenerationIsMonotonicAcrossNavigations -count=1 passed
 tdd: TestSnapshotInjectsMissingEngine — red: actions_full_test.go:1139: Snapshot on unprepared page: Failed to capture snapshot: capture snapshot with frames failed, frame index: 0: eval js error: ReferenceError: snapshotEngine is not defined — green: go test ./actions/ -run TestSnapshotInjectsMissingEngine -count=1 passed
 verify: T03 — pass — go test ./types/ ./actions/ -run 'Snapshot|LocatorInFrame' -count=1 → ok types, ok actions; go vet clean
+
+## T04
+tdd: TestTabNewIsPrepared — red: actions_full_test.go:1160: typeof snapshotEngine = "undefined", want "object" — green: go test ./actions/ -run TestTabNewIsPrepared -count=1 passed
