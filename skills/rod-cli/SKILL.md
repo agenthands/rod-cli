@@ -23,13 +23,18 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
    - a plain **CSS selector** (e.g. `#submit-button`, `.nav-link`) — resolves immediately, even before any `snapshot` call, or
    - an opaque **snapshot ref** — the literal token from a `[ref=sNeM]` annotation printed by `rod-cli snapshot` (e.g. `s1e5`), copied verbatim. Use a ref when no stable CSS selector exists, or to disambiguate elements. Refs are tied to the snapshot generation that produced them — re-run `snapshot` for a fresh ref if the DOM changes and the old ref stops resolving.
 
-4. **Prefer Native Actions over `eval`**: Use `click`/`fill`/`type`/`hover`/`check`/`uncheck`/`select`/etc. to interact with the page — not `eval`. These commands dispatch real, trusted, humanized input: genuine CDP mouse movement (tunable tremor/speed/deviation) and per-keystroke typing cadence, which this tool's stealth design depends on. Simulating interaction via `eval` (`el.click()`, setting `.value` directly, dispatching synthetic events) produces untrusted (`event.isTrusted === false`) events with none of that humanization; checking `isTrusted` on interaction events is a standard headless-detection technique, making eval-driven interaction a strong, trivially-checked bot signal. Reserve `eval` for reading/extracting page state — attributes, computed values, JSON data — never for acting on the page.
+4. **Prefer Native Actions over `eval`**: Use the native commands to interact with the page — not `eval`.
+   - `click`/`dblclick`/`fill`/`type`/`hover`/`drag`/`mousewheel` dispatch real, trusted, humanized input: genuine CDP mouse movement and wheel events (tunable tremor/speed/deviation) and per-keystroke typing cadence, which this tool's stealth design depends on.
+   - `select`/`check`/`uncheck` set state through JS and fire synthetic events (`isTrusted=false`), but they are still preferred over hand-written `eval`.
+
+   Simulating interaction via `eval` (`el.click()`, setting `.value` directly, dispatching synthetic events) produces untrusted (`event.isTrusted === false`) events with none of that humanization; checking `isTrusted` on interaction events is a standard headless-detection technique, making eval-driven interaction a strong, trivially-checked bot signal. Reserve `eval` for reading/extracting page state — attributes, computed values, JSON data — never for acting on the page.
 
 ## Commands
 
 **Flag placement**: Command-specific flags (`--submit`, `--path`, `--body`, `--name`, `--annotate`) must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
 
 ### Global Options
+- `--max-output N`: Cap any command's output at N bytes (0 = unlimited, the default). Use it to bound token cost on big pages, e.g. `rod-cli --max-output 4000 snapshot`.
 - `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
 - `--raw`: Only changes output for two commands — `install` (suppresses the "Downloading…" progress line) and `stealth-check` (single-line PASS/FAIL instead of a table). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — don't add it reflexively.
 - The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
@@ -44,19 +49,22 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli open [url]` (or `goto`): Navigate to a URL.
 - `rod-cli reload`, `go-back`, `go-forward`: Standard navigation.
 - `rod-cli resize [width] [height]`: Resize the browser window.
-- `rod-cli tab-list`: List all open tabs.
-- `rod-cli tab-new [url]`: Create a new tab.
-- `rod-cli tab-select [index]`: Select a browser tab.
-- `rod-cli tab-close [index]`: Close a browser tab.
+- `rod-cli tab-list`: List all open tabs as `[index] <8-char ID> <title> (<url>)`; the current tab is marked `*`.
+- `rod-cli tab-new [url]`: Create a new tab (prints its ID) and switch to it.
+- `rod-cli tab-select [index|id]`: Select a browser tab by index or 8-char ID (prefer the ID; indexes shift).
+- `rod-cli tab-close [index|id]`: Close a browser tab by index or 8-char ID.
+- Rule: Drive only tabs you created (IDs printed by tab-new); under --cdp-endpoint never navigate the user's existing tabs.
 
 ### Interaction
 `[selector]` below accepts a CSS selector or a snapshot ref — see **Element Targeting** in Core Concepts above.
+
+Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref or selector works (canvas, sliders without ARIA, hover-only targets). Coordinates are viewport CSS px.
 
 - `rod-cli click [selector]`: Click an element.
 - `rod-cli dblclick [selector]`: Double-click an element.
 - `rod-cli type [selector] [text]`: Type sequentially into an element.
 - `rod-cli fill [selector] [text]`: Fill an entire input at once. Use `--submit` to press enter afterwards.
-- `rod-cli select [selector] [values...]`: Select dropdown values.
+- `rod-cli select [selector] [values...]`: Select dropdown options. Each value matches an option by exact text, then by `value`, then by case-insensitive text substring; every value must match or the command fails. Prints the selected option labels.
 - `rod-cli check [selector]`: Check a checkbox or radio button.
 - `rod-cli uncheck [selector]`: Uncheck a checkbox or radio button.
 - `rod-cli hover [selector]`: Hover over an element.
@@ -69,7 +77,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli mousemove [x] [y]`: Move the mouse to absolute coordinates.
 - `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
 - `rod-cli mouseup [left|right|middle]`: Trigger mouse up.
-- `rod-cli mousewheel [dx] [dy]`: Scroll the mouse wheel.
+- `rod-cli mousewheel [--end [--max n]] [dx dy] [ref]`: Scroll with real wheel input. No `dx dy` scrolls one viewport down; a `ref` scrolls that element's nearest scrollable pane instead of the page. `--end` keeps scrolling (absorbing lazy loads) until the end, at most `--max` scrolls (default 10). Negative values need `--`: `rod-cli mousewheel --end -- 0 -300`. Output: `scrolled dy=<moved> y=<pos>/<max>` (plus `dx=… x=…/…` for horizontal moves); a trailing ` end` means the pane hit its limit, ` cap` means `--end` stopped at the `--max`/time budget before reaching it.
 - `rod-cli dialog-accept`: Automatically accept the next javascript alert/confirm.
 - `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
 
@@ -93,7 +101,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking). Accepts the same CSS-selector-or-snapshot-ref `[selector]` as the Interaction commands above.
 - `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
 - `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
-- `rod-cli console`: List browser console messages. Only works when the session was started with `--console-capture` (off by default) — pass it on the session's first command, e.g. `rod-cli --console-capture goto https://example.com`.
+- `rod-cli console [--clear]`: List browser console messages; uncaught page errors appear as `[exception] …` entries. `--clear` prints the entries, then empties the buffer. Filter with the shell (`rod-cli console | grep exception`, `| tail -20`). Only works when the session was started with `--console-capture` (off by default) — pass it on the session's first command, e.g. `rod-cli --console-capture goto https://example.com`.
 
 ### Network Interception
 - `rod-cli route --body [body] [pattern]`: Mock network requests matching a URL pattern.
@@ -103,9 +111,9 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli request [index]`: Show details for a specific request (also requires the session started with `--request-capture`).
 
 ### Evaluation & Export
-- `rod-cli eval [script]`: Evaluate raw JavaScript in the browser context. Use it for reading/extracting page state (attributes, computed values, JSON data) — prefer the Interaction commands above (`click`, `fill`, `type`, etc.) for anything that acts on the page; see **Prefer Native Actions over `eval`** in Core Concepts.
-- `rod-cli snapshot`: Return the token-efficient Markdown representation of the DOM.
-- `rod-cli screenshot --name [name]`: Capture a PNG of the viewport.
+- `rod-cli eval [script] [ref]`: Evaluate raw JavaScript in the browser context and print the bare value (no wrapper; strings unquoted). With a ref, `this` is bound to that element. Use it for reading/extracting page state (attributes, computed values, JSON data) — prefer the Interaction commands above (`click`, `fill`, `type`, etc.) for anything that acts on the page; see **Prefer Native Actions over `eval`** in Core Concepts.
+- `rod-cli snapshot [-i] [ref|css]`: Return the token-efficient Markdown representation of the DOM. `-i`/`--interactive` keeps only interactive elements and their ancestors; a ref or CSS selector limits it to that subtree. Both cut tokens on large pages.
+- `rod-cli screenshot [--name] [--selector] [--out] [--full-page]`: Capture a PNG of the viewport (`--selector` = one element by ref or CSS, `--full-page` = whole scrollable page, `--out` = write to this path instead of `tmp/screenshots/`). Prints `saved <path> WxH`.
 - `rod-cli pdf --name [name]`: Export the page as a PDF.
 
 ### Plugins
@@ -141,13 +149,13 @@ rod-cli ships two first-class host extensions alongside this Skill. All three pa
 |---|---|---|---|
 | **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant |
 | **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy this skill directory (`SKILL.md` + `references/`) to the assistant's skills dir |
-| **Tools** | 13 typed `browse_*` (injected `pi.zod`) | 13 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
+| **Tools** | 16 typed `browse_*` (injected `pi.zod`) | 16 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
 | **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
 | **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
 
-**Pi Extension** (recommended for Pi users): 13 typed browser tools with TypeBox schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
+**Pi Extension** (recommended for Pi users): 16 typed browser tools with TypeBox schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
 
-**OMP Extension** (recommended for OMP users): The same 13 typed browser tools with injected `pi.zod` schemas, guidance folded into tool descriptions, and ungated idempotent daemon cleanup. See [extensions/omp/README.md](../../extensions/omp/README.md) for the full tool catalog.
+**OMP Extension** (recommended for OMP users): The same 16 typed browser tools with injected `pi.zod` schemas, guidance folded into tool descriptions, and ungated idempotent daemon cleanup. See [extensions/omp/README.md](../../extensions/omp/README.md) for the full tool catalog.
 
 **Skill path** (this file): Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) with zero npm dependencies. Copy this entire skill directory — this `SKILL.md` together with its `references/` folder — to the assistant's skills directory, so the links under "Specific tasks" below keep resolving.
 

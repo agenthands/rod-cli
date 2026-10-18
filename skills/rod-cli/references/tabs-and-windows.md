@@ -14,6 +14,8 @@ Each line is `[index] <ID> <Title> (<url>)`; the current tab is marked `*`:
 ```
 Target a tab by its index or by its 8-character ID (any unique, case-insensitive ID prefix works; fewer than 8 digits is read as an index). Prefer the ID: indexes shift when tabs open or close, IDs do not.
 
+**Ownership rule:** Drive only tabs you created (IDs printed by `tab-new`); under `--cdp-endpoint` never navigate the user's existing tabs.
+
 ## Opening a New Tab
 You can explicitly spawn a new tab and navigate it to a URL:
 ```bash

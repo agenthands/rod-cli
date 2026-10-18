@@ -30,3 +30,21 @@ You can use standard DOM APIs to extract complex data structures. eval prints th
 ```bash
 rod-cli eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))"
 ```
+
+## Read recipes
+
+```bash
+# Main readable text of the page
+rod-cli eval "(document.querySelector('main,article,[role=main]')||document.body).innerText"
+
+# HTML of one element
+rod-cli eval "() => this.outerHTML" <ref>
+
+# Bring an element into view before a screenshot
+rod-cli eval "() => this.scrollIntoView({block:'center'})" <ref>
+
+# Call the site's own API with the page's cookies
+rod-cli eval "fetch('/api/items',{credentials:'include'}).then(r=>r.text())"
+```
+
+The `fetch` recipe runs on Chrome's own network stack (real TLS, cookies, headers); never fetch from Go.
