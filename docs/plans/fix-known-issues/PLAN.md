@@ -93,17 +93,44 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 - `head -5 skills/rod-cli/SKILL.md | grep -c '^version:'` prints `1`;
 - every flag named in SKILL.md Global Options appears in `go build -o rod-cli . && ./rod-cli --help` (check each).
 
-### T02b [ ] No leaked Chrome profiles from rod-cli tests or godoll
-**Why:** `/tmp/rod/user-data` reached 4135 leaked Chrome profiles (~951k inodes) and filled `/tmp` (tmpfs, 1,048,576 inodes), so every `go build` failed. Each `launcher.New()...Launch()` without `Cleanup()` leaks one profile; a full rod-cli suite run leaks ~50k inodes. godoll's non-test `browser/browser.go` also uses `launcher.New()`.
-**Seams:** godoll `browser.NewBrowserE` + `(*Browser).Close` (live); godoll `cmd/godoll/session` manager close path (live, if it launches); rod-cli package test runs (profile count).
+### T02b [ ] Chrome profiles: on disk, owned, always removed; nothing left in /tmp or project folders
+**Why:** leaked profiles filled the user's RAM-backed `/tmp` (23 GB, 4135 dirs in `/tmp/rod/user-data`) and project folders (2.3 GB in `extensions/pi/rod`, 217 MB in a Codex workspace). Three causes:
+1. rod-cli's daemon puts each session profile in `DefaultBrowserTempDir = "./rod/browser"` (`types/config.go:880`), relative to the daemon's working directory.
+2. The profile is removed only by a clean `Close()` (`types/context.go:211-216`, `:1000`). A killed or crashed daemon, or a reboot, leaves it forever, and nothing sweeps old ones.
+3. Tests in both repos and godoll's `browser/browser.go` use go-rod `launcher.New()`, whose default profile is `/tmp/rod/user-data/<random>`, without `Cleanup()`.
+
+**Seams:**
+- rod-cli: `types` profile-root resolver and stale sweep (unit, temp dirs); the daemon via `daemon.EnsureDaemon` with `XDG_CACHE_HOME` set to `t.TempDir()` (live).
+- godoll: `browser.NewBrowserE` + `(*Browser).Close` (live).
+- Package test runs in both repos (profile counts).
+
 **Change:**
-- godoll `browser/browser.go`: when it launches Chrome itself (not `ControlURL`/remote), keep the `*launcher.Launcher`; `Close()` closes the browser, then calls `l.Cleanup()` (go-rod: waits for exit, removes the user-data dir). Do the same in `cmd/godoll/session/manager.go` and `internal/testing/fixtures.go` if they launch. Commit in godoll.
-- Every `launcher.New()` in a `_test.go` file of both repos keeps the launcher and registers cleanup after the browser closes: `t.Cleanup(func(){ browser.MustClose(); l.Cleanup() })` or an equivalent `defer`. rod-cli sites: `utils/query_aria_test.go:48`, `cmd_test.go:24`, `internal/plugin/scanner/scanner_test.go:28`, `internal/plugin/scanner/scanner_more_test.go:21`, `types/errpaths_test.go:360`, `types/context_more_test.go:51`, `internal/plugin/integ_test.go:34`, `actions/plugin_full_test.go:58`, `types/cdp_footprint_test.go:47`, `internal/plugin/integ_more_test.go:33`. godoll sites: `grep -rln 'launcher.New()' --include=*_test.go /home/john/go/src/github.com/agenthands/godoll`.
-- rod-cli's own daemon launcher (`types/context.go:130`) already removes `cfg.BrowserTempDir` in `Close()`. Confirm with one live check that a session's profile dir is gone after `rod-cli close`; fix if not.
+1. **Location.** The default profile root becomes `filepath.Join(os.UserCacheDir(), "rod-cli", "profiles")` (Linux: `~/.cache/rod-cli/profiles`, on disk). It is absolute, never under the working directory, never under `/tmp`. An explicit `browserTempDir` config value still wins. Fall back to `os.TempDir()` only if `os.UserCacheDir()` errors.
+2. **Ownership.** When a daemon creates its profile dir, it writes `owner.pid` with its own PID into it.
+3. **Every exit path removes it.** The daemon handles SIGINT, SIGTERM and SIGHUP by running the same cleanup as `close` (browser close, proxy cleanup, profile removal) and then exiting. The ppid-death path (`daemon/daemon.go:273-`) and any other exit path call the same cleanup. One function, called from every path.
+4. **Stale sweep.** At daemon start, before creating its own dir, remove every dir under the profile root whose `owner.pid` is missing, unreadable, or names a process that is not alive or whose `/proc/<pid>/cmdline` does not contain `rod-cli`. This covers kill -9, crashes and reboots.
+5. **godoll** `browser/browser.go`: when it launches Chrome itself, keep the `*launcher.Launcher`, and `Close()` closes the browser then calls `l.Cleanup()`. Do the same in `cmd/godoll/session/manager.go` and `internal/testing/fixtures.go` if they launch. Commit in godoll.
+6. **Tests in both repos.**
+   - Every `launcher.New()` in a `_test.go` file sets `.UserDataDir(t.TempDir())` (auto-removed) and closes its browser in `t.Cleanup`.
+   - rod-cli sites: `utils/query_aria_test.go:48`, `cmd_test.go:24`, `internal/plugin/scanner/scanner_test.go:28`, `internal/plugin/scanner/scanner_more_test.go:21`, `types/errpaths_test.go:360`, `types/context_more_test.go:51`, `internal/plugin/integ_test.go:34`, `actions/plugin_full_test.go:58`, `types/cdp_footprint_test.go:47`, `internal/plugin/integ_more_test.go:33`.
+   - godoll sites: `grep -rln 'launcher.New()' --include=*_test.go /home/john/go/src/github.com/agenthands/godoll`.
+   - rod-cli test helpers that build a `types.Config` (`newLiveCtx`/`newLiveCtxCfg` and the `./tests/` daemon spawns) use a `t.TempDir()` profile root. For spawned daemons, set `XDG_CACHE_HOME` in the child env.
+7. **Docs.** SKILL.md and `docs/onboarding/README.md` say where profiles live and that they are removed on close or swept at next start.
+
 **TDD cycles:**
-1. `TestBrowserCloseRemovesProfile` (godoll `browser`, live): launch with `NewBrowserE` defaults, read the launcher's user-data dir, `Close()`, and the dir no longer exists.
-2. `rod-cli suite leaves no profiles`: red is `before=$(ls /tmp/rod/user-data 2>/dev/null | wc -l); cd /home/john/go/src/github.com/agenthands/rod-cli && go test ./types/ ./utils/ ./internal/... ./actions/ . -count=1 >/dev/null; after=$(ls /tmp/rod/user-data 2>/dev/null | wc -l); echo "profiles: $before -> $after"` today (after > before). Green: after ≤ before.
-**Done when:** `cd /home/john/go/src/github.com/agenthands/godoll && go test ./browser/ -count=1` prints `ok`, and the cycle-2 command prints `profiles: N -> M` with M ≤ N, and the same before/after count around `cd /home/john/go/src/github.com/agenthands/godoll && go test ./... -count=1 -timeout 15m` shows no growth.
+1. `TestDefaultProfileRootIsUserCache` (types, unit): the resolved default is absolute and equals `filepath.Join(<os.UserCacheDir()>, "rod-cli", "profiles")`, with `XDG_CACHE_HOME` set by `t.Setenv` to a literal temp path.
+2. `TestSweepRemovesDeadOwnerProfiles` (types, unit, temp root): dirs with no `owner.pid`, with the PID of a process that has exited, and with the PID of a live non-rod-cli process (`sleep 30` started by the test) are removed. A dir with the test's own PID, faked as rod-cli through a cmdline-reader seam, is kept.
+3. `TestDaemonSIGTERMRemovesProfile` (daemon, live): `XDG_CACHE_HOME=t.TempDir()`, `EnsureDaemon`, `goto` a fixture URL, find the single profile dir, send SIGTERM, wait for the process to exit; the dir no longer exists.
+4. `TestDaemonKillProfileSweptOnNextStart` (daemon, live): same setup; SIGKILL the daemon, and the dir remains. Start a new daemon for another session and run `goto`; the old dir is gone.
+5. `TestBrowserCloseRemovesProfile` (godoll `browser`, live): launch with `NewBrowserE` defaults, read the launcher's user-data dir, `Close()`, and the dir no longer exists.
+
+**Done when:** all hold:
+- `go build -o rod-cli . && go test ./types/ ./daemon/ -count=1` prints `ok` for both, and `cd /home/john/go/src/github.com/agenthands/godoll && go test ./browser/ -count=1` prints `ok`.
+- No growth around both full suites:
+  `cnt(){ echo $(ls /tmp/rod/user-data 2>/dev/null | wc -l)/$(ls ~/.cache/rod-cli/profiles 2>/dev/null | wc -l); }; b=$(cnt); cd /home/john/go/src/github.com/agenthands/rod-cli && go test ./... -count=1 >/dev/null; (cd /home/john/go/src/github.com/agenthands/godoll && go test ./... -count=1 -timeout 15m >/dev/null); echo "profiles before=$b after=$(cnt)"`
+  prints the same before and after values (each `tmp/cache` count unchanged).
+- `find /home/john/go/src/github.com/agenthands/rod-cli /home/john/go/src/github.com/agenthands/godoll -type d -name rod -not -path '*/node_modules/*' -not -path '*/.git/*'` prints nothing.
+- `pgrep -af 'rod-cli.*daemon' | grep -v pgrep` prints nothing.
 
 ### T03 [~] Daemon start: no double spawns, no orphans, no load-dependent timeout
 
