@@ -326,19 +326,6 @@ func TestLaunchBrowser_BadProxyURL(t *testing.T) {
 	}
 }
 
-// Close() os.RemoveAll failure branch via seam.
-func TestClose_RemoveAllError(t *testing.T) {
-	ctx := NewContext(context.Background(), Config{BrowserTempDir: t.TempDir()})
-
-	orig := osRemoveAll
-	osRemoveAll = func(string) error { return errBoom }
-	defer func() { osRemoveAll = orig }()
-
-	if err := ctx.Close(); err == nil {
-		t.Fatal("expected error from os.RemoveAll failure")
-	}
-}
-
 // BuildSnapshot (context method) wrapping the inner BuildSnapshot error.
 func TestContextBuildSnapshot_InnerError(t *testing.T) {
 	ctx, _ := navFixture(t)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime/coverage"
 	"strings"
@@ -177,6 +178,21 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 	}
 	defer os.Remove(portFile)
 
+	// cleanup is the one teardown every exit path runs: close, idle timeout,
+	// parent death and SIGINT/SIGTERM/SIGHUP. Context.Close closes the browser,
+	// stops the proxy relay and removes the session profile dir.
+	cleanup := func() {
+		os.Remove(portFile)
+		_ = rodCtx.Close()
+	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-sigs
+		cleanup()
+		exitDaemon(0)
+	}()
+
 	mux := http.NewServeMux()
 	idleTimer := time.NewTimer(15 * time.Minute)
 	// execSem serializes executeAction across concurrent /execute requests,
@@ -239,7 +255,9 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			return
 		}
 		if req.Command == "close" {
-			os.Remove(portFile)
+			// Clean up before answering, so the browser and profile are gone
+			// when the client's close returns.
+			cleanup()
 			json.NewEncoder(w).Encode(Response{Result: "closing"})
 			go func() {
 				time.Sleep(10 * time.Millisecond)
@@ -267,6 +285,7 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 	go func() {
 		<-idleTimer.C
 		log.Info("Idle timeout reached, shutting down daemon")
+		cleanup()
 		exitDaemon(0)
 	}()
 
@@ -275,10 +294,11 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 			for {
 				time.Sleep(2 * time.Second)
 				process, err := os.FindProcess(ppid)
-				if err != nil {
-					exitDaemon(0)
+				if err == nil {
+					err = process.Signal(syscall.Signal(0))
 				}
-				if err := process.Signal(syscall.Signal(0)); err != nil {
+				if err != nil {
+					cleanup()
 					exitDaemon(0)
 				}
 			}

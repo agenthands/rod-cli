@@ -877,12 +877,10 @@ func boolVal(p *bool, def bool) bool {
 }
 
 var (
-	DefaultBrowserTempDir = "./rod/browser"
-
 	DefaultConfig = Config{
 		BrowserBinPath: "",
 		Headless:       false,
-		BrowserTempDir: DefaultBrowserTempDir,
+		BrowserTempDir: "", // DefaultProfileRoot()
 		NoSandbox:      false,
 		Proxy:          "",
 		// Hardened-by-default: a config loaded with zero StealthFlags still gets

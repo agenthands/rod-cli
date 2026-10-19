@@ -9,11 +9,19 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
+
+	"github.com/agenthands/rod-cli/utils"
+	"github.com/go-rod/rod/lib/launcher"
 )
 
 // ownerFile names the file in a session profile dir that holds the PID of the
 // rod-cli process that owns it.
 const ownerFile = "owner.pid"
+
+// legacyBrowserTempDir is the old default profile root. Config files generated
+// before the move to DefaultProfileRoot still carry it, so it counts as unset.
+const legacyBrowserTempDir = "./rod/browser"
 
 // readCmdline returns a process's command line. A var so tests can fake it.
 var readCmdline = func(pid int) (string, error) {
@@ -55,7 +63,7 @@ func ownerAlive(dir string) bool {
 		return false
 	}
 	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
-	if err != nil || pid <= 0 || !processAlive(pid) {
+	if err != nil || !processAlive(pid) {
 		return false
 	}
 	cmdline, err := readCmdline(pid)
@@ -66,7 +74,40 @@ func ownerAlive(dir string) bool {
 	return strings.Contains(cmdline, "rod-cli")
 }
 
+// newSessionProfile creates this session's profile dir under root (the default
+// root when empty) and writes owner.pid. The default root is swept first.
+func newSessionProfile(root string) (string, error) {
+	if root == "" || root == legacyBrowserTempDir {
+		root = DefaultProfileRoot()
+		SweepStaleProfiles(root)
+	}
+	dir := filepath.Join(root, utils.RandomString(10))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", err
+	}
+	return dir, os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(os.Getpid())), 0o600)
+}
+
+// removeSessionProfile deletes dir once l's Chrome has exited, since Chrome
+// writes into its profile until then. A Chrome still up after 5s is killed.
+func removeSessionProfile(dir string, l *launcher.Launcher) {
+	waitGone := func() {
+		for i := 0; i < 50 && processAlive(l.PID()); i++ {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	waitGone()
+	if processAlive(l.PID()) {
+		l.Kill()
+		waitGone()
+	}
+	_ = os.RemoveAll(dir)
+}
+
 func processAlive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		return false

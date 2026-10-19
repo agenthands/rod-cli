@@ -42,3 +42,4 @@ tdd: TestEnsureDaemonKillsOnTimeout — red: daemon_more_test.go:327: spawned pr
 
 tdd: TestDefaultProfileRootIsUserCache — red: types/profile_root_test.go:10:9: undefined: DefaultProfileRoot — green: go test ./types/ -run TestDefaultProfileRootIsUserCache -count=1 passed
 tdd: TestSweepRemovesDeadOwnerProfiles — red: types/profile_root_test.go:59:2: undefined: SweepStaleProfiles — green: go test ./types/ -run TestSweepRemovesDeadOwnerProfiles -count=1 passed
+tdd: TestDaemonSIGTERMRemovesProfile — red: profile_test.go:83: want 1 profile dir under /tmp/TestDaemonSIGTERMRemovesProfile3246516978/001/rod-cli/profiles, got [] — green: go test ./daemon/ -run TestDaemonSIGTERMRemovesProfile -count=1 passed

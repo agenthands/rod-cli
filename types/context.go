@@ -34,7 +34,6 @@ import (
 // real functions; tests swap them and restore via defer. Zero behavior change.
 var (
 	launcherLookPath = launcher.LookPath
-	osRemoveAll      = os.RemoveAll
 )
 
 // parseProxyConfig maps a proxy URL (with scheme) and an optional "user:pass"
@@ -109,9 +108,9 @@ func parseProxyConfig(proxyURL, proxyAuth string) (*browser.ProxyConfig, error) 
 }
 
 // launchBrowser returns the browser plus a session cleanup func. The caller
-// MUST invoke it on session close: it stops the local godoll relay when an
-// authenticated proxy spun one up (T-25-07) and removes the per-session browser
-// profile dir. It is nil only on the CDPEndpoint path, which owns neither.
+// MUST invoke it after closing the browser: it stops the local godoll relay when
+// an authenticated proxy spun one up (T-25-07) and removes the per-session
+// browser profile dir. It is nil only on the CDPEndpoint path, which owns neither.
 func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 
 	if cfg.CDPEndpoint != "" {
@@ -119,13 +118,6 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		return b, nil, nil, err
 	}
 
-	if cfg.BrowserTempDir == "" {
-		cfg.BrowserTempDir = DefaultBrowserTempDir
-	}
-
-	// browser must own a unique temp dir
-	cfg.BrowserTempDir = fmt.Sprintf("%s/%s", cfg.BrowserTempDir, utils.RandomString(10))
-	browserTempDir := cfg.BrowserTempDir
 	// Create basic launcher manually so we can set Headless, Proxy, UserDataDir
 	browserLauncher := launcher.New().
 		Context(context.Background()).
@@ -140,8 +132,7 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		Set("use-mock-keychain").
 		Set("--remote-allow-origins", "*").
 		Set("--disable-dev-shm-usage").
-		Set("--disable-features", "HttpsUpgrades").
-		UserDataDir(cfg.BrowserTempDir)
+		Set("--disable-features", "HttpsUpgrades")
 
 	if cfg.BrowserBinPath != "" {
 		browserLauncher.Bin(cfg.BrowserBinPath)
@@ -206,13 +197,25 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		opts = opts.WithWebRTCLeakProtection(true)
 	}
 
-	// The launcher creates browserTempDir per session and never reaps it; without
-	// this the profile dirs accumulate under BrowserTempDir forever.
-	sessionCleanup := func() {
+	// browser must own a unique profile dir. Created last, so no early return
+	// above can leak it.
+	browserTempDir, err := newSessionProfile(cfg.BrowserTempDir)
+	if err != nil {
 		if proxyCleanup != nil {
 			proxyCleanup()
 		}
 		os.RemoveAll(browserTempDir)
+		return nil, nil, nil, errors.Wrap(err, "create browser profile dir")
+	}
+	browserLauncher.UserDataDir(browserTempDir)
+
+	// The launcher never reaps browserTempDir; without this the profile dirs
+	// accumulate under the profile root forever.
+	sessionCleanup := func() {
+		if proxyCleanup != nil {
+			proxyCleanup()
+		}
+		removeSessionProfile(browserTempDir, browserLauncher)
 	}
 
 	browserInstance, err := browser.NewBrowserE(context.Background(), opts)
@@ -274,11 +277,11 @@ type Context struct {
 	noiseSeed uint64
 	pluginEngine *plugin.PluginEngine
 	loadedPlugins []string
-	// proxyCleanup stops the per-session authenticated-proxy relay (godoll
-	// StartProxyRelay). Non-nil only when an authenticated proxy is in use; it is
-	// invoked exactly once on browser close and nil'd to guard against double-call
-	// (T-25-07).
-	proxyCleanup func()
+	// sessionCleanup stops the per-session authenticated-proxy relay (godoll
+	// StartProxyRelay) and removes the session profile dir. Nil on the
+	// CDPEndpoint path; it is invoked exactly once on browser close and nil'd to
+	// guard against double-call (T-25-07).
+	sessionCleanup func()
 	// cdpDomains is the per-session CDP domain-enable ledger (Phase 30 CDP-01 / D-04
 	// instrumentation): the set of footprint-adding CDP domains this session has
 	// enabled BEYOND what go-rod structurally requires (Page/Target/etc). Keyed by
@@ -352,12 +355,10 @@ func (ctx *Context) initial() error {
 
 	var err error
 	if ctx.browser == nil {
-		var proxyCleanup func()
-		ctx.browser, ctx.cdpProxy, proxyCleanup, err = launchBrowser(ctx.config)
+		ctx.browser, ctx.cdpProxy, ctx.sessionCleanup, err = launchBrowser(ctx.config)
 		if err != nil {
 			return err
 		}
-		ctx.proxyCleanup = proxyCleanup
 	}
 	if ctx.page == nil {
 		page, err := ctx.browser.Page(proto.TargetCreateTarget{})
@@ -508,12 +509,15 @@ func (ctx *Context) closePage() error {
 	return nil
 }
 func (ctx *Context) closeBrowser() error {
-	// Stop the per-session proxy relay (if any) regardless of page/browser state,
-	// so the local listener is never leaked. Guard against double-call by nil'ing.
-	if ctx.proxyCleanup != nil {
-		ctx.proxyCleanup()
-		ctx.proxyCleanup = nil
-	}
+	// Stop the per-session proxy relay and remove the profile on every path, after
+	// the browser close below, so neither is leaked. Guard against double-call by
+	// nil'ing.
+	defer func() {
+		if ctx.sessionCleanup != nil {
+			ctx.sessionCleanup()
+			ctx.sessionCleanup = nil
+		}
+	}()
 
 	err := ctx.closePage()
 	if err != nil {
@@ -994,14 +998,5 @@ func (ctx *Context) GetRoutes() map[string]string {
 func (ctx *Context) Close() error {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	ctx.closeBrowser()
-
-	// remove browser temp dir
-	if ctx.config.BrowserTempDir != "" && ctx.config.CDPEndpoint == "" {
-		err := osRemoveAll(ctx.config.BrowserTempDir)
-		if err != nil {
-			return errors.Wrap(err, "remove browser temp dir failed")
-		}
-	}
-	return nil
+	return ctx.closeBrowser()
 }

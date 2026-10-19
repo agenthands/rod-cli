@@ -43,9 +43,9 @@ func TestLaunchBrowser_DefaultTempDirAndReinit(t *testing.T) {
 		t.Skip("no local Chrome found; skipping local-launch path")
 	}
 
-	// Empty BrowserTempDir -> launchBrowser applies DefaultBrowserTempDir.
-	// Use a chdir into a temp dir so the default "./rod/browser" lands there.
-	chdirTemp(t)
+	// Empty BrowserTempDir -> launchBrowser uses DefaultProfileRoot(), here
+	// under a temp XDG_CACHE_HOME.
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	ctx := NewContext(context.Background(), Config{
 		Headless:  true,
 		NoSandbox: true,
