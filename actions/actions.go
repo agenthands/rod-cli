@@ -1100,8 +1100,8 @@ func HandleDialog(ctx *types.Context, accept bool, promptText string) (string, e
 	return "Set up dialog handler for next dialog", nil
 }
 
-// GetCookies returns the current cookies
-func GetCookies(ctx *types.Context) (string, error) {
+// GetCookies returns the current cookies, or only those named name when name is non-empty.
+func GetCookies(ctx *types.Context, name string) (string, error) {
 	page, err := ctx.ControlledPage()
 	if err != nil {
 		return "", err
@@ -1111,15 +1111,17 @@ func GetCookies(ctx *types.Context) (string, error) {
 		return "", fmt.Errorf("failed to get cookies: %w", err)
 	}
 
-	// Format cookies into a string representation instead of JSON marshaling the Rod types directly,
-	// or we can marshal if json import is present. json is not imported, let's just format it simple.
-	// Wait, we can just use Evaluate for localStorage, but cookies are browser level.
-	// Let's just return length or basic info, or we can use standard json import.
-	// We'll return a simple summary since JSON is not imported yet, or we'll add json import later.
-	// Rod's cookies are []*proto.NetworkCookie.
 	res := "Cookies:\n"
+	found := false
 	for _, c := range cookies {
+		if name != "" && c.Name != name {
+			continue
+		}
+		found = true
 		res += fmt.Sprintf("- %s: %s (domain: %s)\n", c.Name, c.Value, c.Domain)
+	}
+	if name != "" && !found {
+		return "", fmt.Errorf("no cookie named %q", name)
 	}
 	return res, nil
 }

@@ -18,3 +18,7 @@ The other 23 godoll packages were ok.
 ## T00
 
 verify: T00 — pass — `grep -c '^## Baseline'` prints 1; no code changed (diff only docs/plans); recorded failure lines match the source (daemon_more_test.go:158, cli_test.go:71, live_typing_test.go:27)
+
+## T01
+
+tdd: TestGetCookiesByName — red: actions/actions_full_test.go:882:31: too many arguments in call to GetCookies — green: go test ./actions/ -run TestGetCookiesByName -count=1 passed

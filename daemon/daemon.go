@@ -345,7 +345,7 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "dialog-dismiss":
 		return actions.HandleDialog(ctx, false, "")
 	case "cookie-get":
-		return actions.GetCookies(ctx)
+		return actions.GetCookies(ctx, req.Args["name"])
 	case "cookie-set":
 		return actions.SetCookie(ctx, req.Args["name"], req.Args["value"])
 	case "cookie-delete":

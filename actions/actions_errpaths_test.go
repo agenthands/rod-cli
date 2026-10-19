@@ -504,7 +504,7 @@ func TestErrPaths_Cookies(t *testing.T) {
 
 	origGet := browserGetCookies
 	browserGetCookies = func(b *rod.Browser) ([]*proto.NetworkCookie, error) { return nil, errBoom }
-	if _, err := GetCookies(ctx); err == nil {
+	if _, err := GetCookies(ctx, ""); err == nil {
 		t.Error("GetCookies expected wrapped error")
 	}
 	browserGetCookies = origGet

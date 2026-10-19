@@ -860,6 +860,30 @@ func TestHandleDialog(t *testing.T) {
 // Cookies
 // ---------------------------------------------------------------------------
 
+func TestGetCookiesByName(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	for _, kv := range [][2]string{{"a", "1"}, {"b", "2"}} {
+		if _, err := SetCookie(ctx, kv[0], kv[1]); err != nil {
+			t.Fatalf("SetCookie %s: %v", kv[0], err)
+		}
+	}
+	out, err := GetCookies(ctx, "b")
+	if err != nil {
+		t.Fatalf("GetCookies b: %v", err)
+	}
+	if !strings.Contains(out, "b") || !strings.Contains(out, "2") || strings.Contains(out, "a=") || strings.Contains(out, "- a:") {
+		t.Errorf("GetCookies b returned: %q", out)
+	}
+	if _, err := GetCookies(ctx, "zz"); err == nil || err.Error() != `no cookie named "zz"` {
+		t.Errorf("GetCookies zz err = %v, want no cookie named \"zz\"", err)
+	}
+}
+
 func TestCookies(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()
@@ -870,7 +894,7 @@ func TestCookies(t *testing.T) {
 	if _, err := SetCookie(ctx, "foo", "bar"); err != nil {
 		t.Errorf("SetCookie: %v", err)
 	}
-	if out, err := GetCookies(ctx); err != nil {
+	if out, err := GetCookies(ctx, ""); err != nil {
 		t.Errorf("GetCookies: %v", err)
 	} else if !strings.Contains(out, "Cookies") {
 		t.Errorf("unexpected: %s", out)
@@ -886,7 +910,7 @@ func TestCookies(t *testing.T) {
 	if _, err := SetCookie(freshCtx(), "a", "b"); err == nil {
 		t.Error("SetCookie expected error no page")
 	}
-	if _, err := GetCookies(freshCtx()); err == nil {
+	if _, err := GetCookies(freshCtx(), ""); err == nil {
 		t.Error("GetCookies expected error no page")
 	}
 	if _, err := DeleteCookie(freshCtx(), "a"); err == nil {
