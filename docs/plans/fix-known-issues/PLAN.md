@@ -93,7 +93,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 - `head -5 skills/rod-cli/SKILL.md | grep -c '^version:'` prints `1`;
 - every flag named in SKILL.md Global Options appears in `go build -o rod-cli . && ./rod-cli --help` (check each).
 
-### T02b [ ] Chrome profiles: on disk, owned, always removed; nothing left in /tmp or project folders
+### T02b [~] Chrome profiles: on disk, owned, always removed; nothing left in /tmp or project folders
 **Why:** leaked profiles filled the user's RAM-backed `/tmp` (23 GB, 4135 dirs in `/tmp/rod/user-data`) and project folders (2.3 GB in `extensions/pi/rod`, 217 MB in a Codex workspace). Three causes:
 1. rod-cli's daemon puts each session profile in `DefaultBrowserTempDir = "./rod/browser"` (`types/config.go:880`), relative to the daemon's working directory.
 2. The profile is removed only by a clean `Close()` (`types/context.go:211-216`, `:1000`). A killed or crashed daemon, or a reboot, leaves it forever, and nothing sweeps old ones.
