@@ -298,6 +298,8 @@ type Context struct {
 	// prepared records the TargetIDs preparePage has run on, so switchTo prepares
 	// each tab exactly once.
 	prepared map[proto.TargetTargetID]bool
+	// engineSessions records the sessions installEngine has run on.
+	engineSessions map[proto.TargetSessionID]bool
 }
 
 // CDP domain ledger keys (Phase 30 D-04). String constants so the instrumentation
@@ -359,6 +361,9 @@ func (ctx *Context) initial() error {
 		if err != nil {
 			return err
 		}
+		if err := ctx.autoPrepare(ctx.browser); err != nil {
+			return errors.Wrap(err, "auto-attach failed")
+		}
 	}
 	if ctx.page == nil {
 		page, err := ctx.browser.Page(proto.TargetCreateTarget{})
@@ -368,6 +373,41 @@ func (ctx *Context) initial() error {
 		ctx.switchTo(page)
 	}
 	return nil
+}
+
+// autoPrepare makes Chrome pause every new target before its first script
+// (Target.setAutoAttach with waitForDebuggerOnStart) until rod-cli has prepared
+// it, so popups (window.open, target=_blank) and tabs rod-cli opens all run
+// their first document with evasions. Targets that existed before the attach
+// are not paused and stay unprepared until switchTo adopts them.
+func (ctx *Context) autoPrepare(b *rod.Browser) error {
+	go b.EachEvent(func(e *proto.TargetAttachedToTarget) {
+		if e.WaitingForDebugger {
+			go ctx.prepareAttached(b, e)
+		}
+	})()
+	return proto.TargetSetAutoAttach{AutoAttach: true, WaitForDebuggerOnStart: true, Flatten: true}.Call(b)
+}
+
+// prepareAttached prepares a paused page target through its auto-attached
+// session, then resumes it. That session stays attached, so its new-document
+// scripts and overrides last for the life of the tab. It is not the session
+// rod-cli drives the tab with: a Page.navigate already queued there (TabNew)
+// would block the preparation until the resume. Every paused target is
+// resumed, page or not, so none is left waiting.
+func (ctx *Context) prepareAttached(b *rod.Browser, e *proto.TargetAttachedToTarget) {
+	s := b.PageFromSession(e.SessionID)
+	if e.TargetInfo.Type == proto.TargetTargetInfoTypePage {
+		s.TargetID = e.TargetInfo.TargetID
+		ctx.stateLock.Lock()
+		if !ctx.prepared[s.TargetID] {
+			ctx.preparePage(s)
+		}
+		ctx.stateLock.Unlock()
+	}
+	if err := (proto.RuntimeRunIfWaitingForDebugger{}).Call(s); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: resume new target failed: %v\n", err)
+	}
 }
 
 func (ctx *Context) CurrentMode() Mode {
@@ -401,11 +441,11 @@ func (ctx *Context) GetBrowser() *rod.Browser {
 }
 
 // SwitchTo makes p the current tab — the only way to change it. Prepares p
-// (stealth, emulation, snapshot engine, capture) the first time it is seen,
-// clears the snapshot, moves mock routes to p. Selecting the current tab is a
+// (stealth, emulation, capture) if prepareAttached has not, installs the
+// snapshot engine on p's session, clears the snapshot, moves mock routes to p. Selecting the current tab is a
 // no-op. p == nil means no current tab (next EnsurePage opens one).
-// adopted = p was opened outside rod-cli; its loaded document has no evasions
-// until the next navigation.
+// adopted = p existed before rod-cli attached; its loaded document has no
+// evasions until the next navigation.
 func (ctx *Context) SwitchTo(p *rod.Page) (adopted bool) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
@@ -413,11 +453,6 @@ func (ctx *Context) SwitchTo(p *rod.Page) (adopted bool) {
 }
 
 // switchTo is SwitchTo with stateLock held.
-//
-// ponytail: popups (window.open, target=_blank) are prepared when first
-// selected, so their first document runs without evasions. Upgrade path:
-// Target.setAutoAttach{waitForDebuggerOnStart:true} to prepare every target
-// before it runs.
 func (ctx *Context) switchTo(p *rod.Page) (adopted bool) {
 	if p == nil && ctx.page == nil || p != nil && ctx.page != nil && p.TargetID == ctx.page.TargetID {
 		return false
@@ -425,9 +460,9 @@ func (ctx *Context) switchTo(p *rod.Page) (adopted bool) {
 	if p != nil && !ctx.prepared[p.TargetID] {
 		adopted = true
 		ctx.preparePage(p)
-		if _, err := utils.EngineEval(p, js.InjectEngine); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: snapshot engine inject failed: %v\n", err)
-		}
+	}
+	if p != nil && !ctx.engineSessions[p.SessionID] {
+		ctx.installEngine(p)
 	}
 	if ctx.interceptor != nil {
 		ctx.interceptor.Disable()
@@ -438,6 +473,23 @@ func (ctx *Context) switchTo(p *rod.Page) (adopted bool) {
 		ctx.ensureInterceptorEnabled(p)
 	}
 	return adopted
+}
+
+// installEngine puts the snapshot engine on p's session: on every new document
+// and on the current one. Isolated worlds belong to a session, so it goes on
+// the session rod-cli drives p with, not the one prepareAttached used.
+func (ctx *Context) installEngine(p *rod.Page) {
+	if ctx.engineSessions == nil {
+		ctx.engineSessions = make(map[proto.TargetSessionID]bool)
+	}
+	ctx.engineSessions[p.SessionID] = true
+	// The engine lives in an isolated world so page scripts cannot see it.
+	if _, err := (proto.PageAddScriptToEvaluateOnNewDocument{Source: js.InjectedSnapShot, WorldName: utils.EngineWorld}).Call(p); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: snapshot engine new-document script failed: %v\n", err)
+	}
+	if _, err := utils.EngineEval(p, js.InjectEngine); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: snapshot engine inject failed: %v\n", err)
+	}
 }
 
 func (ctx *Context) GetPluginEngine() *plugin.PluginEngine {
@@ -701,9 +753,9 @@ func (ctx *Context) applyEmulationIdentity(page *rod.Page, prof *stealth.Profile
 }
 
 // preparePage applies the per-page session setup (stealth evasions, emulation
-// identity, snapshot engine on new documents, opt-in capture). Caller MUST hold
+// identity, opt-in capture). Caller MUST hold
 // stateLock. Errors are logged and setup continues. Every page goes through it
-// exactly once, from switchTo.
+// exactly once, from prepareAttached (new targets) or switchTo (adopted ones).
 func (ctx *Context) preparePage(page *rod.Page) {
 	if ctx.prepared == nil {
 		ctx.prepared = make(map[proto.TargetTargetID]bool)
@@ -783,11 +835,6 @@ func (ctx *Context) preparePage(page *rod.Page) {
 	// plain session run with neither Runtime, Network, nor Fetch enabled. The old
 	// always-on interceptor identity rule is removed (see updateInterceptorRules).
 	ctx.applyEmulationIdentity(page, &prof)
-
-	// The engine lives in an isolated world so page scripts cannot see it.
-	if _, err := (proto.PageAddScriptToEvaluateOnNewDocument{Source: js.InjectedSnapShot, WorldName: utils.EngineWorld}).Call(page); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: snapshot engine new-document script failed: %v\n", err)
-	}
 
 	// Console capture (CDP-01): the RuntimeConsoleAPICalled subscription forces
 	// Runtime.enable, so it is OPT-IN (default OFF). When off the subscription is

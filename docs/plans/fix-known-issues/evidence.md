@@ -47,3 +47,7 @@ tdd: TestDaemonSIGTERMRemovesProfile — red: profile_test.go:83: want 1 profile
 tdd: TestDaemonKillProfileSweptOnNextStart — red (sweep call disabled, since the sweep was already wired in cycle 3): profile_test.go:111: dead daemon's profile /tmp/TestDaemonKillProfileSweptOnNextStart1636159535/001/rod-cli/profiles/xIirUPEgOy not swept by the next start (stat err <nil>) — green: go test ./daemon/ -run TestDaemonKillProfileSweptOnNextStart -count=1 passed
 tdd: TestBrowserCloseRemovesProfile — red: close_cleanup_test.go:39: profile /tmp/rod/user-data/2bf2e7ab65d1e5c2 still exists after Close (stat err <nil>) — green: cd /home/john/go/src/github.com/agenthands/godoll && go test ./browser/ -run TestBrowserCloseRemovesProfile -count=1 passed
 verify: T02b — pass — types/daemon/godoll browser ok; profiles before=0/0 after=0/0; no rod dirs; no leftover daemons
+
+## T04
+
+tdd: TestPopupPreparedBeforeFirstScript — red: actions_full_test.go:1371: TabSelect output = "Selected tab 0 AD206FD5 Probe (http://127.0.0.1:46167/probe); adopted, stealth applies from next navigation (reload to apply)", popup of a prepared page must not be adopted — green: go test ./actions/ -run TestPopupPreparedBeforeFirstScript -count=1 passed

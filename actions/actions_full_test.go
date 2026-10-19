@@ -13,6 +13,7 @@ import (
 	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/agenthands/rod-cli/utils"
+	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
@@ -62,6 +63,14 @@ func newFixtureServer() *httptest.Server {
 	mux.HandleFunc("/scroll", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<body style="margin:0"><div id="box" style="height:200px;overflow:auto"><div style="height:2000px">in</div></div><div style="height:5000px">tall</div></body>`))
+	})
+	mux.HandleFunc("/popup", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<html><head><title>Popup</title></head><body><button onclick="window.open('/probe')">Open</button></body></html>`))
+	})
+	mux.HandleFunc("/probe", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<html><head><title>Probe</title><script>window.__probe = navigator.platform</script></head><body>probe</body></html>`))
 	})
 	mux.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -1305,17 +1314,27 @@ func TestTabCloseCurrentSwitches(t *testing.T) {
 }
 
 func TestTabSelectAdoptsForeignTab(t *testing.T) {
-	ctx, cleanup := newLiveCtx(t)
-	defer cleanup()
 	srv := newFixtureServer()
 	defer srv.Close()
 
-	raw, err := ctx.GetBrowser().Page(proto.TargetCreateTarget{URL: srv.URL + "/page2"})
+	// The tab exists before rod-cli attaches (--cdp-endpoint), so rod-cli never
+	// saw it start.
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
+	other := rod.New().ControlURL(u)
+	if err := other.Connect(); err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	raw, err := other.Page(proto.TargetCreateTarget{URL: srv.URL + "/page2"})
 	if err != nil {
 		t.Fatalf("create raw page: %v", err)
 	}
 	if err := raw.WaitLoad(); err != nil {
 		t.Fatalf("wait load: %v", err)
+	}
+	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
+	defer func() { _ = ctx.CloseBrowser() }()
+	if _, err := ctx.EnsurePage(); err != nil {
+		t.Fatalf("EnsurePage: %v", err)
 	}
 	out, err := TabSelect(ctx, shortID(raw))
 	if err != nil {
@@ -1326,6 +1345,48 @@ func TestTabSelectAdoptsForeignTab(t *testing.T) {
 	}
 	if _, err := Snapshot(ctx, "", false); err != nil {
 		t.Fatalf("Snapshot on adopted tab: %v", err)
+	}
+}
+
+func TestPopupPreparedBeforeFirstScript(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	if _, err := Navigate(ctx, srv.URL+"/popup"); err != nil {
+		t.Fatalf("Navigate: %v", err)
+	}
+	if _, err := Click(ctx, refFor(t, ctx, "Open")); err != nil {
+		t.Fatalf("Click: %v", err)
+	}
+	var list string
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		out, err := TabList(ctx)
+		if err != nil {
+			t.Fatalf("TabList: %v", err)
+		}
+		if list = out; strings.Contains(out, "/probe") {
+			break
+		}
+	}
+	m := regexp.MustCompile(`\[(\d+)\][^\n]*/probe\)`).FindStringSubmatch(list)
+	if m == nil {
+		t.Fatalf("popup tab not listed:\n%s", list)
+	}
+	out, err := TabSelect(ctx, m[1])
+	if err != nil {
+		t.Fatalf("TabSelect: %v", err)
+	}
+	if strings.Contains(out, "adopted") {
+		t.Fatalf("TabSelect output = %q, popup of a prepared page must not be adopted", out)
+	}
+	got, err := Evaluate(ctx, "String(window.__probe)", "")
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if got != "Win32" {
+		t.Fatalf("popup first script saw navigator.platform = %q, want the stealth value \"Win32\"", got)
 	}
 }
 
