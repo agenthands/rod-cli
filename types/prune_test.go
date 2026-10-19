@@ -30,3 +30,9 @@ func TestPruneInteractiveFlattensUnnamedWrappers(t *testing.T) {
 		"- main:\n  - paragraph: hello\n  - list:\n    - listitem:\n      - link \"Docs\" [ref=s1e4]\n- contentinfo: footer text",
 		"- main:\n  - link \"Docs\" [ref=s1e4]\n")
 }
+
+func TestPruneInteractiveKeepsNamedGroup(t *testing.T) {
+	assertPrune(t,
+		"- group \"Payment\":\n  - generic:\n    - radio \"Card\" [ref=s1e2]\n",
+		"- group \"Payment\":\n  - radio \"Card\" [ref=s1e2]\n")
+}

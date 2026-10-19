@@ -61,3 +61,4 @@ verify: T05 — pass — go build + go test ./actions/ -run MouseWheel -count=1:
 
 ## T06
 tdd: TestPruneInteractiveFlattensUnnamedWrappers (updated from TestPruneInteractiveKeepsControlsAndAncestors) — red: prune_test.go:29: got: - main: - list: - listitem: - link "Docs" [ref=s1e4] want: - main: - link "Docs" [ref=s1e4] — green: go test ./types/ -run TestPruneInteractiveFlattensUnnamedWrappers -count=1 passed
+tdd: TestPruneInteractiveKeepsNamedGroup — red: not observed against cycle-1 code (cycle-1 flattening already covered it); against pre-T06 snapshot.go: prune_test.go:35: got: - group "Payment": - generic: - radio "Card" [ref=s1e2] — green: go test ./types/ -run TestPruneInteractiveKeepsNamedGroup -count=1 passed
