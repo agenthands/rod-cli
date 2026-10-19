@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -45,7 +46,7 @@ func startAriaServer(t *testing.T) string {
 func newAriaBrowser(t *testing.T) *rod.Browser {
 	t.Helper()
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(true).NoSandbox(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Bin(path).Headless(true).NoSandbox(true))
 	b := rod.New().ControlURL(u).MustConnect()
 	t.Cleanup(func() { _ = b.Close() })
 	return b

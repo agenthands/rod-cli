@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -31,11 +32,16 @@ func TestMain(m *testing.M) {
 
 	// Launch browser
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(true).NoSandbox(true).MustLaunch()
+	u, stop, err := testchrome.Launch(launcher.New().Bin(path).Headless(true).NoSandbox(true))
+	if err != nil {
+		panic("failed to launch browser: " + err.Error())
+	}
 	integBrowser = rod.New().ControlURL(u).MustConnect()
-	defer integBrowser.MustClose()
 
-	os.Exit(m.Run())
+	// os.Exit skips defers, so stop Chrome explicitly.
+	code := m.Run()
+	stop()
+	os.Exit(code)
 }
 
 func openIntegPage(t *testing.T, url string) *rod.Page {

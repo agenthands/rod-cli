@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -345,7 +346,7 @@ func TestExecuteActionUnknownCommand(t *testing.T) {
 func startInProcessDaemon(t *testing.T) (string, *types.Context, func()) {
 	t.Helper()
 
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage failed: %v", err)
@@ -449,7 +450,7 @@ func TestExecuteActionDispatch(t *testing.T) {
 	srv := newPageServer()
 	defer srv.Close()
 
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage failed: %v", err)
@@ -703,7 +704,7 @@ func liveCtxWithHTML(t *testing.T, html string) *types.Context {
 		fmt.Fprint(w, html)
 	}))
 	t.Cleanup(srv.Close)
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	t.Cleanup(func() { _ = ctx.CloseBrowser() })
 	if _, err := executeAction(ctx, Request{Command: "open", Args: map[string]string{"url": srv.URL}}); err != nil {

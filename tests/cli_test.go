@@ -10,6 +10,19 @@ import (
 	"time"
 )
 
+// TestMain points XDG_CACHE_HOME at a temp dir for the whole package, so the
+// daemons runCli spawns keep their Chrome profiles out of the user's cache.
+func TestMain(m *testing.M) {
+	cache, err := os.MkdirTemp("", "rod-cli-tests-cache-")
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("XDG_CACHE_HOME", cache)
+	code := m.Run()
+	os.RemoveAll(cache)
+	os.Exit(code)
+}
+
 // runCli is a helper to run the compiled binary
 func runCli(args ...string) (string, error) {
 	absPath, _ := filepath.Abs("../rod-cli")

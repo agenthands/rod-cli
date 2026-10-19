@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
@@ -80,7 +81,7 @@ func newLiveCtx(t *testing.T) (*types.Context, func()) {
 // off-by-default; a test asserting capture must enable it via the mutator).
 func newLiveCtxCfg(t *testing.T, mutate func(*types.Config)) (*types.Context, func()) {
 	t.Helper()
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	cfg := types.Config{CDPEndpoint: u}
 	if mutate != nil {
 		mutate(&cfg)
@@ -1001,7 +1002,7 @@ func TestRoutes(t *testing.T) {
 // stored routes when the first page is created. Previously the route was stored
 // but inert until a second AddRoute happened to trip the lazy-create.
 func TestRouteBeforeFirstGoto(t *testing.T) {
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	defer func() { _ = ctx.CloseBrowser() }()
 
@@ -1155,7 +1156,7 @@ func TestShow(t *testing.T) {
 }
 
 func TestCloseBrowser(t *testing.T) {
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage: %v", err)

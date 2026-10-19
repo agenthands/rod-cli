@@ -5,15 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod/lib/launcher"
 )
 
 func TestNavigateWithRetries(t *testing.T) {
 	// Start a local browser instance for testing
-	u := launcher.New().MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New())
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
-	
+
 	// Create the page via standard types.Context wrapper
 	_, err := ctx.EnsurePage()
 	if err != nil {
@@ -27,11 +28,11 @@ func TestNavigateWithRetries(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error when navigating to non-existent port")
 	}
-	
+
 	if !strings.Contains(err.Error(), "Failed to navigate") {
 		t.Errorf("Expected network error from go-rod, got: %v", err)
 	}
-	
+
 	// Test element resolution that will fail (should retry and eventually return error)
 	_, err = Click(ctx, "#non-existent-element")
 	if err == nil {

@@ -26,6 +26,10 @@ rod-cli install
 
 This downloads Chromium to `~/.cache/rod/browser/`.
 
+### Where browser profiles live
+
+Each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (the OS user cache dir; on disk, never `/tmp` or the working directory). Set `browserTempDir` in `rod-cli.yaml` to use another root. `rod-cli close`, the idle timeout, parent exit and SIGINT/SIGTERM/SIGHUP remove the profile. A profile left behind by a killed or crashed daemon, or a reboot, is removed when the next daemon starts.
+
 ### Verify
 
 ```bash

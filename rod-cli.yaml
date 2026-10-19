@@ -2,7 +2,7 @@ mode: text
 cdpEndpoint: ""
 browserBinPath: ""
 headless: false
-browserTempDir: ./rod/browser
+browserTempDir: ""
 noSandbox: false
 proxy: ""
 stealth:

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/agenthands/godoll/network"
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
@@ -48,10 +49,11 @@ func newFixtureServer(t *testing.T) *httptest.Server {
 // without a DISPLAY. Cleanup is deferred via t.Cleanup.
 func newBrowserContext(t *testing.T) *Context {
 	t.Helper()
-	u, err := launcher.New().Headless(true).Launch()
+	u, stop, err := testchrome.Launch(launcher.New().Headless(true))
 	if err != nil {
 		t.Skipf("cannot launch browser (skipping browser-backed test): %v", err)
 	}
+	t.Cleanup(stop)
 	ctx := NewContext(context.Background(), Config{CDPEndpoint: u, Mode: Text})
 	t.Cleanup(func() {
 		_ = ctx.CloseBrowser()

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -55,7 +56,7 @@ func TestPluginLoad(t *testing.T) {
 
 func TestPluginLoad_WithPage(t *testing.T) {
 	// Exercises the BindLifecycle branch where a controlled page exists.
-	u := launcher.New().Headless(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage: %v", err)

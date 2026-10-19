@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -30,7 +31,7 @@ func TestPluginAPI_GetLocalStorage_ClosedPage(t *testing.T) {
 // context error.
 func TestPluginAPI_GetCookies_CancelledContext(t *testing.T) {
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(true).NoSandbox(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Bin(path).Headless(true).NoSandbox(true))
 	base := rod.New().ControlURL(u).MustConnect()
 	defer base.MustClose()
 

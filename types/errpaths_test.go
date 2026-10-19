@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -345,10 +346,11 @@ func TestContextBuildSnapshot_InnerError(t *testing.T) {
 // underlying process so the subsequent Close() over the dead connection errors.
 func TestCloseBrowser_CloseError(t *testing.T) {
 	l := launcher.New().Headless(true)
-	u, err := l.Launch()
+	u, stop, err := testchrome.Launch(l)
 	if err != nil {
 		t.Skipf("cannot launch browser: %v", err)
 	}
+	t.Cleanup(stop)
 	ctx := NewContext(context.Background(), Config{CDPEndpoint: u})
 	if _, err := ctx.EnsurePage(); err != nil {
 		t.Fatalf("EnsurePage: %v", err)

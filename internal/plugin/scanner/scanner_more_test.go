@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -18,7 +19,7 @@ import (
 // underlying CDP page-creation request fails.
 func TestBrowserPageOpener_OpenPage_BrowserClosed(t *testing.T) {
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(true).NoSandbox(true).MustLaunch()
+	u := testchrome.MustLaunch(t, launcher.New().Bin(path).Headless(true).NoSandbox(true))
 	b := rod.New().ControlURL(u).MustConnect()
 	b.MustClose()
 

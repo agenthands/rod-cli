@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod/lib/launcher"
 	"pgregory.net/rapid"
 )
@@ -21,7 +22,7 @@ import (
 // newCDPEndpoint launches a headless browser and returns its CDP websocket URL.
 func newCDPEndpoint(t *testing.T) string {
 	t.Helper()
-	return launcher.New().Headless(true).MustLaunch()
+	return testchrome.MustLaunch(t, launcher.New().Headless(true))
 }
 
 // TestMain lets a re-exec of the test binary invoke the real main() so that
@@ -40,7 +41,15 @@ func TestMain(m *testing.M) {
 		main()
 		os.Exit(0)
 	}
-	os.Exit(m.Run())
+	// Daemons the tests spawn keep their Chrome profiles out of the user's cache.
+	cache, err := os.MkdirTemp("", "rod-cli-cmd-cache-")
+	if err != nil {
+		panic(err)
+	}
+	os.Setenv("XDG_CACHE_HOME", cache)
+	code := m.Run()
+	os.RemoveAll(cache)
+	os.Exit(code)
 }
 
 // runMainSubprocess re-execs the test binary so it calls main() with the given

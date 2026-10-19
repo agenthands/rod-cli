@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/agenthands/rod-cli/internal/plugin/scanner/testserver"
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -25,13 +26,19 @@ func TestMain(m *testing.M) {
 	defer testServer.Close()
 
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(true).NoSandbox(true).MustLaunch()
+	u, stop, err := testchrome.Launch(launcher.New().Bin(path).Headless(true).NoSandbox(true))
+	if err != nil {
+		panic("failed to launch browser: " + err.Error())
+	}
 	testBrowser = rod.New().ControlURL(u).MustConnect()
-	defer testBrowser.MustClose()
 
 	opener = &BrowserPageOpener{Browser: testBrowser}
 
-	os.Exit(m.Run())
+	// os.Exit skips defers, so stop Chrome and the server explicitly.
+	code := m.Run()
+	stop()
+	testServer.Close()
+	os.Exit(code)
 }
 
 func openPage(t *testing.T, targetURL string) *rod.Page {

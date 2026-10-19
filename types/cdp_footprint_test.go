@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/agenthands/rod-cli/internal/testchrome"
 	"github.com/go-rod/rod/lib/launcher"
 )
 
@@ -44,7 +45,7 @@ func cdpFixtureServer(t *testing.T) *httptest.Server {
 // matching newBrowserContext's discipline.
 func newCDPContext(t *testing.T, cfg Config) *Context {
 	t.Helper()
-	u, err := launcher.New().Headless(true).Launch()
+	u, stop, err := testchrome.Launch(launcher.New().Headless(true))
 	if err != nil {
 		// A browserless lane skips (matching newBrowserContext discipline) — but a
 		// gate that silently skips has verified nothing. A gating CI lane should set
@@ -54,6 +55,7 @@ func newCDPContext(t *testing.T, cfg Config) *Context {
 		}
 		t.Skipf("cannot launch browser (skipping CDP-footprint test): %v", err)
 	}
+	t.Cleanup(stop)
 	cfg.CDPEndpoint = u
 	if cfg.Mode == "" {
 		cfg.Mode = Text
