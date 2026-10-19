@@ -36,7 +36,7 @@ Status marks, in the heading `### Tnn [s] title`:
 - **Full suite** (checkpoint tasks run it):
 
 ```bash
-cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && go vet ./... && go test ./... -count=1 && export ROD_CLI_PATH="$PWD/rod-cli" && ./rod-cli close; (cd extensions/core && npx vitest run && npx tsc --noEmit) && (cd extensions/pi && npx vitest run && npx tsc --noEmit) && (cd extensions/omp && /home/john/bin/bun test && npx tsc --noEmit)
+cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && go vet ./... && go test ./... -count=1 && export ROD_CLI_PATH="$PWD/rod-cli" && { ./rod-cli close || true; } && (cd extensions/core && npx vitest run && npx tsc --noEmit) && (cd extensions/pi && npx vitest run && npx tsc --noEmit) && (cd extensions/omp && /home/john/bin/bun test && npx tsc --noEmit)
 ```
 
 - **Expected test failures.** None. This plan removes the old Baseline flakes; any failure belongs to the task that caused it.

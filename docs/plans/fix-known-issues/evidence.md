@@ -80,3 +80,5 @@ verify: T09 — pass — done-check: `--- SKIP: TestLiveTyping_DuckDuckGo (20.62
 
 ## T10
 verify: T10 — pass — replace count `0`; `git check-ignore go.work` → `go.work`; `go build -o rod-cli .` + `GOWORK=off go build ./...` ok; clean clone `GOWORK=off go build -buildvcs=false ./...` → CLONE_BUILD_OK (godoll v0.0.0-20261019070714-939b13e6d02f from GitHub)
+
+note(T11): first T11 run blocked on godoll govulncheck (33 vulns: go1.26.0 stdlib, x/net v0.49.0). Fixed in godoll 1b4884d (toolchain go1.26.9, x/net v0.60.0); govulncheck clean in both repos. Full suite command fixed so go test failures fail the chain.
