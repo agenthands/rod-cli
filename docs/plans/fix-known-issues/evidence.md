@@ -53,3 +53,6 @@ verify: T02b — pass — types/daemon/godoll browser ok; profiles before=0/0 af
 tdd: TestPopupPreparedBeforeFirstScript — red: actions_full_test.go:1371: TabSelect output = "Selected tab 0 AD206FD5 Probe (http://127.0.0.1:46167/probe); adopted, stealth applies from next navigation (reload to apply)", popup of a prepared page must not be adopted — green: go test ./actions/ -run TestPopupPreparedBeforeFirstScript -count=1 passed
 tdd: TestTabNewNotLeftPaused — red (resume call disabled, since the resume was already wired in cycle 1): actions_full_test.go:1421: new tab still paused: TabNew + Evaluate did not return within 5s — green: go test ./actions/ -run TestTabNewNotLeftPaused -count=1 passed
 verify: T04 — pass — go build ok; go test ./types/ ./actions/ ok (22s, 330s); go test ./tests/ -run TestTabsAndViewCommands|TestSmokeAntigravity ok; grep -c ponytail types/context.go 2→1; no leftover daemons
+
+## T05
+tdd: TestMouseWheelScrollsIframeUnderPointer — red: mousewheel_test.go:136: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelScrollsIframeUnderPointer -count=1 passed

@@ -676,18 +676,26 @@ func saveArtifact(out, dir, name, ext string, data []byte) (string, error) {
 // scrollBox is one scroll container's position, limits and viewport size.
 type scrollBox struct{ X, Y, MaxX, MaxY, VW, VH float64 }
 
-// measureScrollBoxes returns el's scrollable ancestors, innermost first,
-// always ending with document.scrollingElement.
+// measureScrollBoxes returns el's scrollable ancestors, innermost first: each
+// document's boxes end with its scrollingElement, then continue from the
+// frame element that holds it, so the list always ends with the top
+// document.scrollingElement. A cross-origin parent hides frameElement (null),
+// so measuring stops at the frame's own document.
 func measureScrollBoxes(el *rod.Element) ([]scrollBox, error) {
 	res, err := elementEval(el, `function(){
   const box = e => ({X:e.scrollLeft, Y:e.scrollTop, MaxX:e.scrollWidth-e.clientWidth, MaxY:e.scrollHeight-e.clientHeight, VW:e.clientWidth, VH:e.clientHeight});
-  const root = document.scrollingElement, out = [];
-  for (let e = this; e; e = e.parentElement || (e.getRootNode && e.getRootNode().host)) {
-    if (e.nodeType !== 1 || e === root) continue;
-    const s = getComputedStyle(e);
-    if (/auto|scroll|overlay/.test(s.overflowX + s.overflowY) && (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)) out.push(box(e));
+  const out = [];
+  for (let e = this, doc = this.ownerDocument; doc; ) {
+    const root = doc.scrollingElement;
+    for (; e; e = e.parentElement || (e.getRootNode && e.getRootNode().host)) {
+      if (e.nodeType !== 1 || e === root) continue;
+      const s = doc.defaultView.getComputedStyle(e);
+      if (/auto|scroll|overlay/.test(s.overflowX + s.overflowY) && (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)) out.push(box(e));
+    }
+    if (root) out.push(box(root));
+    e = doc.defaultView.frameElement;
+    doc = e && e.ownerDocument;
   }
-  out.push(box(root));
   return out;
 }`)
 	if err != nil {
@@ -699,6 +707,23 @@ func measureScrollBoxes(el *rod.Element) ([]scrollBox, error) {
 	}
 	return boxes, nil
 }
+
+// wheelAnchorJS(x,y) returns the element under top-viewport point x,y. While
+// that element is a frame whose document is readable (same origin), it
+// descends into the frame's document at the same point. A cross-origin frame
+// cannot be read from the parent, so the frame element itself is the anchor.
+const wheelAnchorJS = `(x,y)=>{
+  let e = document.elementFromPoint(x,y) || document.scrollingElement;
+  while (e && (e.tagName === 'IFRAME' || e.tagName === 'FRAME')) {
+    let d = null;
+    try { d = e.contentDocument } catch (_) {}
+    if (!d) break;
+    const r = e.getBoundingClientRect();
+    x -= r.left + e.clientLeft; y -= r.top + e.clientTop;
+    e = d.elementFromPoint(x,y) || d.scrollingElement;
+  }
+  return e;
+}`
 
 // MouseWheel scrolls with real wheel input and reports what actually moved.
 // dx=dy=0 → one viewport down. ref=="" → page; ref → the ref's nearest
@@ -730,9 +755,7 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 		if err := moveToPoint(page, pt, mouseOpts(ctx.HumanizeTuning())...); err != nil {
 			return "", errors.Wrap(err, "Failed to move pointer")
 		}
-		// ponytail: an iframe under the pointer is measured from the parent
-		// document; recurse into a same-origin contentDocument if that matters.
-		if anchor, err = page.ElementByJS(rod.Eval(`(x,y)=>document.elementFromPoint(x,y)||document.scrollingElement`, pt.X, pt.Y)); err != nil {
+		if anchor, err = page.ElementByJS(rod.Eval(wheelAnchorJS, pt.X, pt.Y)); err != nil {
 			return "", errors.Wrap(err, "Failed to find scroll target")
 		}
 	}

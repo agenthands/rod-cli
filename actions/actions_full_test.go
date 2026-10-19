@@ -64,6 +64,10 @@ func newFixtureServer() *httptest.Server {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<body style="margin:0"><div id="box" style="height:200px;overflow:auto"><div style="height:2000px">in</div></div><div style="height:5000px">tall</div></body>`))
 	})
+	mux.HandleFunc("/scroll-iframe", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<body style="margin:0"><iframe id="f" style="position:fixed;inset:0;width:100%;height:100%;border:0" srcdoc="<body style='margin:0'><div style='height:3000px'>in</div></body>"></iframe></body>`))
+	})
 	mux.HandleFunc("/popup", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(`<html><head><title>Popup</title></head><body><button onclick="window.open('/probe')">Open</button></body></html>`))

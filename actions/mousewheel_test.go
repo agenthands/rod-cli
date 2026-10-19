@@ -122,3 +122,20 @@ func TestMouseWheelEndLive(t *testing.T) {
 		t.Fatalf("MouseWheel = %q, %v", got, err)
 	}
 }
+
+func TestMouseWheelScrollsIframeUnderPointer(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	if _, err := Navigate(ctx, srv.URL+"/scroll-iframe"); err != nil {
+		t.Fatalf("Navigate: %v", err)
+	}
+	got, err := MouseWheel(ctx, 0, 300, "", 0)
+	if err != nil || !regexp.MustCompile(`^scrolled dy=([1-9]\d*) y=\d+/\d+$`).MatchString(got) {
+		t.Fatalf("MouseWheel = %q, %v", got, err)
+	}
+	if v, err := Evaluate(ctx, "document.getElementById('f').contentWindow.scrollY > 0 && window.scrollY === 0", ""); err != nil || v != "true" {
+		t.Fatalf("iframe scrolled = %q, %v", v, err)
+	}
+}
