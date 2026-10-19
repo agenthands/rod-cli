@@ -9,8 +9,8 @@ import (
 )
 
 // lockFile takes an exclusive, blocking lock on path (created if missing) and
-// returns its release func. The lock dies with the process, so a crashed
-// client never leaves it held.
+// returns its release func, which removes the file. The lock dies with the
+// process, so a crashed client never leaves it held.
 func lockFile(path string) (func(), error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -21,5 +21,10 @@ func lockFile(path string) (func(), error) {
 		f.Close()
 		return nil, err
 	}
-	return func() { f.Close() }, nil
+	return func() {
+		f.Close()
+		// Fails while another waiter has the file open, which keeps its lock
+		// valid; the last one out removes it.
+		os.Remove(path)
+	}, nil
 }

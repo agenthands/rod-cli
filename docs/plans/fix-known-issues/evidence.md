@@ -102,3 +102,4 @@ note: godoll live TestBrowserTempFilesStayInProfile with long TMPDIR — red not
 tdd: TestLaunchRemovesDeadTestProfiles — red: undefined: ownerFile — green: go test ./internal/testchrome/ passed
 tdd: TestSweepRemovesStaleProfileTempDir — red: undefined: chromeTmpFile — green: go test ./types/ -run TestSweep passed
 tdd: TestDaemonSIGTERMRemovesProfile + TestDaemonKillProfileSweptOnNextStart (chrome temp dir) — red: profile .../YRAnJbpgiK records no chrome temp dir — green: go test ./daemon/ -run Daemon(SIGTERM|Kill) passed
+tdd: TestLockFileLeavesNoFile — red: lock file .../s.port.lock still exists after release — green: go test ./daemon/ -run TestLockFile -count=3 -race passed (TestLockFileStaysExclusiveAcrossRemoval guards the unlink race; green before and after)
