@@ -149,7 +149,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 3. `TestEnsureDaemonKillsOnTimeout`: temp script `#!/bin/sh\nexec sleep 60`, `daemonStartTimeout = 1 * time.Second`; error returned, and its PID no longer exists.
 **Done when:** `go test ./daemon/ -count=1` prints `ok`, and the Go suite run 3 times in a row, `for i in 1 2 3; do go build -o rod-cli . && go test ./... -count=1 2>&1 | grep -E '^(--- FAIL|FAIL|ok )' | grep -v '^ok'; done`, prints nothing, and afterwards `pgrep -af 'rod-cli.*daemon' | grep -v pgrep` prints nothing.
 
-### T04 [~] Popups get stealth before their first script runs
+### T04 [x] Popups get stealth before their first script runs
 **Why:** `types/context.go:416` ponytail: tabs a page opens itself (`window.open`, `target=_blank`) are prepared only when first selected, so their first document runs without evasions.
 **Seams:** `actions.Click/TabList/TabSelect/Evaluate` (live, `newLiveCtx`); `types/cdp_footprint_test.go` (unchanged rules).
 **Change:**
