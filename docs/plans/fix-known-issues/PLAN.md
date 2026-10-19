@@ -43,7 +43,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 
 ---
 
-### T00 [~] Baseline: record the suite state before any change
+### T00 [x] Baseline: record the suite state before any change
 **Seams:** none (no code).
 **Change:** Run the Full suite command once, and `cd /home/john/go/src/github.com/agenthands/godoll && go vet ./... && go test ./... -count=1 -timeout 15m`. Under `## Baseline` in `docs/plans/fix-known-issues/evidence.md`, write the Go version and every failing test by name with its package and failure line (or `baseline: all green`).
 **Done when:** `grep -c '^## Baseline' docs/plans/fix-known-issues/evidence.md` prints `1`.
