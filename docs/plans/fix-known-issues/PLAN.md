@@ -176,7 +176,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 2. `TestMouseWheelRefIframe`: `MouseWheel(ctx,0,300,"#f",0)` moves the frame's document the same way.
 **Done when:** `go build -o rod-cli . && go test ./actions/ -run 'MouseWheel' -count=1` prints `ok`.
 
-### T06 [ ] `snapshot -i` flattens unnamed wrapper ancestors
+### T06 [~] `snapshot -i` flattens unnamed wrapper ancestors
 **Why:** `types/snapshot.go:288` ponytail: `pruneInteractive` keeps unnamed wrappers (list, listitem, generic, group …), so the interactive view still carries structure the agent cannot act on.
 **Seams:** `types.pruneInteractive` (pure, literal YAML); `actions.Snapshot` (live).
 **Change:**
