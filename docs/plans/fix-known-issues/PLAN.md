@@ -132,7 +132,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 - `find /home/john/go/src/github.com/agenthands/rod-cli /home/john/go/src/github.com/agenthands/godoll -type d -name rod -not -path '*/node_modules/*' -not -path '*/.git/*'` prints nothing.
 - `pgrep -af 'rod-cli.*daemon' | grep -v pgrep` prints nothing.
 
-### T03 [~] Daemon start: no double spawns, no orphans, no load-dependent timeout
+### T03 [x] Daemon start: no double spawns, no orphans, no load-dependent timeout
 
 The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). The bytes are fine (26G free). /tmp/rod/user-data holds 4135 leaked Chrome profiles from go-rod's launcher, about 951k files. 655 of them were created in the last hour by test runs. Every `go build` or `go test` now fails with `mkdir /tmp/go-build...: no space left on device`. The first 3x attempt (`TestCloseBr
 **Why:** under the parallel full suite, `TestStorageCommands` and `TestStartServerWithPpid` fail intermittently and stray `--session default --headless daemon` processes survive. `EnsureDaemon` (`daemon/daemon.go:106-138`) polls 40×250 ms, then gives up without killing the process it spawned, and nothing stops two clients spawning two daemons for one session.

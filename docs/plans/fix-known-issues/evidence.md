@@ -37,6 +37,7 @@ tdd: TestStartServerWithPpid (regression) — red: --- FAIL: TestStartServerWith
 tdd: TestEnsureDaemonConcurrentSpawnsOne — red: daemon_more_test.go:277: want exactly 1 daemon for session concurrent-1792402135692698720, got 4: [3112307 3112308 3112313 3112314] — green: go test ./daemon/ -run TestEnsureDaemonConcurrentSpawnsOne -count=1 passed
 tdd: TestEnsureDaemonFailsFastWhenProcessExits — red: daemon_more_test.go:300: took 10.015105414s, want < 3s; daemon_more_test.go:303: error "failed to start daemon" does not contain "exit status 3" — green: go test ./daemon/ -run TestEnsureDaemonFailsFastWhenProcessExits -count=1 passed
 tdd: TestEnsureDaemonKillsOnTimeout — red: daemon_more_test.go:327: spawned process 3132569 still alive after the timeout error — green: go test ./daemon/ -run TestEnsureDaemonKillsOnTimeout -count=1 passed
+verify: T03 — pass — go test ./daemon/ ok (96.4s); 3x build+go test ./... printed no FAIL lines; no rod-cli daemons left; GOOS=windows build of ./daemon ok
 
 ## T02b
 
