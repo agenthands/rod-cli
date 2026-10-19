@@ -163,7 +163,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 2. `TestTabNewNotLeftPaused`: `TabNew(ctx, srv.URL+"/page2")` then `Evaluate(ctx,"document.title","")` returns the page2 title within 5 s.
 **Done when:** `go build -o rod-cli . && go test ./types/ ./actions/ -count=1 && go test ./tests/ -run 'TestTabsAndViewCommands|TestSmokeAntigravity' -count=1` prints only `ok` lines, and `grep -c ponytail types/context.go` drops by one.
 
-### T05 [ ] mousewheel scrolls a same-origin iframe under the pointer
+### T05 [~] mousewheel scrolls a same-origin iframe under the pointer
 **Why:** `actions/actions.go:733` ponytail: an iframe under the pointer is measured from the parent document, so scrolling inside it reports the wrong box.
 **Seams:** `actions.MouseWheel` (live, new fixture routes).
 **Change:**
