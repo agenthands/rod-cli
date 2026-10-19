@@ -36,3 +36,9 @@ func TestPruneInteractiveKeepsNamedGroup(t *testing.T) {
 		"- group \"Payment\":\n  - generic:\n    - radio \"Card\" [ref=s1e2]\n",
 		"- group \"Payment\":\n  - radio \"Card\" [ref=s1e2]\n")
 }
+
+func TestPruneInteractiveFlattensMultiChildWrapperKeepsSiblings(t *testing.T) {
+	assertPrune(t,
+		"- list:\n  - link \"A\" [ref=s1e1]\n  - link \"B\" [ref=s1e2]\n- button \"C\" [ref=s1e3]\n",
+		"- link \"A\" [ref=s1e1]\n- link \"B\" [ref=s1e2]\n- button \"C\" [ref=s1e3]\n")
+}

@@ -312,7 +312,7 @@ func pruneInteractive(n *yaml.Node) *yaml.Node {
 		}
 		return n
 	case yaml.SequenceNode:
-		kept := n.Content[:0]
+		kept := make([]*yaml.Node, 0, len(n.Content)) // new slice: flattening can grow it past the read cursor
 		for _, c := range n.Content {
 			p := pruneInteractive(c)
 			if p == nil {
