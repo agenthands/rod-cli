@@ -69,3 +69,6 @@ verify: T06 — pass — go test ./types/ -run Prune ok; go test ./actions/ -run
 tdd: TestConsoleReportsDropped — red: console_test.go:82: first lines = ["[log] 100" "[log] 101"]; want ["[dropped 100 older entries]" "[log] 100"] — green: go test ./actions/ -run TestConsoleReportsDropped -count=1 passed
 tdd: TestConsoleClearResetsDropped — red: console_test.go:108: ConsoleLogs after clear = "[dropped 100 older entries]\n[log] x"; want "[log] x" (observed with the reset line removed; the reset itself landed in cycle 1) — green: go test ./actions/ -run TestConsoleClearResetsDropped -count=1 passed
 verify: T07 — pass — `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1`: ok types (no tests to run), ok actions 13.4s; TestConsoleReportsDropped/TestConsoleClearResetsDropped PASS; no leftover daemons
+
+## T08
+tdd: TestTypeWithLogic_ReturnsTypoKeyErrors — red: internal_coverage_test.go:195: k=1 iteration 0: call 1 failed but err=<nil> (typed "hello world") — green: cd /home/john/go/src/github.com/agenthands/godoll && go test ./humanize/ -run TestTypeWithLogic_ReturnsTypoKeyErrors -count=1 passed
