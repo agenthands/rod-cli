@@ -34,7 +34,7 @@ rod-cli tab-list
 ```bash
 rod-cli tab-select 9D04E7AA
 ```
-A tab rod-cli did not open itself (a popup or `target="_blank"` link) is prepared on first select and the output says `adopted, stealth applies from next navigation (reload to apply)`: its already-loaded document runs without stealth evasions until you `reload` or navigate.
+Popups and `target="_blank"` tabs get stealth before their first script runs, like tabs from `tab-new`. Only a tab that was already open when rod-cli attached (`--cdp-endpoint`) is prepared on first select, and the output says `adopted, stealth applies from next navigation (reload to apply)`: its already-loaded document runs without stealth evasions until you `reload` or navigate.
 
 ## Closing Tabs
 To clean up tabs you no longer need:
