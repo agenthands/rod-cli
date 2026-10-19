@@ -93,7 +93,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 - `head -5 skills/rod-cli/SKILL.md | grep -c '^version:'` prints `1`;
 - every flag named in SKILL.md Global Options appears in `go build -o rod-cli . && ./rod-cli --help` (check each).
 
-### T03 [ ] Daemon start: no double spawns, no orphans, no load-dependent timeout
+### T03 [~] Daemon start: no double spawns, no orphans, no load-dependent timeout
 **Why:** under the parallel full suite, `TestStorageCommands` and `TestStartServerWithPpid` fail intermittently and stray `--session default --headless daemon` processes survive. `EnsureDaemon` (`daemon/daemon.go:106-138`) polls 40×250 ms, then gives up without killing the process it spawned, and nothing stops two clients spawning two daemons for one session.
 **Seams:** `daemon.EnsureDaemon` and `daemon.StartServer` (in-process, `daemon/daemon_more_test.go` style); CLI `./tests/` `runCli`.
 **Change:**
