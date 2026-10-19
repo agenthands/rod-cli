@@ -90,3 +90,24 @@ func TestDaemonSIGTERMRemovesProfile(t *testing.T) {
 		t.Fatalf("profile %s survived SIGTERM (stat err %v)", dirs[0], err)
 	}
 }
+
+func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
+	bin := buildProfileTestBin(t)
+	_, pid, root := spawnProfileDaemon(t, bin, "killed")
+	dirs := profileDirs(t, root)
+	if len(dirs) != 1 {
+		t.Fatalf("want 1 profile dir under %s, got %v", root, dirs)
+	}
+	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
+	waitExit(t, pid)
+	if _, err := os.Stat(dirs[0]); err != nil {
+		t.Fatalf("SIGKILL cannot clean up, yet profile %s is gone: %v", dirs[0], err)
+	}
+
+	spawnProfileDaemon(t, bin, "next")
+	if _, err := os.Stat(dirs[0]); !os.IsNotExist(err) {
+		t.Fatalf("dead daemon's profile %s not swept by the next start (stat err %v)", dirs[0], err)
+	}
+}
