@@ -5,7 +5,7 @@ go 1.26.1
 toolchain go1.26.9
 
 require (
-	github.com/agenthands/godoll v0.0.0-20260314193512-b7f2b1da0553
+	github.com/agenthands/godoll v0.0.0-20261019070714-939b13e6d02f
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.1
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
@@ -45,5 +45,3 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/text v0.39.0 // indirect
 )
-
-replace github.com/agenthands/godoll => ../godoll

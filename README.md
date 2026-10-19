@@ -40,3 +40,9 @@ rod-cli offers three integration paths. All use the same `rod-cli` binary undern
 | **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
 
 See the per-package READMEs for full details: [Pi Extension](extensions/pi/README.md), [OMP Extension](extensions/omp/README.md), [Agent Skill](skills/rod-cli/SKILL.md).
+
+## Development
+
+Build with `go build -o rod-cli .`; godoll is fetched from GitHub like any other module.
+
+To build against a local godoll checkout, run: go work init . ../godoll
