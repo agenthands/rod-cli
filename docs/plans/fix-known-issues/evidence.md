@@ -77,3 +77,6 @@ verify: T08 — pass — `go vet ./humanize/ && go test ./humanize/ -count=1` in
 ## T09
 tdd: live typing never hangs — red: panic: test timed out after 2m0s — green: cd /home/john/go/src/github.com/agenthands/godoll && go test ./examples/typing/ -count=1 -timeout 120s passed (Google PASS; DuckDuckGo SKIP: site serves "Application error: a client-side exception has occurred", input[name="q"] absent)
 verify: T09 — pass — done-check: `--- SKIP: TestLiveTyping_DuckDuckGo (20.62s)` (input[name="q"] absent within 20s), `--- PASS: TestLiveTyping_Google (2.74s)`, `ok github.com/agenthands/godoll/examples/typing 23.365s`; no FAIL
+
+## T10
+verify: T10 — pass — replace count `0`; `git check-ignore go.work` → `go.work`; `go build -o rod-cli .` + `GOWORK=off go build ./...` ok; clean clone `GOWORK=off go build -buildvcs=false ./...` → CLONE_BUILD_OK (godoll v0.0.0-20261019070714-939b13e6d02f from GitHub)
