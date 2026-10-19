@@ -129,21 +129,33 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 	}
 	// 0600: the daemon log may capture proxy/CONNECT diagnostics from the godoll
 	// relay — keep it owner-only, never world-readable.
-	logFile, _ := os.OpenFile(filepath.Join(os.TempDir(), "rod-cli-daemon.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	logPath := filepath.Join(os.TempDir(), "rod-cli-daemon.log")
+	logFile, _ := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	for i := 0; i < 40; i++ {
-		time.Sleep(250 * time.Millisecond)
-		_, err := ClientExecute(session, Request{Command: "ping"})
-		if err == nil {
-			return nil
+	// Wait on the process itself: ready when it answers ping, failed at once
+	// when it exits.
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	deadline := time.After(10 * time.Second)
+	tick := time.NewTicker(100 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case err := <-exited:
+			return fmt.Errorf("daemon exited before it was ready (%v); see %s", err, logPath)
+		case <-deadline:
+			return fmt.Errorf("failed to start daemon")
+		case <-tick.C:
+			if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
+				return nil
+			}
 		}
 	}
-	return fmt.Errorf("failed to start daemon")
 }
 
 func StartServer(session string, ppid int, rodCtx *types.Context) error {

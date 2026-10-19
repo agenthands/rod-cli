@@ -279,6 +279,31 @@ func TestEnsureDaemonConcurrentSpawnsOne(t *testing.T) {
 	_, _ = ClientExecute(session, Request{Command: "close"})
 }
 
+// writeScript writes an executable shell script to a temp dir and returns its path.
+func writeScript(t *testing.T, body string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "fake-rod-cli")
+	if err := os.WriteFile(p, []byte("#!/bin/sh\n"+body+"\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestEnsureDaemonFailsFastWhenProcessExits(t *testing.T) {
+	exe := writeScript(t, "exit 3")
+	start := time.Now()
+	err := EnsureDaemon(uniqueSession("exits"), exe, nil, nil)
+	if err == nil {
+		t.Fatal("expected an error when the spawned process exits")
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Errorf("took %s, want < 3s", d)
+	}
+	if !strings.Contains(err.Error(), "exit status 3") {
+		t.Errorf("error %q does not contain %q", err, "exit status 3")
+	}
+}
+
 func TestExecuteActionUnknownCommand(t *testing.T) {
 	ctx := types.NewContext(context.Background(), types.Config{})
 	_, err := executeAction(ctx, Request{Command: "this-does-not-exist"})
