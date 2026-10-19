@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -282,10 +283,23 @@ func isInteractive(v string) bool {
 	return false
 }
 
+var landmarkRoles = strings.Fields("main navigation form dialog alertdialog banner contentinfo region complementary search heading")
+
+// isUnnamedWrapper reports whether an aria-snapshot key is a structural
+// wrapper the agent cannot act on: no quoted name, no ref, not a landmark or heading.
+func isUnnamedWrapper(k string) bool {
+	if strings.Contains(k, `"`) || strings.Contains(k, "[ref=") {
+		return false
+	}
+	role, _, _ := strings.Cut(k, " ")
+	return !slices.Contains(landmarkRoles, role)
+}
+
 // pruneInteractive keeps interactive nodes and their ancestors, dropping
 // everything else (including a control's non-interactive children). Returns nil when nothing under n is kept (a document
-// node is returned with an empty sequence instead).
-// ponytail: keeps unnamed wrapper ancestors; flatten them if output is still too large
+// node is returned with an empty sequence instead). A kept ancestor with no
+// name, no ref and a non-landmark, non-heading role is replaced by its kept
+// children, recursively.
 func pruneInteractive(n *yaml.Node) *yaml.Node {
 	switch n.Kind {
 	case yaml.DocumentNode:
@@ -300,9 +314,15 @@ func pruneInteractive(n *yaml.Node) *yaml.Node {
 	case yaml.SequenceNode:
 		kept := n.Content[:0]
 		for _, c := range n.Content {
-			if p := pruneInteractive(c); p != nil {
-				kept = append(kept, p)
+			p := pruneInteractive(c)
+			if p == nil {
+				continue
 			}
+			if p.Kind == yaml.MappingNode && len(p.Content) == 2 && p.Content[1].Kind == yaml.SequenceNode && isUnnamedWrapper(p.Content[0].Value) {
+				kept = append(kept, p.Content[1].Content...)
+				continue
+			}
+			kept = append(kept, p)
 		}
 		n.Content = kept
 	case yaml.MappingNode:

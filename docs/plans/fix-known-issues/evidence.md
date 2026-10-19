@@ -58,3 +58,6 @@ verify: T04 — pass — go build ok; go test ./types/ ./actions/ ok (22s, 330s)
 tdd: TestMouseWheelScrollsIframeUnderPointer — red: mousewheel_test.go:136: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelScrollsIframeUnderPointer -count=1 passed
 tdd: TestMouseWheelRefIframe — red: mousewheel_test.go:153: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelRefIframe -count=1 passed
 verify: T05 — pass — go build + go test ./actions/ -run MouseWheel -count=1: ok github.com/agenthands/rod-cli/actions 36.667s; no leftover daemons, tree clean
+
+## T06
+tdd: TestPruneInteractiveFlattensUnnamedWrappers (updated from TestPruneInteractiveKeepsControlsAndAncestors) — red: prune_test.go:29: got: - main: - list: - listitem: - link "Docs" [ref=s1e4] want: - main: - link "Docs" [ref=s1e4] — green: go test ./types/ -run TestPruneInteractiveFlattensUnnamedWrappers -count=1 passed

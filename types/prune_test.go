@@ -6,9 +6,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestPruneInteractiveKeepsControlsAndAncestors(t *testing.T) {
-	in := "- main:\n  - paragraph: hello\n  - list:\n    - listitem:\n      - link \"Docs\" [ref=s1e4]\n- contentinfo: footer text"
-	want := "- main:\n  - list:\n    - listitem:\n      - link \"Docs\" [ref=s1e4]\n"
+func assertPrune(t *testing.T, in, want string) {
+	t.Helper()
 	var n, w yaml.Node
 	if err := yaml.Unmarshal([]byte(in), &n); err != nil {
 		t.Fatal(err)
@@ -22,4 +21,12 @@ func TestPruneInteractiveKeepsControlsAndAncestors(t *testing.T) {
 	if string(got) != string(exp) {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, exp)
 	}
+}
+
+// Formerly TestPruneInteractiveKeepsControlsAndAncestors: unnamed list/listitem
+// wrappers are now flattened; the main landmark stays.
+func TestPruneInteractiveFlattensUnnamedWrappers(t *testing.T) {
+	assertPrune(t,
+		"- main:\n  - paragraph: hello\n  - list:\n    - listitem:\n      - link \"Docs\" [ref=s1e4]\n- contentinfo: footer text",
+		"- main:\n  - link \"Docs\" [ref=s1e4]\n")
 }
