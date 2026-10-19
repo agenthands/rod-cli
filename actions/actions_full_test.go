@@ -1390,6 +1390,38 @@ func TestPopupPreparedBeforeFirstScript(t *testing.T) {
 	}
 }
 
+func TestTabNewNotLeftPaused(t *testing.T) {
+	ctx, cleanup := newLiveCtx(t)
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+
+	type result struct {
+		out string
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		if _, err := TabNew(ctx, srv.URL+"/page2"); err != nil {
+			done <- result{err: err}
+			return
+		}
+		out, err := Evaluate(ctx, "document.title", "")
+		done <- result{out, err}
+	}()
+	select {
+	case r := <-done:
+		if r.err != nil {
+			t.Fatalf("TabNew/Evaluate: %v", r.err)
+		}
+		if !strings.Contains(r.out, "Page 2") {
+			t.Fatalf("document.title = %q, want Page 2", r.out)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("new tab still paused: TabNew + Evaluate did not return within 5s")
+	}
+}
+
 func TestRoutesFollowTabSwitch(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()
