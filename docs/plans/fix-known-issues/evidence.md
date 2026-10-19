@@ -37,3 +37,7 @@ tdd: TestStartServerWithPpid (regression) — red: --- FAIL: TestStartServerWith
 tdd: TestEnsureDaemonConcurrentSpawnsOne — red: daemon_more_test.go:277: want exactly 1 daemon for session concurrent-1792402135692698720, got 4: [3112307 3112308 3112313 3112314] — green: go test ./daemon/ -run TestEnsureDaemonConcurrentSpawnsOne -count=1 passed
 tdd: TestEnsureDaemonFailsFastWhenProcessExits — red: daemon_more_test.go:300: took 10.015105414s, want < 3s; daemon_more_test.go:303: error "failed to start daemon" does not contain "exit status 3" — green: go test ./daemon/ -run TestEnsureDaemonFailsFastWhenProcessExits -count=1 passed
 tdd: TestEnsureDaemonKillsOnTimeout — red: daemon_more_test.go:327: spawned process 3132569 still alive after the timeout error — green: go test ./daemon/ -run TestEnsureDaemonKillsOnTimeout -count=1 passed
+
+## T02b
+
+tdd: TestDefaultProfileRootIsUserCache — red: types/profile_root_test.go:10:9: undefined: DefaultProfileRoot — green: go test ./types/ -run TestDefaultProfileRootIsUserCache -count=1 passed
