@@ -105,3 +105,6 @@ tdd: TestDaemonSIGTERMRemovesProfile + TestDaemonKillProfileSweptOnNextStart (ch
 tdd: TestLockFileLeavesNoFile — red: lock file .../s.port.lock still exists after release — green: go test ./daemon/ -run TestLockFile -count=3 -race passed (TestLockFileStaysExclusiveAcrossRemoval guards the unlink race; green before and after)
 tdd: TestTryLockFileSkipsAHeldLock — red: undefined: tryLockFile — green: go test ./daemon/ -run TestTryLockFile -race passed
 tdd: TestDaemonKillProfileSweptOnNextStart (port file) — red: /tmp/rod-cli-killed-1792426004983348912.port survived the next start's sweep — green: go test ./daemon/ -run TestDaemonKill passed
+tdd: godoll TestLaunchLeavesNothingInCallerTMPDIR — red: launch left [.org.chromium.Chromium.2qxUdC .org.chromium.Chromium.puyHIO] (go-rod Validate --dump-dom run, found with strace) — green: go test ./browser/ passed; launches 9s -> 0.2s
+tdd: TestOpenDaemonLogStartsOverPastTheCap — red: undefined: daemonLogCap — green: go test ./daemon/ -run TestOpenDaemonLog passed (EnsureDaemon also closes its copy of the log fd)
+scan (private TMPDIR per package, both repos): only rod-cli-daemon.log (now capped) and the user's own browsers' scoped_dir notification icons in /tmp (TMPDIR unset on pids 5538/749167; 2 per hour since 14:00)

@@ -104,6 +104,19 @@ func ListSessions() ([]string, error) {
 	return active, nil
 }
 
+// daemonLogCap bounds the shared daemon log, which lives in TMPDIR (often RAM).
+const daemonLogCap = 1 << 20
+
+// openDaemonLog opens the shared daemon log for appending, starting it over
+// once it has grown past daemonLogCap.
+func openDaemonLog(path string) (*os.File, error) {
+	flags := os.O_CREATE | os.O_WRONLY | os.O_APPEND
+	if fi, err := os.Stat(path); err == nil && fi.Size() > daemonLogCap {
+		flags |= os.O_TRUNC
+	}
+	return os.OpenFile(path, flags, 0600)
+}
+
 // EnsureDaemon spawns the per-session daemon if it is not already running.
 // Non-secret config is forwarded as CLI flags (visible in the daemon argv);
 // secrets MUST be passed via extraEnv ("KEY=value" entries) instead, since argv
@@ -135,9 +148,12 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 	// 0600: the daemon log may capture proxy/CONNECT diagnostics from the godoll
 	// relay — keep it owner-only, never world-readable.
 	logPath := filepath.Join(os.TempDir(), "rod-cli-daemon.log")
-	logFile, _ := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
+	if logFile, err := openDaemonLog(logPath); err == nil {
+		// The daemon gets its own copy of the fd at Start.
+		defer logFile.Close()
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
