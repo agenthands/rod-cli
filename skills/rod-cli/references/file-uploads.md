@@ -9,8 +9,8 @@ For a standard `<input type="file">`, you can use the `upload` command. You must
 # Upload a single file
 rod-cli upload s1e22 "/tmp/resume.pdf"
 
-# Upload multiple files (if the input supports it, separate with commas)
-rod-cli upload s1e22 "/tmp/image1.png,/tmp/image2.png"
+# Upload multiple files (input must have `multiple`): pass each path as its own argument
+rod-cli upload s1e22 "/tmp/image1.png" "/tmp/image2.png"
 ```
 
 ## Drag and Drop Interfaces

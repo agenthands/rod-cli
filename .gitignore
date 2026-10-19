@@ -67,3 +67,6 @@ tests/log/
 
 # SMTC static analysis cache
 .smtc-cache/
+
+# code-improver plugin run artifacts
+.code-improver/
