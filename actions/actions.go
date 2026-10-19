@@ -708,12 +708,19 @@ func measureScrollBoxes(el *rod.Element) ([]scrollBox, error) {
 	return boxes, nil
 }
 
-// wheelAnchorJS(x,y) returns the element under top-viewport point x,y. While
-// that element is a frame whose document is readable (same origin), it
-// descends into the frame's document at the same point. A cross-origin frame
-// cannot be read from the parent, so the frame element itself is the anchor.
-const wheelAnchorJS = `(x,y)=>{
-  let e = document.elementFromPoint(x,y) || document.scrollingElement;
+// wheelAnchorJS(x,y) starts at this (a ref element) or else at the element
+// under top-viewport point x,y. While that element is a frame whose document
+// is readable (same origin), it descends into the frame's document at the
+// same point. A cross-origin frame cannot be read from the parent, so the
+// frame element itself is the anchor.
+const wheelAnchorJS = `function(x,y){
+  let e = this && this.nodeType === 1 ? this : null;
+  if (e) { // a ref may live in a frame: move x,y into its document
+    for (let f = e.ownerDocument.defaultView.frameElement; f; f = f.ownerDocument.defaultView.frameElement) {
+      const r = f.getBoundingClientRect();
+      x -= r.left + f.clientLeft; y -= r.top + f.clientTop;
+    }
+  } else e = document.elementFromPoint(x,y) || document.scrollingElement;
   while (e && (e.tagName === 'IFRAME' || e.tagName === 'FRAME')) {
     let d = null;
     try { d = e.contentDocument } catch (_) {}
@@ -744,6 +751,10 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 		// MoveTo scrolls the element into view and lands inside it.
 		if err := humanize.MoveTo(page, anchor, mouseOpts(ctx.HumanizeTuning())...); err != nil {
 			return "", errors.Wrap(err, "Failed to move pointer")
+		}
+		pt := humanize.GetMousePos(page)
+		if anchor, err = anchor.ElementByJS(rod.Eval(wheelAnchorJS, pt.X, pt.Y)); err != nil {
+			return "", errors.Wrap(err, "Failed to find scroll target")
 		}
 	} else {
 		m, err := proto.PageGetLayoutMetrics{}.Call(page)

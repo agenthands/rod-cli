@@ -56,3 +56,4 @@ verify: T04 — pass — go build ok; go test ./types/ ./actions/ ok (22s, 330s)
 
 ## T05
 tdd: TestMouseWheelScrollsIframeUnderPointer — red: mousewheel_test.go:136: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelScrollsIframeUnderPointer -count=1 passed
+tdd: TestMouseWheelRefIframe — red: mousewheel_test.go:153: MouseWheel = "scrolled dy=0 y=0/0 end", <nil> — green: go test ./actions/ -run TestMouseWheelRefIframe -count=1 passed
