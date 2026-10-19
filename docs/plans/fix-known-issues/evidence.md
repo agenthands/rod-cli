@@ -41,3 +41,4 @@ tdd: TestEnsureDaemonKillsOnTimeout — red: daemon_more_test.go:327: spawned pr
 ## T02b
 
 tdd: TestDefaultProfileRootIsUserCache — red: types/profile_root_test.go:10:9: undefined: DefaultProfileRoot — green: go test ./types/ -run TestDefaultProfileRootIsUserCache -count=1 passed
+tdd: TestSweepRemovesDeadOwnerProfiles — red: types/profile_root_test.go:59:2: undefined: SweepStaleProfiles — green: go test ./types/ -run TestSweepRemovesDeadOwnerProfiles -count=1 passed
