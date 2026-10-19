@@ -232,7 +232,14 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 - `go build -o rod-cli . && GOWORK=off go build ./...` both succeed;
 - a clean clone builds: `rm -rf /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && git clone -q --branch fix/known-issues /home/john/go/src/github.com/agenthands/rod-cli /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && cd /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && GOWORK=off go build -buildvcs=false ./... && echo CLONE_BUILD_OK` prints `CLONE_BUILD_OK`.
 
-### T11 [~] Final: retest everything three times, zero failures
+### T11 [!] Final: retest everything three times, zero failures
+Blocked: T11 is not done. Nothing was verified, because I was made to return before the first of the three full-suite runs had finished.
+
+What I did:
+- Read the PLAN T11 section and the Conventions. Seams says none, so this task changes no code.
+- The working tree was clean. There were no partial wip(T11) changes. HEAD is e95eacd (plan unblocked after the godoll vuln fix; godoll is at 1b4884d).
+- Recorded the profile counts before step 1 (tmp=0 cache=0) in /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/counts.txt.
+- Started the Full suit
 **Seams:** none (no code).
 **Change:** run, in order:
 1. The Full suite command three times in a row. Each run must exit 0 with no failing test.
