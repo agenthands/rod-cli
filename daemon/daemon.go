@@ -29,6 +29,10 @@ import (
 // check instead of waiting out a real 60s.
 var execAcquireTimeout = 60 * time.Second
 
+// daemonStartTimeout bounds how long EnsureDaemon waits for a live spawned
+// daemon to answer ping before killing it. A var so tests can shrink it.
+var daemonStartTimeout = 30 * time.Second
+
 // exitDaemon terminates the daemon process. If the binary was built with
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
 // accumulated coverage counters first, since os.Exit otherwise skips the
@@ -141,7 +145,7 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 	// when it exits.
 	exited := make(chan error, 1)
 	go func() { exited <- cmd.Wait() }()
-	deadline := time.After(10 * time.Second)
+	deadline := time.After(daemonStartTimeout)
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -149,7 +153,10 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 		case err := <-exited:
 			return fmt.Errorf("daemon exited before it was ready (%v); see %s", err, logPath)
 		case <-deadline:
-			return fmt.Errorf("failed to start daemon")
+			// Never leave an unreachable daemon behind.
+			_ = cmd.Process.Kill()
+			<-exited
+			return fmt.Errorf("daemon did not answer ping within %s; killed it; see %s", daemonStartTimeout, logPath)
 		case <-tick.C:
 			if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
 				return nil

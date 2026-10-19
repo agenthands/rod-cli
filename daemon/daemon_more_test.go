@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -301,6 +302,29 @@ func TestEnsureDaemonFailsFastWhenProcessExits(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "exit status 3") {
 		t.Errorf("error %q does not contain %q", err, "exit status 3")
+	}
+}
+
+func TestEnsureDaemonKillsOnTimeout(t *testing.T) {
+	old := daemonStartTimeout
+	daemonStartTimeout = 1 * time.Second
+	defer func() { daemonStartTimeout = old }()
+
+	pidFile := filepath.Join(t.TempDir(), "pid")
+	exe := writeScript(t, "echo $$ > "+pidFile+"\nexec sleep 60")
+	if err := EnsureDaemon(uniqueSession("hangs"), exe, nil, nil); err == nil {
+		t.Fatal("expected a timeout error")
+	}
+	raw, err := os.ReadFile(pidFile)
+	if err != nil {
+		t.Fatalf("script never wrote its pid: %v", err)
+	}
+	var pid int
+	fmt.Sscan(string(raw), &pid)
+	proc, _ := os.FindProcess(pid)
+	if err := proc.Signal(syscall.Signal(0)); err == nil {
+		proc.Kill()
+		t.Errorf("spawned process %d still alive after the timeout error", pid)
 	}
 }
 
