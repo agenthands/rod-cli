@@ -60,7 +60,7 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 2. `TestCookieGetCLIByName` (`./tests/`): `cookie-set k1 v1`, `cookie-set k2 v2`, then `--raw cookie-get k2` contains `v2` and not `v1`.
 **Done when:** `go build -o rod-cli . && go test ./actions/ -run 'Cookie' -count=1 && go test ./tests/ -run 'TestCookieGetCLIByName|TestStorageCommands' -count=1` prints only `ok` lines.
 
-### T02 [~] Skill docs: fix all 25 open review findings
+### T02 [x] Skill docs: fix all 25 open review findings
 **Why:** the skill-improver ledger (`.code-improver/rod-cli/ledger.json`, every finding with `"status": "open"`) lists 11 minor and 14 info findings.
 **Seams:** none (docs only).
 **Change:** in `skills/rod-cli/` only:

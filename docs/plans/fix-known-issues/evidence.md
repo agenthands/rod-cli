@@ -24,3 +24,7 @@ verify: T00 — pass — `grep -c '^## Baseline'` prints 1; no code changed (dif
 tdd: TestGetCookiesByName — red: actions/actions_full_test.go:882:31: too many arguments in call to GetCookies — green: go test ./actions/ -run TestGetCookiesByName -count=1 passed
 tdd: TestCookieGetCLIByName — red: cli_test.go:73: cookie-get k2 returned: "Cookies:\n- testcookie: 123 (domain: 127.0.0.1)\n- k1: v1 (domain: 127.0.0.1)\n- k2: v2 (domain: 127.0.0.1)\n\n" — green: go test ./tests/ -run TestCookieGetCLIByName -count=1 passed
 verify: T01 — pass — done-check printed only `ok actions` and `ok tests` (TestGetCookiesByName, TestCookies, TestErrPaths_Cookies, TestCookieGetCLIByName, TestStorageCommands); diff limited to actions.go/cmd.go/daemon.go + tests; no leftover daemons
+
+## T02
+
+verify: T02 — pass — captchas grep 0; no ../../ links; stealth-check [url] 1, state-save 2, this.style 0; version: line 1 (v1.7 = git describe); all 13 Global Options flags found in ./rod-cli --help; docs-only diff limited to skills/rod-cli/ (SKILL.md + 7 references), help/usage text matches the CLI
