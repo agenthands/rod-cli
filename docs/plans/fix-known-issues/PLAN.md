@@ -219,7 +219,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 1. `live typing never hangs`: red is `cd /home/john/go/src/github.com/agenthands/godoll && go test ./examples/typing/ -count=1 -timeout 120s` today (it fails with `panic: test timed out`). Green: the same command prints `ok` (tests pass or skip with a reason).
 **Done when:** `cd /home/john/go/src/github.com/agenthands/godoll && go test ./examples/typing/ -count=1 -timeout 120s -v 2>&1 | grep -E '^(--- (PASS|SKIP|FAIL)|ok|FAIL)'` shows no FAIL line and ends with `ok`.
 
-### T10 [ ] Build from GitHub without the godoll sibling
+### T10 [~] Build from GitHub without the godoll sibling
 **Why:** `go.mod:49` `replace github.com/agenthands/godoll => ../godoll` makes a clean clone of rod-cli fail to build unless godoll sits next to it.
 **Seams:** none (module wiring and docs; no Go code changes).
 **Change:**
