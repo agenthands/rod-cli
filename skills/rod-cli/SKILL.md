@@ -14,7 +14,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
    - The first command implicitly boots a persistent browser in the background.
    - **Zombie Prevention**: The daemon polls the calling agent process's PPID; if the agent crashes, the browser dies with it. A 15-minute idle timeout is also enforced.
    - **Always** run `rod-cli close` when finished to clean up resources.
-   - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (on disk, never `/tmp` or the working directory; `browserTempDir` in `rod-cli.yaml` overrides the location). `close`, the idle timeout, parent exit and SIGINT/SIGTERM/SIGHUP remove it; a profile left by a killed or crashed daemon is removed when the next daemon starts.
+   - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (on disk, never `/tmp` or the working directory; `browserTempDir` in `rod-cli.yaml` overrides the location). Chrome's temp files go to a per-session `chrome-*` dir in the temp dir. `close`, the idle timeout, parent exit and SIGINT/SIGTERM/SIGHUP remove both; a profile left by a killed or crashed daemon is removed when the next daemon starts.
 
 2. **Named Sessions**:
    - For multi-target workflows (e.g., logging in as two distinct users simultaneously), use the global `--session` or `-s` flag to multiplex daemons.
