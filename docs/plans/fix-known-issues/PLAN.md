@@ -232,7 +232,8 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 - `go build -o rod-cli . && GOWORK=off go build ./...` both succeed;
 - a clean clone builds: `rm -rf /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && git clone -q --branch fix/known-issues /home/john/go/src/github.com/agenthands/rod-cli /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && cd /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && GOWORK=off go build -buildvcs=false ./... && echo CLONE_BUILD_OK` prints `CLONE_BUILD_OK`.
 
-### T11 [~] Final: retest everything three times, zero failures
+### T11 [!] Final: retest everything three times, zero failures
+Blocked: Blocked at step 3: govulncheck in /home/john/go/src/github.com/agenthands/godoll does not print 'No vulnerabilities found.' -- the code is affected by 33 vulnerabilities. Cause: godoll/go.mod declares `go 1.25.1` with no toolchain line, so it builds with the local go1.26.0 stdlib (fixed in go1.26.9), and it requires golang.org/x/net v0.49.0 (fixed in v0.60.0). rod-cli is clean because its go.mod already has `toolchain go1.26.9`. Fixing this means changing godoll/go.mod and go.sum (add `toolchain go1.26.9`, then `go get golang.org/x/net@v0.60.0` and `go mod tidy`). That is a code change, and T1
 **Seams:** none (no code).
 **Change:** run, in order:
 1. The Full suite command three times in a row. Each run must exit 0 with no failing test.
