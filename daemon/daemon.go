@@ -105,8 +105,17 @@ func ListSessions() ([]string, error) {
 // is world-readable through /proc/<pid>/cmdline and `ps`. extraEnv is appended
 // to the inherited environment for the spawned daemon only.
 func EnsureDaemon(session string, exePath string, flags []string, extraEnv []string) error {
-	_, err := ClientExecute(session, Request{Command: "ping"})
-	if err == nil {
+	if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
+		return nil
+	}
+	// One spawn per session: concurrent clients serialize on a per-session lock
+	// and re-ping once they hold it, so only the first one spawns.
+	unlock, err := lockFile(portFilePath(session) + ".lock")
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
 		return nil
 	}
 

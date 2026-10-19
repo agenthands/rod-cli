@@ -239,6 +239,46 @@ func TestEnsureDaemonSpawnAndClose(t *testing.T) {
 	}
 }
 
+func TestEnsureDaemonConcurrentSpawnsOne(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping browser/spawn test in short mode")
+	}
+	tmpBin := os.TempDir() + "/rod-cli-daemontest-" + uniqueSession("bin")
+	build := exec.Command("go", "build", "-o", tmpBin, "github.com/agenthands/rod-cli")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build failed: %v\n%s", err, out)
+	}
+	defer os.Remove(tmpBin)
+	defer os.Remove("rod-cli.yaml")
+
+	session := uniqueSession("concurrent")
+	pattern := "--session " + session + " .*daemon"
+	defer exec.Command("pkill", "-f", "--", pattern).Run()
+
+	var wg sync.WaitGroup
+	errs := make([]error, 5)
+	for i := range errs {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			errs[i] = EnsureDaemon(session, tmpBin, []string{"--headless"}, nil)
+		}(i)
+	}
+	wg.Wait()
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("EnsureDaemon #%d: %v", i, err)
+		}
+	}
+
+	out, _ := exec.Command("pgrep", "-f", "--", pattern).Output()
+	pids := strings.Fields(string(out))
+	if len(pids) != 1 {
+		t.Errorf("want exactly 1 daemon for session %s, got %d: %v", session, len(pids), pids)
+	}
+	_, _ = ClientExecute(session, Request{Command: "close"})
+}
+
 func TestExecuteActionUnknownCommand(t *testing.T) {
 	ctx := types.NewContext(context.Background(), types.Config{})
 	_, err := executeAction(ctx, Request{Command: "this-does-not-exist"})
