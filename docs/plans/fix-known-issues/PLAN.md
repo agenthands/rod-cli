@@ -208,7 +208,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 1. `TestTypeWithLogic_ReturnsTypoKeyErrors`: `sleep` stubbed to a no-op; TypoRate 1.0; for k in 1..15 and 50 iterations each, `typeFn`/`backspaceFn` share a call counter and fail with a sentinel error on call k. If the counter reached k, the returned error `errors.Is` the sentinel; if it never reached k, the error is nil and the buffer equals the input.
 **Done when:** `cd /home/john/go/src/github.com/agenthands/godoll && go vet ./humanize/ && go test ./humanize/ -count=1` prints `ok`.
 
-### T09 [ ] godoll: live typing examples never hang
+### T09 [~] godoll: live typing examples never hang
 **Why:** `examples/typing/live_typing_test.go:27` `page.MustElement("#searchbox_input")` retries forever because DuckDuckGo changed its page; the package hits the 10 m test timeout and `TestLiveTyping_Google` never runs.
 **Seams:** godoll `examples/typing` package tests (live).
 **Change:**
