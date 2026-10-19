@@ -50,7 +50,7 @@ func TestConsoleBufferCapped(t *testing.T) {
 	}
 	var logs []string
 	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
-		logs = ctx.GetConsoleLogs()
+		logs, _ = ctx.GetConsoleLogs()
 		if len(logs) > 0 && logs[len(logs)-1] == "[log] 2099" {
 			break
 		}
@@ -61,5 +61,24 @@ func TestConsoleBufferCapped(t *testing.T) {
 			first = logs[0]
 		}
 		t.Errorf("got %d entries, first %q; want 2000, first \"[log] 100\"", len(logs), first)
+	}
+}
+
+func TestConsoleReportsDropped(t *testing.T) {
+	ctx, cleanup := newConsoleCtx(t)
+	defer cleanup()
+	if _, err := Evaluate(ctx, "for (let i = 0; i < 2100; i++) console.log(i)", ""); err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	var out string
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		out, _ = ConsoleLogs(ctx, false)
+		if strings.HasSuffix(out, "[log] 2099") {
+			break
+		}
+	}
+	lines := strings.SplitN(out, "\n", 3)
+	if len(lines) < 2 || lines[0] != "[dropped 100 older entries]" || lines[1] != "[log] 100" {
+		t.Errorf("first lines = %q; want [\"[dropped 100 older entries]\" \"[log] 100\"]", lines[:min(2, len(lines))])
 	}
 }

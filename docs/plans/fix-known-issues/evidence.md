@@ -64,3 +64,6 @@ tdd: TestPruneInteractiveFlattensUnnamedWrappers (updated from TestPruneInteract
 tdd: TestPruneInteractiveKeepsNamedGroup — red: not observed against cycle-1 code (cycle-1 flattening already covered it); against pre-T06 snapshot.go: prune_test.go:35: got: - group "Payment": - generic: - radio "Card" [ref=s1e2] — green: go test ./types/ -run TestPruneInteractiveKeepsNamedGroup -count=1 passed
 tdd: TestPruneInteractiveFlattensMultiChildWrapperKeepsSiblings (verify gap: kept aliased n.Content) — red: prune_test.go:41: got: - link "A" [ref=s1e1] - link "B" [ref=s1e2] - link "B" [ref=s1e2] want: - link "A" [ref=s1e1] - link "B" [ref=s1e2] - button "C" [ref=s1e3] — green: go test ./types/ -run TestPruneInteractiveFlattensMultiChildWrapperKeepsSiblings -count=1 passed
 verify: T06 — pass — go test ./types/ -run Prune ok; go test ./actions/ -run Snapshot ok (28s); unnamed wrappers flattened, landmarks/heading/named/ref kept, ponytail comment removed
+
+## T07
+tdd: TestConsoleReportsDropped — red: console_test.go:82: first lines = ["[log] 100" "[log] 101"]; want ["[dropped 100 older entries]" "[log] 100"] — green: go test ./actions/ -run TestConsoleReportsDropped -count=1 passed

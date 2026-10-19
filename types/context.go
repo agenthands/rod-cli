@@ -262,6 +262,10 @@ type Context struct {
 	mode        Mode
 	consoleLogs []string
 	requests    []string
+	// consoleDropped / requestsDropped count entries evicted by captureCap since
+	// the last clear, so the console/requests output can say the log is incomplete.
+	consoleDropped int
+	requestsDropped int
 	interceptor *network.Interceptor
 	routes      map[string]string
 	fingerprint *rodfingerprint.Fingerprint
@@ -851,7 +855,9 @@ func (ctx *Context) preparePage(page *rod.Page) {
 					args = append(args, arg.Value.String())
 				}
 			}
-			ctx.consoleLogs = appendCapped(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+			var n int
+			ctx.consoleLogs, n = appendCapped(ctx.consoleLogs, fmt.Sprintf("[%s] %s", e.Type, strings.Join(args, " ")))
+			ctx.consoleDropped += n
 		}, func(e *proto.RuntimeExceptionThrown) {
 			ctx.stateLock.Lock()
 			defer ctx.stateLock.Unlock()
@@ -859,7 +865,9 @@ func (ctx *Context) preparePage(page *rod.Page) {
 			if ex := e.ExceptionDetails.Exception; ex != nil && ex.Description != "" {
 				msg = ex.Description
 			}
-			ctx.consoleLogs = appendCapped(ctx.consoleLogs, "[exception] "+msg)
+			var n int
+			ctx.consoleLogs, n = appendCapped(ctx.consoleLogs, "[exception] "+msg)
+			ctx.consoleDropped += n
 		})()
 	}
 
@@ -871,21 +879,26 @@ func (ctx *Context) preparePage(page *rod.Page) {
 		go page.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
 			ctx.stateLock.Lock()
 			defer ctx.stateLock.Unlock()
-			ctx.requests = appendCapped(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+			var n int
+			ctx.requests, n = appendCapped(ctx.requests, fmt.Sprintf("%s %s", e.Request.Method, e.Request.URL))
+			ctx.requestsDropped += n
 		})()
 	}
 }
 
-// captureCap bounds the console and request buffers.
-// ponytail: drop-oldest slice trim (O(n) copy once per overflow event); switch to a ring buffer if capture rates make that measurable.
+// captureCap bounds the console and request buffers so a chatty page cannot
+// grow daemon memory without limit; the oldest entries are dropped and counted.
 const captureCap = 2000
 
-func appendCapped(buf []string, entry string) []string {
+// appendCapped appends entry, trims the oldest entries beyond captureCap, and
+// returns the buffer and how many entries it dropped.
+func appendCapped(buf []string, entry string) ([]string, int) {
 	buf = append(buf, entry)
-	if len(buf) > captureCap {
-		buf = slices.Delete(buf, 0, len(buf)-captureCap)
+	dropped := len(buf) - captureCap
+	if dropped <= 0 {
+		return buf, 0
 	}
-	return buf
+	return slices.Delete(buf, 0, dropped), dropped
 }
 
 // RecordCDPDomain marks a footprint-adding CDP domain as enabled for this
@@ -918,28 +931,34 @@ func (ctx *Context) GetEnabledCDPDomains() map[string]bool {
 }
 
 // Accessors
-func (ctx *Context) GetConsoleLogs() []string {
+// GetConsoleLogs returns the captured console entries and how many older
+// entries the cap dropped since the last clear.
+func (ctx *Context) GetConsoleLogs() ([]string, int) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	return slices.Clone(ctx.consoleLogs)
+	return slices.Clone(ctx.consoleLogs), ctx.consoleDropped
 }
 
-func (ctx *Context) GetRequests() []string {
+// GetRequests returns the captured requests and how many older entries the
+// cap dropped since the last clear.
+func (ctx *Context) GetRequests() ([]string, int) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	return slices.Clone(ctx.requests)
+	return slices.Clone(ctx.requests), ctx.requestsDropped
 }
 
 func (ctx *Context) ClearConsoleLogs() {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	ctx.consoleLogs = nil
+	ctx.consoleDropped = 0
 }
 
 func (ctx *Context) ClearRequests() {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
 	ctx.requests = nil
+	ctx.requestsDropped = 0
 }
 
 // GetCDPProxy returns the CDP proxy instance (nil if proxy is not enabled).

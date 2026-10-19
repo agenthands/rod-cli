@@ -1234,18 +1234,18 @@ func EvalStorage(ctx *types.Context, storageType string, action string, key stri
 }
 
 func ConsoleLogs(ctx *types.Context, clear bool) (string, error) {
-	logs := ctx.GetConsoleLogs()
+	logs, dropped := ctx.GetConsoleLogs()
 	if clear {
 		ctx.ClearConsoleLogs()
 	}
 	if len(logs) == 0 {
 		return "No console logs", nil
 	}
-	return strings.Join(logs, "\n"), nil
+	return droppedLine(dropped) + strings.Join(logs, "\n"), nil
 }
 
 func NetworkRequests(ctx *types.Context, clear bool) (string, error) {
-	reqs := ctx.GetRequests()
+	reqs, dropped := ctx.GetRequests()
 	if clear {
 		ctx.ClearRequests()
 	}
@@ -1253,14 +1253,24 @@ func NetworkRequests(ctx *types.Context, clear bool) (string, error) {
 		return "No network requests", nil
 	}
 	var res strings.Builder
+	res.WriteString(droppedLine(dropped))
 	for i, req := range reqs {
 		res.WriteString(fmt.Sprintf("[%d] %s\n", i, req))
 	}
 	return res.String(), nil
 }
 
+// droppedLine is the first output line telling the agent the capture cap
+// evicted older entries; empty when nothing was dropped.
+func droppedLine(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("[dropped %d older entries]\n", n)
+}
+
 func NetworkRequest(ctx *types.Context, index int) (string, error) {
-	reqs := ctx.GetRequests()
+	reqs, _ := ctx.GetRequests()
 	if index < 0 || index >= len(reqs) {
 		return "", fmt.Errorf("Request index out of bounds")
 	}

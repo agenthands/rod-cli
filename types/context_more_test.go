@@ -149,8 +149,8 @@ func TestContext_LifecycleAndAccessors(t *testing.T) {
 	}
 
 	// Console logs / requests accessors should be reachable (may be empty).
-	_ = ctx.GetConsoleLogs()
-	_ = ctx.GetRequests()
+	_, _ = ctx.GetConsoleLogs()
+	_, _ = ctx.GetRequests()
 
 	// SetPage with a freshly created page.
 	newPage, err := ctx.GetBrowser().Page(proto.TargetCreateTarget{})
