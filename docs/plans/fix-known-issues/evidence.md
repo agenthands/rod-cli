@@ -28,3 +28,9 @@ verify: T01 — pass — done-check printed only `ok actions` and `ok tests` (Te
 ## T02
 
 verify: T02 — pass — captchas grep 0; no ../../ links; stealth-check [url] 1, state-save 2, this.style 0; version: line 1 (v1.7 = git describe); all 13 Global Options flags found in ./rod-cli --help; docs-only diff limited to skills/rod-cli/ (SKILL.md + 7 references), help/usage text matches the CLI
+
+## T03
+
+measure (before, full Go suite, timestamps in the spawned daemon): main-pkg-init→port file written median 1.1 ms, max 1.6 ms over 101 spawns (LoadConfig 0.1 ms, ResolveStealth 0.2 ms, NewContext 0.0 ms, Listen 0.1 ms). Client spawn→ready median 251 ms, which is the first 250 ms poll sleep. One client gave up after 10.01 s even though its daemon (session default) wrote its port file 3 ms after spawn. That daemon was left running as an orphan. In the same run TestStartServerWithPpid failed at 10.03 s with its port file written 0.07 ms after StartServer entered.
+root cause: startup is not slow, so no work moves after Listen. cmd_test.go clearPortFiles globbed and deleted every rod-cli-*.port in the shared TMPDIR. The root-package tests run in parallel with ./daemon/ and ./tests/, so it deleted live daemons' port files. Their clients could no longer find them, spawned duplicates, and left the originals orphaned. Fix: clearPortFiles points TMPDIR at t.TempDir() instead.
+tdd: TestStartServerWithPpid (regression) — red: --- FAIL: TestStartServerWithPpid (10.03s) (3/3 runs of `go test . ./daemon/ -run 'TestSessions|TestStartServerWithPpid|TestRunApp|Port' -count=1`) — green: same command 3/3 ok

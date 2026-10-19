@@ -787,12 +787,14 @@ func portFilePathForSession(session string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("rod-cli-%s.port", session))
 }
 
+// clearPortFiles gives the test an empty port-file directory by pointing
+// TMPDIR (read by os.TempDir) at a fresh per-test dir. It must never delete
+// files in the shared TMPDIR: other packages' tests run live daemons in
+// parallel, and removing their port files orphans those daemons and makes
+// their clients spawn duplicates.
 func clearPortFiles(t *testing.T) {
 	t.Helper()
-	files, _ := filepath.Glob(filepath.Join(os.TempDir(), "rod-cli-*.port"))
-	for _, f := range files {
-		os.Remove(f)
-	}
+	t.Setenv("TMPDIR", t.TempDir())
 }
 
 func uniqueSession(prefix string) string {
