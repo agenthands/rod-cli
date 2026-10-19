@@ -91,3 +91,9 @@ note(T11): first T11 run blocked on godoll govulncheck (33 vulns: go1.26.0 stdli
 - go test ./tests/ -run 'TestSmokeAntigravity|TestInputsAndForms|TestStorageCommands' -count=5: ok.
 - Leftover daemons: none. Profiles /tmp/rod/user-data / ~/.cache/rod-cli/profiles: before 0/0, after 0/0. No rod dirs in either repo.
 - Commits: rod-cli main..fix/known-issues = 68; godoll main..fix/known-issues = 5.
+
+## Chrome temp-file leak (2026-10-19)
+scan (before): per run actions +93, types +26, daemon +6 Chrome lock dirs in /tmp; Google Chrome also leaves /tmp/com.google.Chrome.* lock and url_fetcher temp files. Cause: Chrome writes them to TMPDIR and removes them only on clean exit; tests and kill paths SIGKILL it.
+fix: every Chrome we launch gets a TMPDIR we own and remove with its profile.
+tdd: godoll TestBrowserTempFilesStayInProfile — red: chrome lock /tmp/.org.chromium.Chromium.HS0mKJ/SingletonSocket is outside the profile /tmp/rod/user-data/368af63807e51f8c — green: go test ./browser/ passed
+tdd: TestStopRemovesProfileAndTempFiles — red: chrome lock /tmp/.org.chromium.Chromium.Q53bxY/SingletonSocket is outside the profile /tmp/rod-cli-test-profile-3007012446 — green: go test ./internal/testchrome/ passed
