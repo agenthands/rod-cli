@@ -19,6 +19,11 @@ import (
 // rod-cli process that owns it.
 const ownerFile = "owner.pid"
 
+// chromeTmpFile names the file in a session profile dir that holds the path of
+// the session Chrome's temp dir (see browser.ChromeTempDir), which lives
+// outside the profile so its socket path stays short.
+const chromeTmpFile = "chrome-tmp"
+
 // legacyBrowserTempDir is the old default profile root. Config files generated
 // before the move to DefaultProfileRoot still carry it, so it counts as unset.
 const legacyBrowserTempDir = "./rod/browser"
@@ -52,7 +57,7 @@ func SweepStaleProfiles(root string) {
 		}
 		dir := filepath.Join(root, e.Name())
 		if !ownerAlive(dir) {
-			_ = os.RemoveAll(dir)
+			removeProfileDir(dir)
 		}
 	}
 }
@@ -100,6 +105,17 @@ func removeSessionProfile(dir string, l *launcher.Launcher) {
 	if processAlive(l.PID()) {
 		l.Kill()
 		waitGone()
+	}
+	_ = os.RemoveAll(dir)
+}
+
+// removeProfileDir removes a profile whose Chrome has exited, and that Chrome's
+// temp dir, which holds the lock dir and temp files a killed Chrome leaves.
+func removeProfileDir(dir string) {
+	if b, err := os.ReadFile(filepath.Join(dir, chromeTmpFile)); err == nil {
+		if tmp := strings.TrimSpace(string(b)); strings.HasPrefix(filepath.Base(tmp), "chrome-") {
+			_ = os.RemoveAll(tmp)
+		}
 	}
 	_ = os.RemoveAll(dir)
 }

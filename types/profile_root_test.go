@@ -67,3 +67,31 @@ func TestSweepRemovesDeadOwnerProfiles(t *testing.T) {
 		t.Errorf("live rod-cli profile removed: %v", err)
 	}
 }
+
+func TestSweepRemovesStaleProfileTempDir(t *testing.T) {
+	root := t.TempDir()
+	tmp := filepath.Join(t.TempDir(), "chrome-123")
+	notChrome := filepath.Join(t.TempDir(), "keep")
+	stale, odd := filepath.Join(root, "stale"), filepath.Join(root, "odd")
+	for _, d := range []string{tmp, notChrome, stale, odd} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for dir, target := range map[string]string{stale: tmp, odd: notChrome} {
+		if err := os.WriteFile(filepath.Join(dir, chromeTmpFile), []byte(target), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	SweepStaleProfiles(root)
+
+	for _, p := range []string{stale, tmp, odd} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Errorf("%s still exists after sweep (stat err %v)", p, err)
+		}
+	}
+	if _, err := os.Stat(notChrome); err != nil {
+		t.Errorf("sweep removed %s, which is not a Chrome temp dir: %v", notChrome, err)
+	}
+}
