@@ -75,6 +75,33 @@ func waitExit(t *testing.T, pid int) {
 	t.Fatalf("daemon %d still alive 10s after the signal", pid)
 }
 
+// chromeTmp returns the session Chrome's temp dir recorded in profile, after
+// checking that Chrome's lock lives in it and not in the shared TMPDIR.
+func chromeTmp(t *testing.T, profile string) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(profile, "chrome-tmp"))
+	if err != nil {
+		t.Fatalf("profile %s records no chrome temp dir: %v", profile, err)
+	}
+	tmp := strings.TrimSpace(string(b))
+	lock, err := os.Readlink(filepath.Join(profile, "SingletonSocket"))
+	if err != nil {
+		t.Fatalf("read chrome lock link in %s: %v", profile, err)
+	}
+	if !strings.HasPrefix(lock, tmp+string(filepath.Separator)) {
+		t.Fatalf("chrome lock %s is outside the session temp dir %s", lock, tmp)
+	}
+	return tmp
+}
+
+func assertGone(t *testing.T, path, when string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		os.RemoveAll(path)
+		t.Fatalf("%s survived %s (stat err %v)", path, when, err)
+	}
+}
+
 func TestDaemonSIGTERMRemovesProfile(t *testing.T) {
 	bin := buildProfileTestBin(t)
 	_, pid, root := spawnProfileDaemon(t, bin, "sigterm")
@@ -82,13 +109,13 @@ func TestDaemonSIGTERMRemovesProfile(t *testing.T) {
 	if len(dirs) != 1 {
 		t.Fatalf("want 1 profile dir under %s, got %v", root, dirs)
 	}
+	tmp := chromeTmp(t, dirs[0])
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
 		t.Fatal(err)
 	}
 	waitExit(t, pid)
-	if _, err := os.Stat(dirs[0]); !os.IsNotExist(err) {
-		t.Fatalf("profile %s survived SIGTERM (stat err %v)", dirs[0], err)
-	}
+	assertGone(t, dirs[0], "SIGTERM")
+	assertGone(t, tmp, "SIGTERM")
 }
 
 func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
@@ -98,6 +125,7 @@ func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
 	if len(dirs) != 1 {
 		t.Fatalf("want 1 profile dir under %s, got %v", root, dirs)
 	}
+	tmp := chromeTmp(t, dirs[0])
 	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +135,6 @@ func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
 	}
 
 	spawnProfileDaemon(t, bin, "next")
-	if _, err := os.Stat(dirs[0]); !os.IsNotExist(err) {
-		t.Fatalf("dead daemon's profile %s not swept by the next start (stat err %v)", dirs[0], err)
-	}
+	assertGone(t, dirs[0], "the next start's sweep")
+	assertGone(t, tmp, "the next start's sweep")
 }

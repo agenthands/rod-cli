@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agenthands/godoll/browser"
 	"github.com/agenthands/rod-cli/utils"
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -80,8 +81,10 @@ func ownerAlive(dir string) bool {
 }
 
 // newSessionProfile creates this session's profile dir under root (the default
-// root when empty) and writes owner.pid. The default root is swept first.
-func newSessionProfile(root string) (string, error) {
+// root when empty), writes owner.pid, and gives l's Chrome its own temp dir,
+// recorded in the profile so every removal path takes it too. The default root
+// is swept first. On error the returned dir, if any, is for removeProfileDir.
+func newSessionProfile(root string, l *launcher.Launcher) (string, error) {
 	if root == "" || root == legacyBrowserTempDir {
 		root = DefaultProfileRoot()
 		SweepStaleProfiles(root)
@@ -90,7 +93,14 @@ func newSessionProfile(root string) (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
-	return dir, os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(os.Getpid())), 0o600)
+	if err := os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(os.Getpid())), 0o600); err != nil {
+		return dir, err
+	}
+	tmp, err := browser.ChromeTempDir(l)
+	if err != nil {
+		return dir, err
+	}
+	return dir, os.WriteFile(filepath.Join(dir, chromeTmpFile), []byte(tmp), 0o600)
 }
 
 // removeSessionProfile deletes dir once l's Chrome has exited, since Chrome
@@ -106,7 +116,7 @@ func removeSessionProfile(dir string, l *launcher.Launcher) {
 		l.Kill()
 		waitGone()
 	}
-	_ = os.RemoveAll(dir)
+	removeProfileDir(dir)
 }
 
 // removeProfileDir removes a profile whose Chrome has exited, and that Chrome's

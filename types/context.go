@@ -199,12 +199,14 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 
 	// browser must own a unique profile dir. Created last, so no early return
 	// above can leak it.
-	browserTempDir, err := newSessionProfile(cfg.BrowserTempDir)
+	browserTempDir, err := newSessionProfile(cfg.BrowserTempDir, browserLauncher)
 	if err != nil {
 		if proxyCleanup != nil {
 			proxyCleanup()
 		}
-		os.RemoveAll(browserTempDir)
+		if browserTempDir != "" {
+			removeProfileDir(browserTempDir)
+		}
 		return nil, nil, nil, errors.Wrap(err, "create browser profile dir")
 	}
 	browserLauncher.UserDataDir(browserTempDir)
