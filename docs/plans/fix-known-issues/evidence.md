@@ -76,3 +76,4 @@ verify: T08 — pass — `go vet ./humanize/ && go test ./humanize/ -count=1` in
 
 ## T09
 tdd: live typing never hangs — red: panic: test timed out after 2m0s — green: cd /home/john/go/src/github.com/agenthands/godoll && go test ./examples/typing/ -count=1 -timeout 120s passed (Google PASS; DuckDuckGo SKIP: site serves "Application error: a client-side exception has occurred", input[name="q"] absent)
+verify: T09 — pass — done-check: `--- SKIP: TestLiveTyping_DuckDuckGo (20.62s)` (input[name="q"] absent within 20s), `--- PASS: TestLiveTyping_Google (2.74s)`, `ok github.com/agenthands/godoll/examples/typing 23.365s`; no FAIL
