@@ -93,8 +93,19 @@ cd /home/john/go/src/github.com/agenthands/rod-cli && go build -o rod-cli . && g
 - `head -5 skills/rod-cli/SKILL.md | grep -c '^version:'` prints `1`;
 - every flag named in SKILL.md Global Options appears in `go build -o rod-cli . && ./rod-cli --help` (check each).
 
-### T03 [!] Daemon start: no double spawns, no orphans, no load-dependent timeout
-Blocked: BLOCKED: the done-check cannot run because /tmp has run out of inodes. The code work for T03 is done and committed. Nothing is uncommitted, the heading stays at [~], and no rod-cli daemons are left running.
+### T02b [ ] No leaked Chrome profiles from rod-cli tests or godoll
+**Why:** `/tmp/rod/user-data` reached 4135 leaked Chrome profiles (~951k inodes) and filled `/tmp` (tmpfs, 1,048,576 inodes), so every `go build` failed. Each `launcher.New()...Launch()` without `Cleanup()` leaks one profile; a full rod-cli suite run leaks ~50k inodes. godoll's non-test `browser/browser.go` also uses `launcher.New()`.
+**Seams:** godoll `browser.NewBrowserE` + `(*Browser).Close` (live); godoll `cmd/godoll/session` manager close path (live, if it launches); rod-cli package test runs (profile count).
+**Change:**
+- godoll `browser/browser.go`: when it launches Chrome itself (not `ControlURL`/remote), keep the `*launcher.Launcher`; `Close()` closes the browser, then calls `l.Cleanup()` (go-rod: waits for exit, removes the user-data dir). Do the same in `cmd/godoll/session/manager.go` and `internal/testing/fixtures.go` if they launch. Commit in godoll.
+- Every `launcher.New()` in a `_test.go` file of both repos keeps the launcher and registers cleanup after the browser closes: `t.Cleanup(func(){ browser.MustClose(); l.Cleanup() })` or an equivalent `defer`. rod-cli sites: `utils/query_aria_test.go:48`, `cmd_test.go:24`, `internal/plugin/scanner/scanner_test.go:28`, `internal/plugin/scanner/scanner_more_test.go:21`, `types/errpaths_test.go:360`, `types/context_more_test.go:51`, `internal/plugin/integ_test.go:34`, `actions/plugin_full_test.go:58`, `types/cdp_footprint_test.go:47`, `internal/plugin/integ_more_test.go:33`. godoll sites: `grep -rln 'launcher.New()' --include=*_test.go /home/john/go/src/github.com/agenthands/godoll`.
+- rod-cli's own daemon launcher (`types/context.go:130`) already removes `cfg.BrowserTempDir` in `Close()`. Confirm with one live check that a session's profile dir is gone after `rod-cli close`; fix if not.
+**TDD cycles:**
+1. `TestBrowserCloseRemovesProfile` (godoll `browser`, live): launch with `NewBrowserE` defaults, read the launcher's user-data dir, `Close()`, and the dir no longer exists.
+2. `rod-cli suite leaves no profiles`: red is `before=$(ls /tmp/rod/user-data 2>/dev/null | wc -l); cd /home/john/go/src/github.com/agenthands/rod-cli && go test ./types/ ./utils/ ./internal/... ./actions/ . -count=1 >/dev/null; after=$(ls /tmp/rod/user-data 2>/dev/null | wc -l); echo "profiles: $before -> $after"` today (after > before). Green: after ≤ before.
+**Done when:** `cd /home/john/go/src/github.com/agenthands/godoll && go test ./browser/ -count=1` prints `ok`, and the cycle-2 command prints `profiles: N -> M` with M ≤ N, and the same before/after count around `cd /home/john/go/src/github.com/agenthands/godoll && go test ./... -count=1 -timeout 15m` shows no growth.
+
+### T03 [~] Daemon start: no double spawns, no orphans, no load-dependent timeout
 
 The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). The bytes are fine (26G free). /tmp/rod/user-data holds 4135 leaked Chrome profiles from go-rod's launcher, about 951k files. 655 of them were created in the last hour by test runs. Every `go build` or `go test` now fails with `mkdir /tmp/go-build...: no space left on device`. The first 3x attempt (`TestCloseBr
 **Why:** under the parallel full suite, `TestStorageCommands` and `TestStartServerWithPpid` fail intermittently and stray `--session default --headless daemon` processes survive. `EnsureDaemon` (`daemon/daemon.go:106-138`) polls 40×250 ms, then gives up without killing the process it spawned, and nothing stops two clients spawning two daemons for one session.
