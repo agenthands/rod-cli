@@ -97,3 +97,6 @@ scan (before): per run actions +93, types +26, daemon +6 Chrome lock dirs in /tm
 fix: every Chrome we launch gets a TMPDIR we own and remove with its profile.
 tdd: godoll TestBrowserTempFilesStayInProfile — red: chrome lock /tmp/.org.chromium.Chromium.HS0mKJ/SingletonSocket is outside the profile /tmp/rod/user-data/368af63807e51f8c — green: go test ./browser/ passed
 tdd: TestStopRemovesProfileAndTempFiles — red: chrome lock /tmp/.org.chromium.Chromium.Q53bxY/SingletonSocket is outside the profile /tmp/rod-cli-test-profile-3007012446 — green: go test ./internal/testchrome/ passed
+tdd: godoll TestChromeTempDirIsShortEvenWhenTMPDIRIsLong — red: undefined: browser.ChromeTempDir — green: go test ./browser/ passed
+note: godoll live TestBrowserTempFilesStayInProfile with long TMPDIR — red not observed (go-rod fixes its default profile prefix at init from /tmp; the crash it guards against is macOS, where that prefix is long). Found by testchrome: Chrome FATAL "Socket path too long" when TMPDIR is deep.
+tdd: TestLaunchRemovesDeadTestProfiles — red: undefined: ownerFile — green: go test ./internal/testchrome/ passed
