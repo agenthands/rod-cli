@@ -82,3 +82,29 @@ func TestConsoleReportsDropped(t *testing.T) {
 		t.Errorf("first lines = %q; want [\"[dropped 100 older entries]\" \"[log] 100\"]", lines[:min(2, len(lines))])
 	}
 }
+
+func TestConsoleClearResetsDropped(t *testing.T) {
+	ctx, cleanup := newConsoleCtx(t)
+	defer cleanup()
+	if _, err := Evaluate(ctx, "for (let i = 0; i < 2100; i++) console.log(i)", ""); err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		if logs, _ := ctx.GetConsoleLogs(); len(logs) > 0 && logs[len(logs)-1] == "[log] 2099" {
+			break
+		}
+	}
+	if _, err := ConsoleLogs(ctx, true); err != nil {
+		t.Fatalf("ConsoleLogs(clear): %v", err)
+	}
+	_, _ = Evaluate(ctx, "console.log('x')", "")
+	var out string
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		if out, _ = ConsoleLogs(ctx, false); strings.HasSuffix(out, "[log] x") {
+			break
+		}
+	}
+	if out != "[log] x" {
+		t.Errorf("ConsoleLogs after clear = %q; want \"[log] x\"", out)
+	}
+}
