@@ -108,3 +108,4 @@ tdd: TestDaemonKillProfileSweptOnNextStart (port file) — red: /tmp/rod-cli-kil
 tdd: godoll TestLaunchLeavesNothingInCallerTMPDIR — red: launch left [.org.chromium.Chromium.2qxUdC .org.chromium.Chromium.puyHIO] (go-rod Validate --dump-dom run, found with strace) — green: go test ./browser/ passed; launches 9s -> 0.2s
 tdd: TestOpenDaemonLogStartsOverPastTheCap — red: undefined: daemonLogCap — green: go test ./daemon/ -run TestOpenDaemonLog passed (EnsureDaemon also closes its copy of the log fd)
 scan (private TMPDIR per package, both repos): only rod-cli-daemon.log (now capped) and the user's own browsers' scoped_dir notification icons in /tmp (TMPDIR unset on pids 5538/749167; 2 per hour since 14:00)
+tdd: pi integration.test.ts daemon cleanup — red: after vitest run, daemon 984150 "rod-cli --session default --headless daemon" still running — green: vitest run integration.test.ts 9 passed, no daemons left (own session pi-integration-<pid>, closed in afterAll)

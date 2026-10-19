@@ -3,6 +3,10 @@ import { createServer, type Server } from "node:http";
 import { execFile } from "node:child_process";
 import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
 
+// A session of its own, so the tests never touch the user's default session
+// and can close their daemon when done.
+const SESSION = `pi-integration-${process.pid}`;
+
 /**
  * A real child_process execFn for integration tests.
  * This lets execRodCli() work in the test environment as it would in Pi.
@@ -10,7 +14,7 @@ import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
 function createRealExecFn(bin: string): ExecFn {
   return (args, opts) => {
     return new Promise((resolve, reject) => {
-      const child = execFile(bin, ["--headless", ...args], { timeout: opts?.timeout }, (err, stdout, stderr) => {
+      const child = execFile(bin, ["--session", SESSION, "--headless", ...args], { timeout: opts?.timeout }, (err, stdout, stderr) => {
         if (err) {
           // Non-zero exit is NOT an error here — we return it as a result.
           if (err.code === undefined) {
@@ -70,7 +74,8 @@ describe("integration workflow", () => {
       });
     });
 
-    afterAll(() => {
+    afterAll(async () => {
+      await execFn(["close"], { timeout: 15000 });
       if (server) {
         server.closeAllConnections();
         server.close();
