@@ -200,7 +200,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 2. `TestConsoleClearResetsDropped`: after `ConsoleLogs(ctx,true)`, one more `console.log("x")`; output == `[log] x`.
 **Done when:** `go test ./types/ ./actions/ -run 'Console|Request|Network' -count=1` prints `ok` for both.
 
-### T08 [~] godoll: typing returns errors from typo keystrokes
+### T08 [x] godoll: typing returns errors from typo keystrokes
 **Why:** in `humanize/typing.go` `typeWithLogic`, wrong-key and backspace calls are `_ = typeFn(...)` / `_ = backspaceFn()`. If one fails, typing continues and can leave wrong text with a nil error.
 **Seams:** godoll `typeWithLogic` (internal, the buffer-simulating `typeFn`/`backspaceFn` pattern in `humanize/internal_coverage_test.go`).
 **Change:** every `typeFn` and `backspaceFn` call in `typeWithLogic` returns its error. Commit in godoll.

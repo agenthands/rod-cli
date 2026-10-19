@@ -72,3 +72,4 @@ verify: T07 — pass — `go test ./types/ ./actions/ -run 'Console|Request|Netw
 
 ## T08
 tdd: TestTypeWithLogic_ReturnsTypoKeyErrors — red: internal_coverage_test.go:195: k=1 iteration 0: call 1 failed but err=<nil> (typed "hello world") — green: cd /home/john/go/src/github.com/agenthands/godoll && go test ./humanize/ -run TestTypeWithLogic_ReturnsTypoKeyErrors -count=1 passed
+verify: T08 — pass — `go vet ./humanize/ && go test ./humanize/ -count=1` in godoll: vet clean, ok humanize 73.5s; all 12 typeFn/backspaceFn calls in typeWithLogic now return errors (godoll 3918946)
