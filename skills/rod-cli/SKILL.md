@@ -1,6 +1,7 @@
 ---
 name: rod-cli
-description: "Token-efficient, native web automation CLI for LLMs using Go Rod. Use rod-cli whenever you need to browse the web, scrape content, interact with forms, click elements, take screenshots, evaluate JavaScript on a page, or automate any browser-based task. Prefer rod-cli over curl/wget for JavaScript-rendered pages and over heavy browser automation frameworks for token-efficient DOM snapshots."
+description: "This skill should be used when the user needs to browse the web, scrape content, interact with forms, click elements, take screenshots, evaluate JavaScript on a page, or automate any browser-based task. rod-cli is a token-efficient, native web automation CLI for LLMs using Go Rod. Prefer rod-cli over curl/wget for JavaScript-rendered pages and over heavy browser automation frameworks for token-efficient DOM snapshots."
+version: v1.7
 ---
 
 # Go Rod Skill (`rod-cli`)
@@ -10,9 +11,9 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 ## Core Concepts
 
 1. **Daemon Architecture**: `rod-cli` runs as a background persistent daemon to hold state.
-   - The first command you execute implicitly boots a persistent browser in the background.
-   - **Zombie Prevention**: The daemon polls your Agent process's PPID. If your agent crashes, the browser dies with it. A 15-minute idle timeout is also enforced.
-   - You **MUST** run `rod-cli close` when you are finished to aggressively clean up resources.
+   - The first command implicitly boots a persistent browser in the background.
+   - **Zombie Prevention**: The daemon polls the calling agent process's PPID; if the agent crashes, the browser dies with it. A 15-minute idle timeout is also enforced.
+   - **Always** run `rod-cli close` when finished to clean up resources.
 
 2. **Named Sessions**:
    - For multi-target workflows (e.g., logging in as two distinct users simultaneously), use the global `--session` or `-s` flag to multiplex daemons.
@@ -31,7 +32,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 
 ## Commands
 
-**Flag placement**: Command-specific flags (`--submit`, `--path`, `--body`, `--name`, `--annotate`) must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
+**Flag placement**: Command-specific flags must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). This applies to every command-local flag in this skill: `fill --submit`, `drop --path`, `route --body`, `screenshot --name`/`--selector`/`--out`/`--full-page`, `pdf --name`/`--out`, `console --clear`, `requests --clear`, `mousewheel --end`/`--max`, `snapshot -i`, `dialog-accept --prompt`, `show --annotate`. A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
 
 ### Global Options
 - `--max-output N`: Cap any command's output at N bytes (0 = unlimited, the default). Use it to bound token cost on big pages, e.g. `rod-cli --max-output 4000 snapshot`.
@@ -39,6 +40,17 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `--raw`: Only changes output for two commands — `install` (suppresses the "Downloading…" progress line) and `stealth-check` (single-line PASS/FAIL instead of a table). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — don't add it reflexively.
 - The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
 - `-s, --session`: Specify a named session string.
+
+Session-spawn flags take effect only when a session's daemon spawns (its first command). To change them, run `rod-cli close` first, then pass them on the next command:
+- `--headless`: enable headless.
+- `--proxy`: route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port).
+- `--profile`: stealth profile: a built-in name (see --profile=list), a custom name resolved under ~/.rod-cli/profiles/, or a path to a JSON profile file.
+- `--user-agent`: pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor).
+- `--locale`: pin the BCP-47 locale (e.g. en-US); derived from languages when unset.
+- `--timezone`: pin the IANA timezone (e.g. America/New_York).
+- `--cdp-endpoint`: control browser by cdp.
+- `--console-capture`: Capture browser console messages for the console command (default off; enables Runtime CDP domain).
+- `--request-capture`: Capture network requests for the requests/`request` commands (default off; enables Network CDP domain).
 
 ### Setup
 - `rod-cli install`: Install the Chromium browser required by rod-cli.
@@ -53,12 +65,12 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 - `rod-cli tab-new [url]`: Create a new tab (prints its ID) and switch to it.
 - `rod-cli tab-select [index|id]`: Select a browser tab by index or 8-char ID (prefer the ID; indexes shift).
 - `rod-cli tab-close [index|id]`: Close a browser tab by index or 8-char ID.
-- Rule: Drive only tabs you created (IDs printed by tab-new); under --cdp-endpoint never navigate the user's existing tabs.
+- Rule: Drive only tabs created with tab-new (it prints their IDs); under --cdp-endpoint never navigate the user's existing tabs.
 
 ### Interaction
 `[selector]` below accepts a CSS selector or a snapshot ref — see **Element Targeting** in Core Concepts above.
 
-Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref or selector works (canvas, sliders without ARIA, hover-only targets). Coordinates are viewport CSS px.
+Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only when no ref or selector works (canvas, sliders without ARIA, hover-only targets). Coordinates are viewport CSS px.
 
 - `rod-cli click [selector]`: Click an element.
 - `rod-cli dblclick [selector]`: Double-click an element.
@@ -78,13 +90,13 @@ Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref o
 - `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
 - `rod-cli mouseup [left|right|middle]`: Trigger mouse up.
 - `rod-cli mousewheel [--end [--max n]] [dx dy] [ref]`: Scroll with real wheel input. No `dx dy` scrolls one viewport down; a `ref` scrolls that element's nearest scrollable pane instead of the page. `--end` keeps scrolling (absorbing lazy loads) until the end, at most `--max` scrolls (default 10). Negative values need `--`: `rod-cli mousewheel --end -- 0 -300`. Output: `scrolled dy=<moved> y=<pos>/<max>` (plus `dx=… x=…/…` for horizontal moves); a trailing ` end` means the pane hit its limit, ` cap` means `--end` stopped at the `--max`/time budget before reaching it.
-- `rod-cli dialog-accept`: Automatically accept the next javascript alert/confirm.
+- `rod-cli dialog-accept [--prompt <text>]`: Automatically accept the next javascript alert/confirm/prompt; `--prompt` is the text entered into a `window.prompt()`.
 - `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
 
 ### Storage & State Controls
-- `rod-cli state-save [path]`: Save the browser state to a file.
-- `rod-cli state-load [path]`: Load the browser state from a file.
-- `rod-cli cookie-get`: Read all browser cookies.
+- `rod-cli state-save [path]`: Save the browser's cookies to a JSON file (path required).
+- `rod-cli state-load [path]`: Load cookies saved by `state-save` into the session (path required).
+- `rod-cli cookie-get [name]`: Read all browser cookies, or only the cookie with that exact name (errors if none matches).
 - `rod-cli cookie-set [name] [value]`: Set a cookie.
 - `rod-cli cookie-delete [name]`: Delete a specific cookie.
 - `rod-cli cookie-clear`: Clear all browser cookies.
@@ -92,7 +104,7 @@ Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref o
 - `rod-cli localstorage-set [key] [value]`: Set a localStorage item.
 - `rod-cli localstorage-delete [key]`: Delete a localStorage entry.
 - `rod-cli localstorage-clear`: Clear localStorage.
-- `rod-cli sessionstorage-get [key]`: Retrieve a sessionStorage item.
+- `rod-cli sessionstorage-get [key]`: Retrieve a sessionStorage item (or omit key for all).
 - `rod-cli sessionstorage-set [key] [value]`: Set a sessionStorage item.
 - `rod-cli sessionstorage-delete [key]`: Delete a sessionStorage entry.
 - `rod-cli sessionstorage-clear`: Clear sessionStorage.
@@ -100,11 +112,12 @@ Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref o
 ### Observability & Debugging
 - `rod-cli highlight [selector]`: Highlight an element with a persistent red border (useful for visual reasoning validation before clicking). Accepts the same CSS-selector-or-snapshot-ref `[selector]` as the Interaction commands above.
 - `rod-cli highlight-clear`: Remove all injected highlights from the DOM.
+- `rod-cli show`: Without flags, prints how to make the browser visible (it cannot un-hide a headless browser: `close`, then restart without `--headless`).
 - `rod-cli show --annotate`: Provide human-in-the-loop interactive bounding box feedback.
 - `rod-cli console [--clear]`: List browser console messages; uncaught page errors appear as `[exception] …` entries. `--clear` prints the entries, then empties the buffer. Filter with the shell (`rod-cli console | grep exception`, `| tail -20`). Only works when the session was started with `--console-capture` (off by default) — pass it on the session's first command, e.g. `rod-cli --console-capture goto https://example.com`.
 
 ### Network Interception
-- `rod-cli route --body [body] [pattern]`: Mock network requests matching a URL pattern.
+- `rod-cli route --body [body] [pattern]`: Mock network requests matching a URL pattern via the browser's own network interception.
 - `rod-cli route-list`: List all active network interception routes.
 - `rod-cli unroute [pattern]`: Remove a mock network route.
 - `rod-cli requests`: List all captured network requests. Only works when the session was started with `--request-capture` (off by default) — pass it on the session's first command.
@@ -114,12 +127,16 @@ Use refs first; use pixel input (mousemove/mousedown/mouseup) only when no ref o
 - `rod-cli eval [script] [ref]`: Evaluate raw JavaScript in the browser context and print the bare value (no wrapper; strings unquoted). With a ref, `this` is bound to that element. Use it for reading/extracting page state (attributes, computed values, JSON data) — prefer the Interaction commands above (`click`, `fill`, `type`, etc.) for anything that acts on the page; see **Prefer Native Actions over `eval`** in Core Concepts.
 - `rod-cli snapshot [-i] [ref|css]`: Return the token-efficient Markdown representation of the DOM. `-i`/`--interactive` keeps only interactive elements and their ancestors; a ref or CSS selector limits it to that subtree. Both cut tokens on large pages.
 - `rod-cli screenshot [--name] [--selector] [--out] [--full-page]`: Capture a PNG of the viewport (`--selector` = one element by ref or CSS, `--full-page` = whole scrollable page, `--out` = write to this path instead of `tmp/screenshots/`). Prints `saved <path> WxH`.
-- `rod-cli pdf --name [name]`: Export the page as a PDF.
+- `rod-cli pdf [--name] [--out]`: Export the page as a PDF (`--out` = write to this path instead of `tmp/pdfs/`).
+
+### Diagnostics
+- `rod-cli stealth-check [url]`: Run per-signal stealth verdicts against the current page (or navigate to URL first). `--raw` prints a single PASS/FAIL line; `--json` prints the structured verdicts.
+- `rod-cli cdp-traffic`: Print logged CDP protocol traffic from the proxy (requires --cdp-proxy). WARNING: output may contain sensitive CDP payload data (URLs, cookies, page content). `--cdp-proxy` is a global session-spawn flag, like those in Global Options.
 
 ### Plugins
 - `rod-cli plugin load [path]`: Load a JavaScript plugin into the session. The plugin's lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) start firing automatically — open a page first (e.g. `goto`) so the hooks and the `api` global bind to it.
 - `rod-cli plugin list`: List the plugins loaded in the session.
-- `rod-cli plugin run [name]`: Invoke a named function defined in the loaded plugin (e.g. an accessor like `getFindings`) and print its returned value. This is how you read back the state a plugin accumulated while you browsed.
+- `rod-cli plugin run [name]`: Invoke a named function defined in the loaded plugin (e.g. an accessor like `getFindings`) and print its returned value. Use it to read back the state a plugin accumulated during browsing.
 
 ## Usage Example
 
@@ -132,7 +149,6 @@ rod-cli sessions
 
 # Interact
 rod-cli fill --submit "#search-input" "go-rod automation"
-rod-cli click "#submit-button"
 
 # Extract state
 rod-cli snapshot
@@ -141,23 +157,10 @@ rod-cli snapshot
 rod-cli close
 ```
 
-## Extensions
+## Installation
 
-rod-cli ships two first-class host extensions alongside this Skill. All three paths use the same `rod-cli` binary underneath.
-
-| | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (this file) |
-|---|---|---|---|
-| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant |
-| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy this skill directory (`SKILL.md` + `references/`) to the assistant's skills dir |
-| **Tools** | 16 typed `browse_*` (injected `pi.zod`) | 16 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
-| **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
-| **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |
-
-**Pi Extension** (recommended for Pi users): 16 typed browser tools with TypeBox schema validation, lifecycle hooks (auto-verify binary on session start, auto-cleanup daemon on quit), and prompt guidance. See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
-
-**OMP Extension** (recommended for OMP users): The same 16 typed browser tools with injected `pi.zod` schemas, guidance folded into tool descriptions, and ungated idempotent daemon cleanup. See [extensions/omp/README.md](../../extensions/omp/README.md) for the full tool catalog.
-
-**Skill path** (this file): Works with any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) with zero npm dependencies. Copy this entire skill directory — this `SKILL.md` together with its `references/` folder — to the assistant's skills directory, so the links under "Specific tasks" below keep resolving.
+Install this skill folder whole (`SKILL.md` together with `references/`) so the links under "Specific tasks" resolve.
+Pi and OMP users can use the typed extensions instead: [Pi](https://github.com/agenthands/rod-cli/blob/main/extensions/pi/README.md), [OMP](https://github.com/agenthands/rod-cli/blob/main/extensions/omp/README.md).
 
 ## Specific tasks
 

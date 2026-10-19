@@ -1,6 +1,6 @@
 # Inspecting Element Attributes
 
-To retrieve element attributes, use the `rod-cli eval` command along with a target element reference from the snapshot. This is a **read**, not an interaction — `eval` is the right tool here because you're extracting data (an attribute value) rather than acting on the page, which is exactly what `eval` is reserved for; use `click`/`fill`/`type`/etc. instead whenever you need to actually interact with an element.
+To retrieve element attributes, use the `rod-cli eval` command along with a target element reference from the snapshot. This is a **read**, not an interaction — `eval` is the right tool here because it extracts data (an attribute value) rather than acting on the page, which is exactly what `eval` is reserved for; use `click`/`fill`/`type`/etc. instead to actually interact with an element.
 
 ## Getting standard attributes
 ```bash
@@ -23,10 +23,4 @@ rod-cli eval "() => this.getAttribute('data-testid')" s1e5
 
 # Get 'aria-expanded'
 rod-cli eval "() => this.getAttribute('aria-expanded')" s1e2
-```
-
-## Extracting just the value
-eval prints the bare value. With --json, a JSON object/array value prints as-is; any other value prints as {"result": "<value>"}.
-```bash
-rod-cli eval "() => this.href" s1e12
 ```

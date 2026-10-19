@@ -3,11 +3,14 @@
 `rod-cli` provides robust primitives for dealing with file inputs, which are notoriously tricky in web automation.
 
 ## Standard File Uploads
-For a standard `<input type="file">`, you can use the `upload` command. You must provide the element reference and the absolute path to the file on the local filesystem.
+For a standard `<input type="file">`, use the `upload` command. `upload`, `drag` and `drop` each take a CSS selector or a snapshot ref, plus (for `upload`/`drop`) the absolute path to the file on the local filesystem.
 
 ```bash
-# Upload a single file
+# Upload a single file (by snapshot ref)
 rod-cli upload s1e22 "/tmp/resume.pdf"
+
+# The same with a CSS selector
+rod-cli upload "input[type=file]" "/tmp/resume.pdf"
 
 # Upload multiple files (input must have `multiple`): pass each path as its own argument
 rod-cli upload s1e22 "/tmp/image1.png" "/tmp/image2.png"
@@ -22,7 +25,7 @@ rod-cli drop --path="/tmp/avatar.jpg" s1e45
 ```
 
 ## Element-to-Element Dragging
-If you need to drag one DOM element and drop it onto another DOM element (e.g., reordering a list, or moving a card on a Kanban board), use the `drag` command.
+To drag one DOM element and drop it onto another DOM element (e.g., reordering a list, or moving a card on a Kanban board), use the `drag` command.
 
 ```bash
 # Drag element s1e10 and drop it onto element s1e15

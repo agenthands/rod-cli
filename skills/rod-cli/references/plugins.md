@@ -1,10 +1,10 @@
 # Plugins
 
-`rod-cli` runs user-written JavaScript **plugins** that hook into the browser lifecycle. A plugin is a plain `.js` file executed in an embedded goja sandbox — there is **no** `console`, `fs`, `require`, or `window`; you get only the lifecycle hooks and a small `api` global.
+`rod-cli` runs user-written JavaScript **plugins** that hook into the browser lifecycle. A plugin is a plain `.js` file executed in an embedded goja sandbox — there is **no** `console`, `fs`, `require`, or `window`; only the lifecycle hooks and a small `api` global.
 
 ## Lifecycle hooks
 
-Define any of these top-level functions in your plugin; the engine no-ops the ones you omit:
+Define any of these top-level functions in the plugin; the engine no-ops the omitted ones:
 
 | Hook | Fires on | Key payload |
 |------|----------|-------------|
@@ -27,19 +27,13 @@ Network context comes from the `onRequest`/`onResponse` payloads, not from `api`
 
 ```bash
 rod-cli goto https://example.com                 # open a page first so hooks/api bind
-rod-cli plugin load ./plugins/examples/starter.js  # load the plugin
+rod-cli plugin load /path/to/plugin.js           # load the plugin
 rod-cli plugin list                              # list loaded plugins
 rod-cli plugin run getResults                    # invoke a named function, print its JSON result
 ```
 
-Pattern: a plugin accumulates state in module-level arrays inside its hooks and exposes a getter (e.g. `getResults`, `getFindings`) that returns `JSON.stringify(...)`. `plugin run <getter>` is how you read that state back from the CLI.
+Pattern: a plugin accumulates state in module-level arrays inside its hooks and exposes a getter (e.g. `getResults`, `getFindings`) that returns `JSON.stringify(...)`. Use `plugin run <getter>` to read that state back from the CLI.
 
 ## Full documentation
 
-The complete plugin docs live under [`docs/plugins/`](../../../docs/plugins/README.md):
-
-- [Authoring guide](../../../docs/plugins/authoring.md) — write, load, and run your first plugin end-to-end.
-- [Lifecycle hooks reference](../../../docs/plugins/lifecycle-hooks.md)
-- [State / context API reference](../../../docs/plugins/state-api.md)
-- [CLI reference](../../../docs/plugins/cli-reference.md)
-- Examples: [XSS scanner](../../../docs/plugins/examples/xss-scanner.md), [per-hook recipes](../../../docs/plugins/examples/recipes.md), [copyable starter](../../../docs/plugins/examples/starter.md).
+The complete plugin docs (authoring guide, hooks and state API reference, CLI reference, examples) live in the `docs/plugins/` folder of the rod-cli repo: https://github.com/agenthands/rod-cli/tree/main/docs/plugins
