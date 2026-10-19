@@ -89,15 +89,15 @@ func TestStorageCommands(t *testing.T) {
 	}
 
 	// 2. Test LocalStorage Set
-	_, err = runCli("localstorage-set", "testkey", "testvalue")
+	out, err = runCli("localstorage-set", "testkey", "testvalue")
 	if err != nil {
-		t.Fatalf("Failed to set localstorage: %v", err)
+		t.Fatalf("Failed to set localstorage: %v\nOutput: %s", err, out)
 	}
 
 	// 3. Test LocalStorage Get
 	out, err = runCli("localstorage-get", "testkey")
 	if err != nil {
-		t.Fatalf("Failed to get localstorage: %v", err)
+		t.Fatalf("Failed to get localstorage: %v\nOutput: %s", err, out)
 	}
 	if !strings.Contains(out, "testvalue") {
 		t.Errorf("Expected localstorage to contain 'testvalue', got: %s", out)
@@ -119,9 +119,9 @@ func TestStorageCommands(t *testing.T) {
 	}
 
 	// 6. Test Cookies
-	_, err = runCli("cookie-set", "mycookie", "myval")
+	out, err = runCli("cookie-set", "mycookie", "myval")
 	if err != nil {
-		t.Fatalf("Failed to set cookie: %v", err)
+		t.Fatalf("Failed to set cookie: %v\nOutput: %s", err, out)
 	}
 	out, _ = runCli("cookie-get")
 	if !strings.Contains(out, "mycookie") || !strings.Contains(out, "myval") {
@@ -138,7 +138,7 @@ func TestStorageCommands(t *testing.T) {
 	runCli("cookie-set", "statecookie", "stateval")
 	out, err = runCli("state-save", "state.json")
 	if err != nil || !strings.Contains(out, "Saved state") {
-		t.Fatalf("Failed to save state: %v", err)
+		t.Fatalf("Failed to save state: %v\nOutput: %s", err, out)
 	}
 	
 	runCli("cookie-clear")
@@ -149,7 +149,7 @@ func TestStorageCommands(t *testing.T) {
 
 	out, err = runCli("state-load", "state.json")
 	if err != nil || !strings.Contains(out, "Loaded state") {
-		t.Fatalf("Failed to load state: %v", err)
+		t.Fatalf("Failed to load state: %v\nOutput: %s", err, out)
 	}
 	out, _ = runCli("cookie-get")
 	if !strings.Contains(out, "statecookie") || !strings.Contains(out, "stateval") {
