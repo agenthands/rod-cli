@@ -103,3 +103,5 @@ tdd: TestLaunchRemovesDeadTestProfiles — red: undefined: ownerFile — green: 
 tdd: TestSweepRemovesStaleProfileTempDir — red: undefined: chromeTmpFile — green: go test ./types/ -run TestSweep passed
 tdd: TestDaemonSIGTERMRemovesProfile + TestDaemonKillProfileSweptOnNextStart (chrome temp dir) — red: profile .../YRAnJbpgiK records no chrome temp dir — green: go test ./daemon/ -run Daemon(SIGTERM|Kill) passed
 tdd: TestLockFileLeavesNoFile — red: lock file .../s.port.lock still exists after release — green: go test ./daemon/ -run TestLockFile -count=3 -race passed (TestLockFileStaysExclusiveAcrossRemoval guards the unlink race; green before and after)
+tdd: TestTryLockFileSkipsAHeldLock — red: undefined: tryLockFile — green: go test ./daemon/ -run TestTryLockFile -race passed
+tdd: TestDaemonKillProfileSweptOnNextStart (port file) — red: /tmp/rod-cli-killed-1792426004983348912.port survived the next start's sweep — green: go test ./daemon/ -run TestDaemonKill passed

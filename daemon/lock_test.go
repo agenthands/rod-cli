@@ -57,3 +57,26 @@ func TestLockFileStaysExclusiveAcrossRemoval(t *testing.T) {
 	unlockB()
 	(<-gotC)()
 }
+
+func TestTryLockFileSkipsAHeldLock(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.port.lock")
+	unlock, err := lockFile(path)
+	if err != nil {
+		t.Fatalf("lockFile: %v", err)
+	}
+	if release, ok, err := tryLockFile(path); err != nil || ok {
+		if ok {
+			release()
+		}
+		t.Fatalf("tryLockFile on a held lock: ok=%v err=%v, want ok=false err=nil", ok, err)
+	}
+	unlock()
+	release, ok, err := tryLockFile(path)
+	if err != nil || !ok {
+		t.Fatalf("tryLockFile on a free lock: ok=%v err=%v", ok, err)
+	}
+	release()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("lock file %s still exists after release (stat err %v)", path, err)
+	}
+}

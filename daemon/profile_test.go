@@ -122,7 +122,7 @@ func TestDaemonSIGTERMRemovesProfile(t *testing.T) {
 
 func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
 	bin := buildProfileTestBin(t)
-	_, pid, root := spawnProfileDaemon(t, bin, "killed")
+	killed, pid, root := spawnProfileDaemon(t, bin, "killed")
 	dirs := profileDirs(t, root)
 	if len(dirs) != 1 {
 		t.Fatalf("want 1 profile dir under %s, got %v", root, dirs)
@@ -138,5 +138,6 @@ func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
 
 	spawnProfileDaemon(t, bin, "next")
 	assertGone(t, dirs[0], "the next start's sweep")
+	assertGone(t, portFilePath(killed), "the next start's sweep")
 	assertGone(t, tmp, "the next start's sweep")
 }

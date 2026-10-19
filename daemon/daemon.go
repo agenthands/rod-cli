@@ -166,7 +166,29 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 	}
 }
 
+// removeDeadPortFiles removes the port files of daemons that no longer listen:
+// killed or crashed ones never ran their cleanup. A session whose start lock is
+// held is mid-spawn and is skipped, so its new port file is never removed.
+func removeDeadPortFiles() {
+	files, _ := filepath.Glob(filepath.Join(os.TempDir(), "rod-cli-*.port"))
+	for _, f := range files {
+		release, ok, err := tryLockFile(f + ".lock")
+		if err != nil || !ok {
+			continue
+		}
+		if b, err := os.ReadFile(f); err == nil {
+			if c, err := net.DialTimeout("tcp", "127.0.0.1:"+strings.TrimSpace(string(b)), time.Second); err == nil {
+				c.Close()
+			} else {
+				os.Remove(f)
+			}
+		}
+		release()
+	}
+}
+
 func StartServer(session string, ppid int, rodCtx *types.Context) error {
+	removeDeadPortFiles()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return err
