@@ -22,3 +22,4 @@ verify: T00 — pass — `grep -c '^## Baseline'` prints 1; no code changed (dif
 ## T01
 
 tdd: TestGetCookiesByName — red: actions/actions_full_test.go:882:31: too many arguments in call to GetCookies — green: go test ./actions/ -run TestGetCookiesByName -count=1 passed
+tdd: TestCookieGetCLIByName — red: cli_test.go:73: cookie-get k2 returned: "Cookies:\n- testcookie: 123 (domain: 127.0.0.1)\n- k1: v1 (domain: 127.0.0.1)\n- k2: v2 (domain: 127.0.0.1)\n\n" — green: go test ./tests/ -run TestCookieGetCLIByName -count=1 passed

@@ -820,10 +820,11 @@ func getApp() *cli.App {
 				},
 			},
 			{
-				Name:  "cookie-get",
-				Usage: "Get cookies",
+				Name:      "cookie-get",
+				Usage:     "Get cookies (all, or only the named cookie)",
+				ArgsUsage: "[name]",
 				Action: func(c *cli.Context) error {
-					return runClientCommand(c, daemon.Request{Command: "cookie-get"})
+					return runClientCommand(c, daemon.Request{Command: "cookie-get", Args: map[string]string{"name": c.Args().First()}})
 				},
 			},
 			{

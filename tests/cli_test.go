@@ -51,6 +51,29 @@ func runCli(args ...string) (string, error) {
 	return out.String(), err
 }
 
+func TestCookieGetCLIByName(t *testing.T) {
+	ts := SetupTestServer()
+	defer ts.Close()
+	runCli("close")
+	defer runCli("close")
+
+	if out, err := runCli("goto", ts.URL+"/storage"); err != nil {
+		t.Fatalf("goto: %v\n%s", err, out)
+	}
+	for _, kv := range [][2]string{{"k1", "v1"}, {"k2", "v2"}} {
+		if out, err := runCli("cookie-set", kv[0], kv[1]); err != nil {
+			t.Fatalf("cookie-set %s: %v\n%s", kv[0], err, out)
+		}
+	}
+	out, err := runCli("--raw", "cookie-get", "k2")
+	if err != nil {
+		t.Fatalf("cookie-get k2: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "v2") || strings.Contains(out, "v1") {
+		t.Errorf("cookie-get k2 returned: %q", out)
+	}
+}
+
 func TestStorageCommands(t *testing.T) {
 	ts := SetupTestServer()
 	defer ts.Close()
