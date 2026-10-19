@@ -10,12 +10,12 @@ Copy the shipped skill directory to Claude Code's skills path:
 
 ```bash
 # User-wide (recommended)
-mkdir -p ~/.claude/skills/rod-cli
-cp skills/rod-cli/SKILL.md ~/.claude/skills/rod-cli/
+mkdir -p ~/.claude/skills
+cp -R skills/rod-cli ~/.claude/skills/
 
 # Project-scoped
-mkdir -p .claude/skills/rod-cli
-cp skills/rod-cli/SKILL.md .claude/skills/rod-cli/
+mkdir -p .claude/skills
+cp -R skills/rod-cli .claude/skills/
 ```
 
 **Important:** If the `~/.claude/skills/` directory didn't exist when your Claude Code session started, you must **restart Claude** (`/exit` then relaunch) for the new skill to be discovered. Claude scans the skills directory at startup only.

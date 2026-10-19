@@ -8,12 +8,12 @@ opencode onboards rod-cli as a **native skill** — plus it natively reads `.cla
 
 ```bash
 # Global
-mkdir -p ~/.config/opencode/skills/rod-cli
-cp skills/rod-cli/SKILL.md ~/.config/opencode/skills/rod-cli/
+mkdir -p ~/.config/opencode/skills
+cp -R skills/rod-cli ~/.config/opencode/skills/
 
 # Project-scoped
-mkdir -p .opencode/skills/rod-cli
-cp skills/rod-cli/SKILL.md .opencode/skills/rod-cli/
+mkdir -p .opencode/skills
+cp -R skills/rod-cli .opencode/skills/
 ```
 
 ### 2. Or: use Claude/agents compat (zero extra work)

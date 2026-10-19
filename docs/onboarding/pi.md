@@ -16,12 +16,12 @@ Copy the shipped skill directory to Pi's skills path:
 
 ```bash
 # Global (recommended — avoids the project-trust requirement)
-mkdir -p ~/.pi/agent/skills/rod-cli
-cp skills/rod-cli/SKILL.md ~/.pi/agent/skills/rod-cli/
+mkdir -p ~/.pi/agent/skills
+cp -R skills/rod-cli ~/.pi/agent/skills/
 
 # Also works via the shared agents path
-mkdir -p ~/.agents/skills/rod-cli
-cp skills/rod-cli/SKILL.md ~/.agents/skills/rod-cli/
+mkdir -p ~/.agents/skills
+cp -R skills/rod-cli ~/.agents/skills/
 ```
 
 **Note:** Project-scoped skills (`.pi/skills/` or `.agents/skills/`) require the project to be **trusted** first. Global `~/.pi/agent/skills/` avoids this. See Pi's project-trust documentation for details.
@@ -64,7 +64,7 @@ pi install npm:@agenthands/rod-cli-pi
 
 ### What you get
 
-- **13 typed browser tools** — `browse_goto`, `browse_snapshot`, `browse_click`, etc.
+- **16 typed browser tools** — `browse_goto`, `browse_snapshot`, `browse_click`, etc.
 - **Automatic daemon lifecycle** — browser starts on first use, cleans up on quit
 - **Named sessions** — `session` parameter on every tool for multi-browser workflows
 - **Token-efficient output** — markdown snapshots, not raw HTML
@@ -73,7 +73,7 @@ The [Skill-based path](#install) (SKILL.md) remains available as a zero-install 
 
 See [extensions/pi/README.md](../../extensions/pi/README.md) for the full tool catalog.
 
-**OMP users:** Use the native [`@agenthands/rod-cli-omp`](../../extensions/omp/README.md) extension instead -- it provides the same 13 typed browser tools for the OMP host.
+**OMP users:** Use the native [`@agenthands/rod-cli-omp`](../../extensions/omp/README.md) extension instead -- it provides the same 16 typed browser tools for the OMP host.
 
 ## References
 

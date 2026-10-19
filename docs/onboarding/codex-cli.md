@@ -10,12 +10,12 @@ Copy the shipped skill directory to Codex's skills path:
 
 ```bash
 # Global (recommended)
-mkdir -p ~/.agents/skills/rod-cli
-cp skills/rod-cli/SKILL.md ~/.agents/skills/rod-cli/
+mkdir -p ~/.agents/skills
+cp -R skills/rod-cli ~/.agents/skills/
 
 # Project-scoped
-mkdir -p .agents/skills/rod-cli
-cp skills/rod-cli/SKILL.md .agents/skills/rod-cli/
+mkdir -p .agents/skills
+cp -R skills/rod-cli .agents/skills/
 ```
 
 > **Path note:** The official Codex skills path is `.agents/skills/` (project) or `$HOME/.agents/skills/` (global). The community fork path `~/.codex/skills/` differs — if you're using the community fork, adjust accordingly. Check your Codex version with `codex --version`.
