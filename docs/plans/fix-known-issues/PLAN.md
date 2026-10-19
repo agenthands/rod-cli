@@ -188,7 +188,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 2. `TestPruneInteractiveKeepsNamedGroup`: input `- group "Payment":\n  - generic:\n    - radio "Card" [ref=s1e2]\n`; output `- group "Payment":\n  - radio "Card" [ref=s1e2]\n`.
 **Done when:** `go test ./types/ -run Prune -count=1 && go test ./actions/ -run Snapshot -count=1` prints `ok` for both.
 
-### T07 [ ] console and requests say when old entries were dropped
+### T07 [~] console and requests say when old entries were dropped
 **Why:** the 2000-entry cap (`types/context.go:829`) drops the oldest entries silently, so an agent cannot tell its log is incomplete. The cap stays (it bounds daemon memory); the silence goes.
 **Seams:** `actions.ConsoleLogs/NetworkRequests` (live, capture on).
 **Change:**
