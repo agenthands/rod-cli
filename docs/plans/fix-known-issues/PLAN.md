@@ -240,6 +240,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 3. `cd /home/john/go/src/github.com/agenthands/rod-cli && go run golang.org/x/vuln/cmd/govulncheck@latest ./...` prints `No vulnerabilities found.`, and the same in godoll.
 4. `go test ./tests/ -run 'TestSmokeAntigravity|TestInputsAndForms|TestStorageCommands' -count=5` prints `ok`.
 5. `pgrep -af 'rod-cli.*daemon' | grep -v pgrep` prints nothing.
+5b. Profile counts `$(ls /tmp/rod/user-data 2>/dev/null | wc -l)` and `$(ls ~/.cache/rod-cli/profiles 2>/dev/null | wc -l)`, taken before step 1 and after step 4, are equal. `find /home/john/go/src/github.com/agenthands/rod-cli /home/john/go/src/github.com/agenthands/godoll -type d -name rod -not -path '*/node_modules/*' -not -path '*/.git/*'` prints nothing.
 6. Append a `## Summary` to evidence.md: each task, the three full-suite results, and the godoll result.
 
 If anything fails, return `blocked` with the failing test, its output, and the task whose files it touches.
