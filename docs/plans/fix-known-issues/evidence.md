@@ -82,3 +82,12 @@ verify: T09 — pass — done-check: `--- SKIP: TestLiveTyping_DuckDuckGo (20.62
 verify: T10 — pass — replace count `0`; `git check-ignore go.work` → `go.work`; `go build -o rod-cli .` + `GOWORK=off go build ./...` ok; clean clone `GOWORK=off go build -buildvcs=false ./...` → CLONE_BUILD_OK (godoll v0.0.0-20261019070714-939b13e6d02f from GitHub)
 
 note(T11): first T11 run blocked on godoll govulncheck (33 vulns: go1.26.0 stdlib, x/net v0.49.0). Fixed in godoll 1b4884d (toolchain go1.26.9, x/net v0.60.0); govulncheck clean in both repos. Full suite command fixed so go test failures fail the chain.
+
+## Summary
+- Tasks T00–T10 verified [x] by independent verifier; T11 run directly (2026-10-19).
+- Full suite ×3: run1 exit=0 fails=0; run2 exit=0 fails=0; run3 exit=0 fails=0.
+- godoll go vet + go test ./... -timeout 15m: exit=0, 0 FAIL.
+- govulncheck: rod-cli "No vulnerabilities found."; godoll "No vulnerabilities found." (after godoll 1b4884d: toolchain go1.26.9, x/net v0.60.0).
+- go test ./tests/ -run 'TestSmokeAntigravity|TestInputsAndForms|TestStorageCommands' -count=5: ok.
+- Leftover daemons: none. Profiles /tmp/rod/user-data / ~/.cache/rod-cli/profiles: before 0/0, after 0/0. No rod dirs in either repo.
+- Commits: rod-cli main..fix/known-issues = 68; godoll main..fix/known-issues = 5.

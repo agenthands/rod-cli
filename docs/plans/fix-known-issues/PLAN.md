@@ -232,7 +232,7 @@ The block: /tmp is a tmpfs with 1,048,576 inodes, and 100% are used (355 free). 
 - `go build -o rod-cli . && GOWORK=off go build ./...` both succeed;
 - a clean clone builds: `rm -rf /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && git clone -q --branch fix/known-issues /home/john/go/src/github.com/agenthands/rod-cli /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && cd /tmp/claude-1000/-home-john-go-src-github-com-agenthands-rod-cli/f5adcbb0-fa09-40c9-8840-6df439605546/scratchpad/clone && GOWORK=off go build -buildvcs=false ./... && echo CLONE_BUILD_OK` prints `CLONE_BUILD_OK`.
 
-### T11 [~] Final: retest everything three times, zero failures
+### T11 [x] Final: retest everything three times, zero failures
 **Seams:** none (no code).
 **Change:** run, in order:
 1. The Full suite command three times in a row. Each run must exit 0 with no failing test.
