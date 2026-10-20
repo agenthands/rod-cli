@@ -120,11 +120,10 @@ func ListSessions() ([]string, error) {
 	for _, f := range files {
 		base := filepath.Base(f)
 		session := strings.TrimSuffix(strings.TrimPrefix(base, "rod-cli-"), ".port")
-		_, err := ClientExecute(session, Request{Command: "ping"})
-		if err == nil {
+		if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
 			active = append(active, session)
 		} else {
-			os.Remove(f)
+			removeIfDead(f)
 		}
 	}
 	return active, nil
@@ -209,24 +208,33 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 }
 
 // removeDeadPortFiles removes the port files of daemons that no longer listen:
-// killed or crashed ones never ran their cleanup. A session whose start lock is
-// held is mid-spawn and is skipped, so its new port file is never removed.
+// killed or crashed ones never ran their cleanup.
 func removeDeadPortFiles() {
 	files, _ := filepath.Glob(filepath.Join(os.TempDir(), "rod-cli-*.port"))
 	for _, f := range files {
-		release, ok, err := tryLockFile(f + ".lock")
-		if err != nil || !ok {
-			continue
-		}
-		if port, err := readPort(f); err == nil {
-			if c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second); err == nil {
-				c.Close()
-			} else {
-				os.Remove(f)
-			}
-		}
-		release()
+		removeIfDead(f)
 	}
+}
+
+// removeIfDead removes port file f when nothing listens on its port or it
+// names no valid port. It skips f while its start lock is held (mid-spawn).
+func removeIfDead(f string) {
+	release, ok, err := tryLockFile(f + ".lock")
+	if err != nil || !ok {
+		return
+	}
+	defer release()
+	port, err := readPort(f)
+	if os.IsNotExist(err) {
+		return
+	}
+	if err == nil {
+		if c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second); err == nil {
+			c.Close()
+			return
+		}
+	}
+	os.Remove(f)
 }
 
 // publishPort writes the port file owner-only (0600, CreateTemp's mode) and

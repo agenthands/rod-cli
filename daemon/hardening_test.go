@@ -199,3 +199,20 @@ func TestPingTimeoutSparesRealCommands(t *testing.T) {
 		t.Fatalf("slow goto: %q, %v; want ok (ping timeout must not apply)", res, err)
 	}
 }
+
+func TestListSessionsKeepsLockedPortFile(t *testing.T) {
+	privateTmp(t)
+	spawning := writePortFile(t, "spawning", deadPort(t))
+	release, err := lockFile(spawning + ".lock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+
+	if s, _ := ListSessions(); len(s) != 0 {
+		t.Fatalf("listed %v, want none", s)
+	}
+	if _, err := os.Stat(spawning); err != nil {
+		t.Fatalf("ListSessions removed a port file whose .lock is held: %v", err)
+	}
+}
