@@ -1,6 +1,6 @@
 # rod-cli Plugin Documentation
 
-This is the index for writing, loading, and running `rod-cli` plugins — JavaScript files with optional lifecycle hooks that run in the goja sandbox alongside your browser session. New to plugins? Start with the [Writing Your First Plugin](./authoring.md) tutorial, then use the reference pages and worked examples below.
+This is the index for writing, loading, and running `rod-cli` plugins — JavaScript files with optional lifecycle hooks that run in the goja sandbox alongside your browser session. If you are new to plugins, start with the [Writing Your First Plugin](./authoring.md) tutorial, then use the reference pages and worked examples below.
 
 ## Getting Started
 

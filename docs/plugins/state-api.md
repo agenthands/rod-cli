@@ -1,12 +1,12 @@
 # State / Context API
 
-A loaded `rod-cli` plugin reads the live page's state through the `api` global. The engine binds `api` to the JavaScript runtime when it runs `BindLifecycle` (on `plugin load`), exposing a small set of accessors that wrap the underlying go-rod page. Each accessor mirrors the same shape: it reads from the bound page and returns its value, no-opping to a nil/empty result when no page is attached.
+A loaded `rod-cli` plugin reads the live page's state through the `api` global. The engine binds `api` to the JavaScript runtime when it runs `BindLifecycle` (on `plugin load`, when the session already has an open page), exposing a small set of accessors that wrap that go-rod page. Each accessor has the same shape: it reads from the bound page and returns its value, or a nil/empty result when no page is attached. When the underlying go-rod call fails, the accessor throws a JS exception, so wrap calls in `try/catch`.
 
 This page documents the three accessors that exist in `internal/plugin/api.go` — `GetSnapshot()`, `GetCookies()`, and `GetLocalStorage()` — with their return shapes and a worked snippet. Network request/response context is **not** an `api` method; it arrives through the lifecycle hook payloads (see [Network context](#network-context) below).
 
 ## When `api` Is Available
 
-The `api` global is bound only **after** `BindLifecycle` runs, which happens on `plugin load`. It is not available at script parse time — only inside your hook handlers, which run after load. If your code might be evaluated outside a loaded session, guard against an undefined `api`:
+The `api` global is bound only **after** `BindLifecycle` runs, which happens on `plugin load` when the session already has an open page; a plugin loaded before any page is open never gets `api`, so run `rod-cli goto <url>` before `plugin load`. It is not available at script parse time — only inside your hook handlers, which run after load. If your code might be evaluated outside a loaded session, guard against an undefined `api`:
 
 ```javascript
 if (typeof api !== "undefined") {
@@ -44,7 +44,7 @@ function onLoad(event) {
 
 ## `api.GetCookies()`
 
-Returns the page's **cookie array** — the CDP cookie objects collected via `page.Browser().GetCookies()`, handed back as a structured value.
+Returns the browser's **cookie array** — every cookie in the browser context, for all domains, not only the current page's — collected via `page.Browser().GetCookies()` and handed back as a structured value. Filter on `Domain` when you need one site's cookies.
 
 **Return shape:** an array of cookie objects. The fields a plugin reads most often are:
 
@@ -55,7 +55,7 @@ Returns the page's **cookie array** — the CDP cookie objects collected via `pa
 | `Domain` | the domain the cookie is scoped to |
 | `Path` | the path the cookie is scoped to |
 
-These are only the commonly-used fields. For the complete cookie shape (expiry, `HTTPOnly`, `Secure`, `SameSite`, etc.) consult the go-rod `proto.NetworkCookie` type in the [go-rod CDP proto reference](https://pkg.go.dev/github.com/go-rod/rod/lib/proto#NetworkCookie). The objects passed to JS are the JSON projection of that Go struct, so field names match.
+These are only the commonly-used fields. For the complete cookie shape (expiry, `HTTPOnly`, `Secure`, `SameSite`, etc.) consult the go-rod `proto.NetworkCookie` type in the [go-rod CDP proto reference](https://pkg.go.dev/github.com/go-rod/rod/lib/proto#NetworkCookie). The objects passed to JS are the Go structs wrapped by goja, not a JSON projection, so field names are the Go field names (`Name`, not `name`).
 
 ```javascript
 function onLoad(event) {

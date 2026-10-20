@@ -1,6 +1,6 @@
 # Running Code in the Browser
 
-Evaluate custom JavaScript code directly in the browser's context using the `eval` command.
+Run JavaScript in the page with the `eval` command.
 
 ## Basic Evaluation
 Without a target, the script is executed in the context of the global `window`.
@@ -11,7 +11,7 @@ rod-cli eval "performance.timing.navigationStart"
 ```
 
 ## Targeting Specific Elements
-To evaluate code against a specific element from the snapshot, provide the element reference as the second argument. This ref is the exact `[ref=…]` token printed by `rod-cli snapshot` next to each element (e.g. `s1e5`) — copy it verbatim. Refs are scoped to the snapshot that produced them: they change on every navigation/reload and whenever the page's DOM changes significantly, so re-run `snapshot` to get a fresh ref if one stops resolving. The script is evaluated with `this` bound to the DOM element.
+To evaluate code against a specific element from the snapshot, provide the element reference as the second argument. This ref is the exact `[ref=…]` token printed by `rod-cli snapshot` next to each element (e.g. `s1e5`) — copy it verbatim. Refs are scoped to the snapshot that produced them: they stop resolving after the next `snapshot`, after a navigation or reload, and when the element leaves the DOM, so re-run `snapshot` to get a fresh ref if one stops resolving. The script is evaluated with `this` bound to the DOM element.
 
 ```bash
 # Get text content of an element

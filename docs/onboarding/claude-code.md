@@ -28,7 +28,7 @@ Start a Claude Code session and ask:
 /rod-cli --version
 ```
 
-If rod-cli is on your `PATH` and the skill loaded correctly, Claude should invoke `rod-cli --version` and report the version. You can also test a real browse:
+If rod-cli is on your `PATH` and the skill loaded, Claude invokes `rod-cli --version` and reports the version. To test a real browse:
 
 ```
 /rod-cli goto https://example.com

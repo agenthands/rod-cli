@@ -1,6 +1,6 @@
 # Plugin CLI Reference
 
-`rod-cli` exposes three plugin subcommands under the top-level `plugin` command: `plugin load`, `plugin list`, and `plugin run`. These are thin clients — each one packages your arguments into a `daemon.Request{Command: "plugin-load" | "plugin-list" | "plugin-run"}` envelope, sends it to the running daemon, prints the daemon's response, and exits non-zero if the command fails. This page documents each subcommand's arguments, behavior, output format, and error/exit conditions exactly as they are implemented in `cmd.go` and `actions/plugin.go`.
+`rod-cli` exposes three plugin subcommands under the top-level `plugin` command: `plugin load`, `plugin list`, and `plugin run`. These are thin clients — each one packages your arguments into a `daemon.Request{Command: "plugin-load" | "plugin-list" | "plugin-run"}` envelope, sends it to the session's daemon (starting the daemon first if it is not running), prints the daemon's response, and exits non-zero if the command fails.
 
 ## `plugin load <path>`
 
@@ -10,9 +10,13 @@ Loads a plugin script into the active daemon session.
 rod-cli plugin load ./plugins/examples/xss_scanner.js
 ```
 
-**Arguments:** one positional `<path>` — the filesystem path to the plugin's JavaScript source. Required.
+**Arguments:** one positional `<path>` — the filesystem path to the plugin's JavaScript source. Required. The daemon opens the file, so a relative path resolves against the directory the session's daemon was started from; pass an absolute path when you run `rod-cli` from another directory.
 
-**Behavior:** the daemon's `PluginLoad` compiles and runs the script in the goja VM (`engine.LoadScript`), then, if a controlled page is available, calls `engine.BindLifecycle` to attach the CDP event listeners and bind the `api` global. The plugin's lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) begin firing from this point on — loading a plugin is what activates its hooks. The path is also recorded in the session's loaded-plugin list (surfaced by `plugin list`).
+**Behavior:** the daemon's `PluginLoad` compiles and runs the script in the goja VM (`engine.LoadScript`), then, if the session already has an open page, calls `engine.BindLifecycle` to attach the CDP event listeners to that page and bind the `api` global. The plugin's lifecycle hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) begin firing from this point on — loading a plugin is what activates its hooks. The path is also recorded in the session's loaded-plugin list (surfaced by `plugin list`).
+
+Open a page before loading: when the session has no page yet (for example, a fresh session), the script still loads and `plugin run` works, but no listeners attach and `api` stays undefined, and opening a page later does not attach them. Run `rod-cli goto <url>` first, then `plugin load`, then drive the page. The listeners stay on the page that was current at load; a tab opened or selected afterwards is not watched.
+
+Every loaded script runs in the same VM, so a later script's top-level functions replace same-named ones from an earlier script. Each `plugin load` made while a page is open attaches one more listener set, so loading twice makes each hook fire twice per event.
 
 **Output (success):** the literal string
 
@@ -23,9 +27,10 @@ Plugin loaded successfully from <path>
 **Error / exit conditions:**
 
 - **Missing path argument** — the CLI guards this client-side in `cmd.go` and returns the error `plugin path is required` without ever contacting the daemon. The process exits non-zero.
-- **Missing or unreadable file** — the daemon's `engine.LoadScript` cannot open the file and surfaces `failed to open script file <path>` (wrapping the underlying OS error). The command prints the error and exits non-zero.
+- **Missing or unreadable file** — the daemon's `engine.LoadScript` cannot open the file and surfaces `failed to open script file <path>` (or `failed to read script file <path>`), wrapping the underlying OS error. The command prints the error and exits non-zero.
+- **Script error** — a syntax error or an exception thrown while the script's top level runs surfaces as `failed to execute script <path>`. The path is not added to `plugin list`, and the command exits non-zero.
 
-Because the hooks begin firing after a successful load, `plugin load` is the primary execution path for a plugin today. See [lifecycle-hooks.md](./lifecycle-hooks.md) for the hooks that run and [state-api.md](./state-api.md) for the page state a loaded plugin can read.
+Because the hooks begin firing after a successful load, `plugin load` is the primary execution path for a plugin. See [lifecycle-hooks.md](./lifecycle-hooks.md) for the hooks that run and [state-api.md](./state-api.md) for the page state a loaded plugin can read.
 
 ## `plugin list`
 
@@ -60,7 +65,7 @@ rod-cli plugin run getFindings
 
 **Arguments:** one positional `<name>` — the name of a top-level function defined in the currently loaded plugin's VM.
 
-**Behavior:** `plugin run <name>` invokes the JS function named `<name>` in the loaded plugin's VM and returns its result stringified. The daemon's `PluginRun` delegates to `engine.RunFunc`, which looks the name up in the goja runtime (`vm.Get` + `goja.AssertFunction`), calls it with no arguments, and stringifies the returned value. This is the read path for in-VM plugin state: the canonical use is `rod-cli plugin run getFindings`, which calls the example XSS scanner's `getFindings` accessor and returns its collected findings as JSON. It operates on the single loaded plugin VM — there is no multi-plugin registry, so `<name>` resolves against whatever plugin is currently loaded.
+**Behavior:** `plugin run <name>` invokes the JS function named `<name>` in the loaded plugin's VM and returns its result stringified. The daemon's `PluginRun` delegates to `engine.RunFunc`, which looks the name up in the goja runtime (`vm.Get` + `goja.AssertFunction`), calls it with no arguments, and stringifies the returned value. This is the read path for in-VM plugin state: the canonical use is `rod-cli plugin run getFindings`, which calls the example XSS scanner's `getFindings` accessor and returns its collected findings as JSON. There is one plugin VM per session and no per-plugin registry: `<name>` resolves against the top-level functions of every script loaded so far, and when two scripts define the same name, the one loaded last wins.
 
 This complements `plugin load`: a plugin's hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`) still fire automatically after load and accumulate state as you browse; `plugin run` is how you invoke a named accessor or function — such as `getFindings` or `getRequestLog` — to read that state back. See [lifecycle-hooks.md](./lifecycle-hooks.md) for the hooks and the [XSS scanner worked example](./examples/xss-scanner.md) for the full load → drive page → `plugin run getFindings` flow.
 
@@ -69,10 +74,9 @@ This complements `plugin load`: a plugin's hooks (`onRequest`, `onResponse`, `on
 **Error / exit conditions:**
 
 - **Missing name argument** — an empty `<name>` is guarded with `plugin function name is required`.
-- **No such function** — a name that is not defined in the loaded plugin's VM yields `function "<name>" not found`.
+- **No such function** — a name that is not defined in the plugin VM yields `function "<name>" not found`. This is also the error when no plugin has been loaded: the VM is created empty on first use.
 - **Not callable** — a name bound to a non-callable value yields `"<name>" is not a callable function`.
 - **Runtime error inside the function** — an exception thrown while the function runs is wrapped as `error calling "<name>"`.
-- **Uninitialized engine** — if no plugin VM is available, `engine.RunFunc` returns `plugin engine not initialized`.
 
 Each of these causes a non-zero process exit, as does a daemon transport failure.
 

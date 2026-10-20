@@ -1,9 +1,9 @@
 # File Uploads and Drag-and-Drop
 
-`rod-cli` provides robust primitives for dealing with file inputs, which are notoriously tricky in web automation.
+`rod-cli` sets files on file inputs and drags elements onto other elements.
 
 ## Standard File Uploads
-For a standard `<input type="file">`, use the `upload` command. `upload`, `drag` and `drop` each take a CSS selector or a snapshot ref, plus (for `upload`/`drop`) the absolute path to the file on the local filesystem.
+For a standard `<input type="file">`, use the `upload` command. `upload`, `drag` and `drop` each take a CSS selector or a snapshot ref, plus (for `upload`/`drop`) the absolute path to the file on the local filesystem; a relative path resolves against the directory of the command that started the session's daemon.
 
 ```bash
 # Upload a single file (by snapshot ref)
@@ -17,10 +17,10 @@ rod-cli upload s1e22 "/tmp/image1.png" "/tmp/image2.png"
 ```
 
 ## Drag and Drop Interfaces
-Modern web applications often use "Dropzones" instead of standard file inputs. To simulate a user physically dragging a file from their desktop onto a DOM element, use the `drop` command.
+For a "Dropzone", target the zone's own `<input type="file">` (often hidden) with `drop`. `drop` sets one file on that input, like `upload` with one path; it does not fire drag or drop events, and on any element that is not a file input it fails.
 
 ```bash
-# Drop a file directly onto a Dropzone element
+# Set a file on the Dropzone's file input
 rod-cli drop --path="/tmp/avatar.jpg" s1e45
 ```
 

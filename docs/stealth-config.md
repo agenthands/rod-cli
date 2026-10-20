@@ -25,7 +25,7 @@ precedence and the same validation seam:
 | Daemon flag capture | `main.go` `runDaemonServer` | reads the flags off its `cli.Context` into a `types.StealthFlags` |
 | Resolution | `types/config.go` `ResolveStealth(cfg, flags)` | applies precedence, derives + validates, freezes into `cfg.Stealth` |
 | Identity build | `types/context.go` `profileFromStealth` | turns the resolved `cfg.Stealth` into the active `stealth.Profile` (the single identity source) |
-| Apply | `types/context.go` `createPage` | `EvasionManager.SetProfile` + `Apply` + `EvadeWebRTC` per page |
+| Apply | `types/context.go` `preparePage` | `EvasionManager.SetProfile` + `Apply` + `EvadeWebRTC` + `applyEmulationIdentity` per page |
 
 **Resolved once, at spawn.** `ResolveStealth` runs before `NewContext` freezes
 `Config`. A stealth flag therefore only takes effect for a session if it is
@@ -104,7 +104,8 @@ injection (it reverts to the un-hardened browser default — e.g. with
 `--battery-spoof=false`, headless `getBattery` reads back `level: 1, charging:
 true`, vs a spoofed laptop-like `level: 0.38, charging: false` when ON). The
 `media-devices-spoof` toggle-off is the harness-proven leg (ON vs OFF device
-signatures differ); the other vectors revert by the same per-dimension gate.
+signatures differ), and so is `font-spoof` (`TestFontSpoof`); battery and codecs
+revert by the same per-dimension gate.
 
 **Performance.** Each is a one-time JS injection at page setup
 (`EvalOnNewDocument`); cost is negligible and there is no per-call overhead.
@@ -112,11 +113,11 @@ signatures differ); the other vectors revert by the same per-dimension gate.
 **Real Chrome, no TLS.** Like the rest of the stack these are real-Chrome JS
 overrides only — there is **no** TLS/JA3 spoofing (see `stealth-validation.md`).
 
-> **Font caveat:** godoll's font injector currently does not alter observable
-> `measureText` widths, so `--font-spoof` is wired and gates injection but is not
-> separately harness-asserted on the live page; OS-coherence of the font *set* is
-> enforced at generation (the OS-keyed font list), and the media-devices, battery,
-> and codec vectors carry the live coherence/stability/toggle-off proofs.
+> **Font proof:** godoll's font injector offsets canvas `measureText` widths.
+> `TestFontSpoof` (`tests/detection_test.go`) asserts on the live page that ON
+> differs from `--font-spoof=false`, stays stable within a session, and reverts
+> to the baseline when OFF. OS-coherence of the font *set* is enforced at
+> generation (the OS-keyed font list).
 
 ### Humanize tuning (Phase 28, all opt-in)
 
@@ -128,8 +129,8 @@ overrides only — there is **no** TLS/JA3 spoofing (see `stealth-validation.md`
 | `--mouse-steps` | `WithMouseSteps` | interpolation steps along the path |
 | `--mouse-speed-min` / `--mouse-speed-max` | `WithMouseSpeed(min,max)` | **both** required |
 | `--mouse-deviation` | `WithMouseDeviation` | path randomness 0.0–1.0 |
-| `--scroll-duration` | `WithDuration` | base scroll animation in ms |
-| `--scroll-physics` | `WithPhysics` | see the constraint in §6 |
+| `--scroll-duration` | none (rod-cli) | total ms spread across a `mousewheel` call's ~100 px notches; unset = random 20–60 ms gap per notch |
+| `--scroll-physics` | none | ignored; accepted for config compatibility (see §6) |
 
 ### CDP footprint / capture (Phase 30, default OFF)
 
@@ -151,6 +152,14 @@ The network interceptor (godoll **Fetch** domain) is created + enabled **lazily*
 on the first mock `route` and torn down when the last route is removed — so a
 session that never adds a route never enables Fetch. Plugin `onRequest`/`onResponse`
 hooks enable their own Network subscription on demand, independent of the baseline.
+
+The opt-in CDP proxy (v2.0, `internal/cdpproxy/`) is also default OFF:
+
+| Flag | Meaning |
+|---|---|
+| `--cdp-proxy` | route CDP through the in-process WebSocket proxy: logs traffic for the `cdp-traffic` command and strips getter values from `Runtime.getProperties` responses. Default OFF. |
+| `--cdp-jitter-ms` | max random delay in ms before each CDP command; `0` = off; requires `--cdp-proxy`; above 1000 prints a stderr warning. |
+| `--no-cdp-proxy` | bypass the CDP proxy even when `--cdp-proxy` is set. |
 
 See [`cdp-footprint.md`](cdp-footprint.md) for the per-command inventory and the
 offline harness baseline assertion.
@@ -184,7 +193,8 @@ The proxy is bound **per named session**, not as one global egress IP.
 
 `profileFromStealth` overlays the resolved `cfg.Stealth` onto
 `stealth.DefaultProfile()` and returns the **one** `stealth.Profile` that drives
-both godoll's evasion JS and rod-cli's interceptor. Notable behavior:
+both godoll's evasion JS and the HTTP identity (`applyEmulationIdentity` →
+`Emulation.setUserAgentOverride`). Notable behavior:
 
 - `SpoofClientHints` is forced **on** so `Sec-Ch-Ua`, `navigator.userAgentData`,
   and the UA all tell one Chrome-version story (FINGERPRINT-02/03). Shipping the
@@ -192,9 +202,9 @@ both godoll's evasion JS and rod-cli's interceptor. Notable behavior:
 - Client-Hints are **derived from the active UA** (`parseChromeMajor`), not the
   old hardcoded version `121`.
 - `--canvas-noise` gates **both** `SpoofCanvas` and `SpoofAudioContext`.
-- The randomly generated fingerprint in `createPage` is used *only* for
-  dimensions godoll still needs (e.g. WebGL VideoCard) — **never** as the
-  identity.
+- The fingerprint generated in `preparePage` (seeded, constrained to the
+  profile's OS and locale) is used *only* for dimensions godoll still needs (WebGL
+  VideoCard and the §5 dimension injectors) — **never** as the identity.
 
 **Consistency gate** (`deriveAndValidateFingerprint`, run at the spawn seam):
 
@@ -244,33 +254,35 @@ mid-session.
 default `true`. Consumers read them through `boolVal(p, true)`.
 
 - **WebRTC (HARDEN-01):** when on, `launchBrowser` sets the
-  disable-non-proxied-UDP browser preference *and* `createPage` injects godoll's
+  disable-non-proxied-UDP browser preference *and* `preparePage` injects godoll's
   `EvadeWebRTC` JS wrapper, so a real local IP cannot leak past a proxy.
 - **Canvas/WebGL/Audio noise (HARDEN-02):** seeded by a per-session
   `noiseSeed` (generated once from `crypto/rand` in `NewContext`, threaded via
   `EvasionManager.SetNoiseSeed`). The seed makes the noise **stable within a
   session** — re-reads return an identical hash — because an unstable hash across
   reads is itself a tell.
-- **Fingerprint dimensions (Phase 33 / EVAD-01..03):** `createPage` calls
+- **Fingerprint dimensions (Phase 33 / EVAD-01..03):** `preparePage` calls
   `em.SetFingerprint(fp)` (before `SetProfile`, so the config identity stays the
   source of truth) with an **OS/locale-constrained, seeded** fingerprint, then
   `em.SetDimensionOptions(...)` from the four toggles. godoll's
   `applyFingerprintDimensions` injects only the enabled vectors. The same
   `noiseSeed` seeds generation, so the dimensions are stable per session; a toggle
   OFF skips that vector's injection entirely. See §2 "Advanced fingerprint-
-  dimension toggles" for the per-flag table and the font caveat.
+  dimension toggles" for the per-flag table and the font proof.
 
 ---
 
 ## 6. Human-behavior tuning and the zero-regression invariant
 
-The humanize knobs are consumed in `actions/actions.go` by three builders —
-`typingOpts`, `mouseOpts`, `scrollOpts` — that read `ctx.HumanizeTuning()` (the
-resolved `StealthConfig`) at the `click`/`fill`/`type`/`scroll` call sites.
+The humanize knobs are consumed in `actions/actions.go` by two builders —
+`typingOpts` and `mouseOpts` — that read `ctx.HumanizeTuning()` (the resolved
+`StealthConfig`) at the `click`/`fill`/`type`/`hover`/`mousemove`/`mousewheel`/`drag`
+call sites; `wheelScroll` reads `ScrollDuration` directly.
 
-Every tunable is a **pointer**: `nil` means "emit no godoll option," so godoll's
-own default applies and behavior is byte-for-byte the pre-v1.6 default. A bad
-value is rejected at spawn by `validateHumanizeTuning` (out-of-range, inverted, or
+Every tunable is a **pointer**: `nil` means "emit no godoll option" (for
+`ScrollDuration`, keep the random per-notch gap), so godoll's own default
+applies and behavior is byte-for-byte the pre-v1.6 default. A bad value is
+rejected at spawn by `validateHumanizeTuning` (out-of-range, inverted, or
 half-set min/max ranges) — godoll's `rand` would otherwise *panic per-keystroke*
 deep inside a frozen session.
 
@@ -279,11 +291,10 @@ deep inside a frozen session.
 - **No separate "delay jitter" knob.** "Delay jitter" is the variance produced by
   the `--typing-speed-min`/`--typing-speed-max` spread; a wider spread = more
   jitter. There is deliberately no dedicated jitter field.
-- **`--scroll-physics=false` cannot disable physics.** godoll's `WithPhysics()`
-  can only *enable* physics, and physics is godoll's own default. So `true` emits
-  `WithPhysics()` and `false`/unset emits nothing — godoll's default physics still
-  applies. Disabling it would need a godoll signature change (out of scope for
-  v1.6). The flag is kept for round-trip symmetry and forward-compat.
+- **`--scroll-physics` is ignored.** `mousewheel` sends real ~100 px wheel
+  notches and Chrome does the scrolling, so there is no physics model to switch.
+  The flag and the `scrollPhysics` config key are accepted only so existing
+  configs still load.
 
 ---
 
@@ -293,7 +304,21 @@ deep inside a frozen session.
   command hitting the same daemon session (PROFILE-01).
 - Resolution is deterministic and happens **once at spawn** (PROFILE-02); there is
   no per-command stealth state, and no bleed across named sessions.
-- Secrets (`--proxy-auth`) never enter argv; the daemon log is `0600`.
+- Secrets (`--proxy-auth`) never enter argv; the daemon log
+  (`os.TempDir()/rod-cli-daemon.log`, shared by all sessions, started over once
+  it passes 1 MiB) is `0600`.
+- Each session's Chrome runs on its own browser profile dir under
+  `types.DefaultProfileRoot()` (`~/.cache/rod-cli/profiles/` on Linux; the config
+  key `browserTempDir` overrides it, and the legacy `./rod/browser` counts as
+  unset) — not the stealth profile JSON in `~/.rod-cli/profiles/`. The profile dir
+  holds `owner.pid` and `chrome-tmp`, the path of the session Chrome's own short
+  temp dir (`os.TempDir()/chrome-XXXX`, or `/tmp` when `TMPDIR` is longer than 40
+  chars), which Chrome uses as `TMPDIR`. Both are removed on `close`, the
+  15-minute idle timeout, and SIGINT/SIGTERM/SIGHUP. A daemon killed
+  with `kill -9` leaves them; the next session Chrome launch under the default root
+  removes profiles whose owner is dead or whose PID now belongs to a non-rod-cli
+  process, and the next daemon start removes port files
+  (`os.TempDir()/rod-cli-<session>.port`) of dead daemons.
 
 ---
 

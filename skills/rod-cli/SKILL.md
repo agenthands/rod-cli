@@ -1,20 +1,20 @@
 ---
 name: rod-cli
-description: "This skill should be used when the user needs to browse the web, scrape content, interact with forms, click elements, take screenshots, evaluate JavaScript on a page, or automate any browser-based task. rod-cli is a token-efficient, native web automation CLI for LLMs using Go Rod. Prefer rod-cli over curl/wget for JavaScript-rendered pages and over heavy browser automation frameworks for token-efficient DOM snapshots."
+description: "Browse the web, scrape a page, fill forms, click elements, take screenshots, run JavaScript on a page, or automate any browser task with rod-cli, the token-efficient Go Rod browser CLI."
 version: v1.7
 ---
 
 # Go Rod Skill (`rod-cli`)
 
-This skill defines the `rod-cli` binary usage for agentic web workflows. The tool is heavily optimized for token-efficiency, generating structured, accessibility-tree-based DOM snapshots rather than dumping massive raw HTML.
+`rod-cli` is a native Go Rod web automation CLI for agents. It returns token-efficient, accessibility-tree-based DOM snapshots instead of raw HTML. Prefer it over curl/wget for JavaScript-rendered pages, and over heavy browser automation frameworks.
 
 ## Core Concepts
 
-1. **Daemon Architecture**: `rod-cli` runs as a background persistent daemon to hold state.
-   - The first command implicitly boots a persistent browser in the background.
-   - **Zombie Prevention**: The daemon polls the calling agent process's PPID; if the agent crashes, the browser dies with it. A 15-minute idle timeout is also enforced.
+1. **Daemon Architecture**: `rod-cli` runs as a persistent background daemon that holds state.
+   - The first command boots a persistent browser in the background.
+   - **Idle timeout**: the daemon outlives the command that started it and exits after 15 minutes without a command.
    - **Always** run `rod-cli close` when finished to clean up resources.
-   - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (on disk, never `/tmp` or the working directory; `browserTempDir` in `rod-cli.yaml` overrides the location). Chrome's temp files go to a per-session `chrome-*` dir in the temp dir. `close`, the idle timeout, parent exit and SIGINT/SIGTERM/SIGHUP remove both; a profile left by a killed or crashed daemon is removed when the next daemon starts.
+   - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` on Linux (the user cache dir: on disk, never `/tmp` or the working directory; `browserTempDir` in `./rod-cli.yaml` overrides the location). Chrome's lock dir and temp files go to a per-session `chrome-*` dir in the system temp dir. `close`, the idle timeout and SIGINT/SIGTERM/SIGHUP remove both. A daemon killed with `kill -9` or crashed leaves them; the next session that launches Chrome removes them (default location only). Every session file and its cleanup: [references/session-management.md](references/session-management.md#session-files).
 
 2. **Named Sessions**:
    - For multi-target workflows (e.g., logging in as two distinct users simultaneously), use the global `--session` or `-s` flag to multiplex daemons.
@@ -23,7 +23,7 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 
 3. **Element Targeting**: Every command below that takes `[selector]` (`click`, `dblclick`, `type`, `fill`, `select`, `check`, `uncheck`, `hover`, `upload`, `drag`, `drop`, `highlight`) accepts **either**:
    - a plain **CSS selector** (e.g. `#submit-button`, `.nav-link`) — resolves immediately, even before any `snapshot` call, or
-   - an opaque **snapshot ref** — the literal token from a `[ref=sNeM]` annotation printed by `rod-cli snapshot` (e.g. `s1e5`), copied verbatim. Use a ref when no stable CSS selector exists, or to disambiguate elements. Refs are tied to the snapshot generation that produced them — re-run `snapshot` for a fresh ref if the DOM changes and the old ref stops resolving.
+   - an opaque **snapshot ref** — the literal token from a `[ref=sNeM]` annotation printed by `rod-cli snapshot` (e.g. `s1e5`), copied verbatim. Use a ref when no stable CSS selector exists, or to disambiguate elements. Refs are tied to the snapshot that produced them: they stop resolving after the next `snapshot`, a navigation or a tab switch — re-run `snapshot` for a fresh ref.
 
 4. **Prefer Native Actions over `eval`**: Use the native commands to interact with the page — not `eval`.
    - `click`/`dblclick`/`fill`/`type`/`hover`/`drag`/`mousewheel` dispatch real, trusted, humanized input: genuine CDP mouse movement and wheel events (tunable tremor/speed/deviation) and per-keystroke typing cadence, which this tool's stealth design depends on.
@@ -38,17 +38,19 @@ This skill defines the `rod-cli` binary usage for agentic web workflows. The too
 ### Global Options
 - `--max-output N`: Cap any command's output at N bytes (0 = unlimited, the default). Use it to bound token cost on big pages, e.g. `rod-cli --max-output 4000 snapshot`.
 - `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
-- `--raw`: Only changes output for two commands — `install` (suppresses the "Downloading…" progress line) and `stealth-check` (single-line PASS/FAIL instead of a table). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — don't add it reflexively.
+- `--raw`: Only changes output for `install` (suppresses the "Downloading…" progress line), `stealth-check` (single-line PASS/FAIL instead of a table) and `--profile=list` (names only). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — omit it there.
 - The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
 - `-s, --session`: Specify a named session string.
 
 Session-spawn flags take effect only when a session's daemon spawns (its first command). To change them, run `rod-cli close` first, then pass them on the next command:
 - `--headless`: enable headless.
 - `--proxy`: route this session through an HTTP or SOCKS5 proxy (scheme in URL, e.g. http://host:port or socks5://host:port).
+- `--proxy-auth`: proxy credentials as user:pass (handled via CDP, never URL-embedded).
 - `--profile`: stealth profile: a built-in name (see --profile=list), a custom name resolved under ~/.rod-cli/profiles/, or a path to a JSON profile file.
 - `--user-agent`: pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor).
 - `--locale`: pin the BCP-47 locale (e.g. en-US); derived from languages when unset.
 - `--timezone`: pin the IANA timezone (e.g. America/New_York).
+- `--platform`: pin navigator.platform (e.g. Win32, MacIntel, Linux); derived from the UA OS token when unset.
 - `--cdp-endpoint`: control browser by cdp.
 - `--console-capture`: Capture browser console messages for the console command (default off; enables Runtime CDP domain).
 - `--request-capture`: Capture network requests for the requests/`request` commands (default off; enables Network CDP domain).
@@ -165,7 +167,7 @@ Pi and OMP users can use the typed extensions instead: [Pi](https://github.com/a
 
 ## Specific tasks
 
-For more detailed guides on advanced features, refer to the following documents:
+Detailed guides on advanced features:
 
 * **Inspecting element attributes**: [references/element-attributes.md](references/element-attributes.md)
 * **Request mocking**: [references/request-mocking.md](references/request-mocking.md)

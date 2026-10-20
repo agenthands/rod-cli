@@ -1,8 +1,7 @@
 # rod-cli Architecture
 
-This document provides a high-level overview of the `rod-cli` system architecture,
-explaining how a simple CLI command translates into stealth-enabled browser
-automation. For the deeper map the team keeps while working on the code, see
+How a `rod-cli` command becomes stealth-enabled browser automation, at a high
+level. For the deeper map the team keeps while working on the code, see
 `.planning/codebase/`.
 
 ## 1. The Daemon Model
@@ -18,9 +17,10 @@ between calls. `rod-cli` solves this with a **client/daemon split**:
 3. If no daemon answers, the client spawns a detached copy of itself in daemon
    mode (`daemon.EnsureDaemon` → `exec.Command(exePath, "--session", <s>, <flags…>, "daemon")`).
 4. The daemon (`runDaemonServer`, `main.go`) loads config, **resolves the stealth
-   surface once** (see §3), launches Chromium via `godoll`, and serves a small
-   JSON-over-HTTP protocol on a per-session loopback socket
-   (`daemon.StartServer`).
+   surface once** (see §3), and serves a small JSON-over-HTTP protocol on a
+   loopback TCP port (`daemon.StartServer`), whose number it writes to the
+   session's port file. It launches Chrome via `godoll` on the first command
+   that needs a page (or attaches to `--cdp-endpoint` instead).
 5. The client sends its request to the daemon (`daemon.ClientExecute`); the
    daemon runs the action against the live browser and returns the result, which
    the client prints (plain, `--raw`, or `--json`).
@@ -34,6 +34,38 @@ sequential client invocations.
 its **own** daemon process with its own Chromium instance — so sessions are fully
 isolated, and stealth config set on one session never bleeds into another.
 
+### Session files and cleanup
+
+Each daemon owns these files (`daemon/daemon.go`, `types/profile_root.go`):
+
+- **Port file** `os.TempDir()/rod-cli-<session>.port` holds the daemon's port.
+  Clients serialize spawns on the start lock `<port file>.lock`, which is
+  deleted on release.
+- **Shared daemon log** `os.TempDir()/rod-cli-daemon.log` (mode 0600) takes
+  every daemon's stdout/stderr; a spawn truncates it once it exceeds 1 MiB.
+- **Session profile** — a random-named dir under `types.DefaultProfileRoot()` =
+  `os.UserCacheDir()/rod-cli/profiles` (`~/.cache/rod-cli/profiles` on Linux),
+  unless the config sets `browserTempDir` (the legacy value `./rod/browser`
+  counts as unset). It holds `owner.pid` (the daemon's PID) and `chrome-tmp`
+  (the path of the session Chrome's temp dir).
+- **Chrome temp dir** — from godoll `browser.ChromeTempDir`:
+  `os.TempDir()/chrome-XXXX`, or `/tmp/chrome-XXXX` when `os.TempDir()` is
+  longer than 40 characters (not on Windows) so Chrome's socket path fits.
+  Chrome runs with it as `TMPDIR`/`TMP`/`TEMP` and keeps its lock dir and temp
+  files there.
+
+`close`, the 15-minute idle timeout, and SIGINT/SIGTERM/SIGHUP all run one
+cleanup: remove the port file, close Chrome, then remove the profile and its
+Chrome temp dir. A daemon killed with `kill -9` leaves them behind, and later
+starts remove them:
+
+- every daemon start removes port files whose port no longer answers
+  (`removeDeadPortFiles`), skipping sessions whose start lock is held;
+- every Chrome launch under the default profile root first removes profiles
+  whose owner is gone — no `owner.pid`, a dead PID, or a PID reused by a
+  non-rod-cli process (`SweepStaleProfiles`) — together with their Chrome temp
+  dirs.
+
 ## 2. Godoll Engine Integration
 
 `rod-cli` is built on the [`godoll`](https://github.com/agenthands/godoll)
@@ -41,7 +73,7 @@ framework (a wrapper around `go-rod`). The daemon's `types.Context`
 (`types/context.go`) owns the `rod.Browser`/`rod.Page` lifecycle and wires godoll
 in at three points:
 
-- **Stealth / evasion** — `godoll/stealth.EvasionManager`. `createPage` builds the
+- **Stealth / evasion** — `godoll/stealth.EvasionManager`. `preparePage` builds the
   active `stealth.Profile` from the resolved config (the single identity source),
   applies the evasion JS, threads the per-session noise seed, and conditionally
   wraps WebRTC. See §3.
@@ -81,7 +113,7 @@ client flags (cmd.go)                  daemon (main.go)            types/context
 --proxy-auth ───(out-of-band env)──▶  ROD_CLI_PROXY_AUTH           ▼
                                                               NewContext freezes cfg
                                                                     │
-                                                              createPage → profileFromStealth
+                                                              preparePage → profileFromStealth
                                                                     │  → stealth.Profile (the
                                                                     ▼     single identity source)
                                                               EvasionManager.Apply() + EvadeWebRTC()
@@ -154,7 +186,7 @@ tier proves and the full honest-ceiling discussion, and
 
 ## 5. Invoking with no command
 
-Running `rod-cli` with no arguments prints the banner, description, and full
-command list (see `--help`). The tool is driven entirely through explicit
+Running `rod-cli` with no arguments prints the description and full command list
+(the same as `--help`); `--banner` adds the startup banner. The tool is driven entirely through explicit
 subcommands; the only long-running process is the per-session daemon spawned on
 demand.

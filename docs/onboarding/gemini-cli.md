@@ -1,6 +1,6 @@
 # Gemini CLI — rod-cli Onboarding
 
-Gemini CLI does **not** have a skills primitive. Instead, rod-cli is onboarded via a **`GEMINI.md` context file** that teaches Gemini how and when to shell out to the `rod-cli` binary.
+Gemini CLI has no skills primitive. rod-cli is onboarded via a **`GEMINI.md` context file** that teaches Gemini how and when to shell out to the `rod-cli` binary.
 
 ## Install
 
@@ -23,7 +23,8 @@ task involving web browsing, scraping, form interaction, or page evaluation.
   each element's `[ref=s1e5]`-style ref)
 - Clicking elements: `rod-cli click <ref-or-selector>` — a CSS selector
   (`#id`, `.class`) or a ref copied verbatim from `snapshot` output
-- Filling forms: `rod-cli fill <ref-or-selector> <value> --submit`
+- Filling forms: `rod-cli fill --submit <ref-or-selector> <value>` (command
+  flags go before the positional arguments)
 - Running JavaScript: `rod-cli eval <script>` (for reading page state/data —
   prefer `click`/`fill`/`type`/`hover` for interaction; they dispatch real,
   trusted, humanized input, while an eval-driven `el.click()` fires an
@@ -33,7 +34,8 @@ task involving web browsing, scraping, form interaction, or page evaluation.
 ### Important
 - rod-cli runs as a background daemon — the first command starts it.
 - Always run `rod-cli close` when done to clean up.
-- For multi-tab work, use `--session <name>`.
+- For multi-tab work, use `rod-cli tab-new <url>` (it prints the new tab's ID) and `rod-cli tab-select <id>`; prefer the ID over the index, because indexes shift.
+- For separate browsers (e.g. two logged-in users), use `--session <name>`.
 - rod-cli is NOT an MCP server — do not attempt MCP registration. Use it as a CLI.
 EOF
 ```

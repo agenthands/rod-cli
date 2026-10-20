@@ -64,8 +64,9 @@ Emulation domain carries no header-deletion knob.
     a feature onto the baseline; it cannot by itself catch a domain enabled through a
     path that bypasses the instrumentation. The concrete instance today is the
     **plugin lifecycle binder** (`internal/plugin/lifecycle.go`): loading a plugin
-    enables `Network`/`DOM` on the wire but does not call `recordCDPDomainLocked`, so
-    `GetEnabledCDPDomains()` does not reflect it. A mechanical completeness guard
+    enables `Network` and `DOM` on the wire, but `BindLifecycle` records only `DOM`
+    (through `RecordCDPDomain`), so the ledger misses the `Network` enable it
+    causes. A mechanical completeness guard
     (e.g. an `.smtc/analyzers` dominance spec, routing the plugin binder through the
     ledger, or sniffing real CDP commands) is a candidate strengthening for v2.
 - **Wire-level identity confirmation.** `TestNetworkEvasionHeaders` drives a plain
@@ -119,9 +120,10 @@ It sits between go-rod's `cdp.Client` and Chrome's debugging WebSocket, implemen
 - **Default-OFF** — gated behind `--cdp-proxy` (default false)
 - **Bypass flag** — `--no-cdp-proxy` provides a zero-risk escape hatch
 
-The proxy is 402 lines of Go in `internal/cdpproxy/` (proxy.go + filters.go) with
-7 unit tests for the normalization logic. Runtime normalization is active when the
-proxy is enabled; jitter and command dispatch are opt-in.
+The proxy is 182 lines of Go in `internal/cdpproxy/` (proxy.go + filters.go) with
+7 unit tests for the normalization logic (filters_test.go). Traffic logging and
+Runtime normalization are active whenever the proxy is enabled; jitter needs
+`--cdp-jitter-ms`.
 
 ### What the proxy can and cannot hide (v2.0, built)
 

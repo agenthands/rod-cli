@@ -1,6 +1,6 @@
 # Inspecting Element Attributes
 
-To retrieve element attributes, use the `rod-cli eval` command along with a target element reference from the snapshot. This is a **read**, not an interaction — `eval` is the right tool here because it extracts data (an attribute value) rather than acting on the page, which is exactly what `eval` is reserved for; use `click`/`fill`/`type`/etc. instead to actually interact with an element.
+To read an element attribute, run `rod-cli eval` with the element's ref from the snapshot. This is a **read**, not an interaction: `eval` is reserved for extracting data such as an attribute value; to interact with an element, use `click`/`fill`/`type`/etc.
 
 ## Getting standard attributes
 ```bash

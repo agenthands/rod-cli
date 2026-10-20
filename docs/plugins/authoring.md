@@ -7,13 +7,13 @@ This is a zero-to-running-plugin tutorial: copy a starter, fill in one hook, loa
 A `rod-cli` plugin is a plain JavaScript file that defines one or more optional lifecycle hooks. The file runs in the [goja](https://github.com/dop251/goja) sandbox, which is deliberately minimal: there is **no `console`, no `fs`, no `require`, and no `import`**. The only things your script can touch are:
 
 - the **hook payloads** the engine passes in — `event.Request`, `event.Response`, and `event.Node`, and
-- the **`api` global** — a small set of page-state accessors that bind once a page is open.
+- the **`api` global** — a small set of page-state accessors, bound when you load the plugin into a session that already has an open page.
 
 There are four hooks (`onRequest`, `onResponse`, `onLoad`, `onDOMNodeInserted`); every one is optional, and an undefined hook is silently no-op'd. See [./lifecycle-hooks.md](./lifecycle-hooks.md) for the hook list and payload shapes, and [./state-api.md](./state-api.md) for the `api` accessors.
 
 ## 2. Project structure
 
-A plugin is a single `.js` file and can live at any filesystem path — you pass that path to `plugin load`. The fastest way to start is to copy the Phase 22 starter scaffold, which already wires up the four hook stubs and a `getResults` accessor:
+A plugin is a single `.js` file and can live at any filesystem path — you pass that path to `plugin load`. The fastest way to start is to copy the starter scaffold, which already wires up the four hook stubs and a `getResults` accessor:
 
 ```bash
 cp ./plugins/examples/starter.js ./my_plugin.js
@@ -42,9 +42,15 @@ function getResults() {
 
 Delete the hooks you don't use — an undefined hook changes nothing. See [./lifecycle-hooks.md](./lifecycle-hooks.md) for the exact payload shapes and [./examples/recipes.md](./examples/recipes.md) for a per-hook recipe you can crib from.
 
-## 4. Load it
+## 4. Open a page, then load it
 
-Load the script into the active daemon session:
+The `api` global and the CDP lifecycle listeners bind only to a page that is already open when you load the plugin. A plugin loaded before any page is open gets no listeners, and opening a page afterwards does not attach them. Open a page first:
+
+```bash
+rod-cli goto https://example.test
+```
+
+Then load the script into the session:
 
 ```bash
 rod-cli plugin load ./my_plugin.js
@@ -58,9 +64,9 @@ Plugin loaded successfully from ./my_plugin.js
 
 Loading is what activates the hooks — they begin firing from this point on. See [./cli-reference.md](./cli-reference.md) for the full `plugin load` behavior and error conditions.
 
-## 5. Open a page so hooks attach
+## 5. Drive the page so hooks fire
 
-The `api` global and the CDP lifecycle listeners bind only when a browser page is open in the session. Until then, hooks have nothing to fire against. Open and drive a page so the listeners attach and your hook starts accumulating state:
+Navigate or interact in the same tab so your hook starts accumulating state; a tab opened or selected after the load is not watched:
 
 ```bash
 rod-cli goto https://example.test

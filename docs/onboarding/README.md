@@ -1,6 +1,6 @@
 # Installing rod-cli for Coding Assistants
 
-rod-cli is a native, token-efficient web automation CLI designed for LLM integration. It communicates via standard I/O — no MCP server, no JSON-RPC overhead. This guide shows how to install rod-cli and onboard it into your coding assistant.
+rod-cli is a native, token-efficient web automation CLI for LLMs. It communicates via standard I/O — no MCP server, no JSON-RPC overhead. This guide shows how to install rod-cli and onboard it into your coding assistant.
 
 ## Prerequisites: Install rod-cli
 
@@ -28,7 +28,9 @@ This downloads Chromium to `~/.cache/rod/browser/`.
 
 ### Where browser profiles live
 
-Each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (the OS user cache dir; on disk, never `/tmp` or the working directory). Set `browserTempDir` in `rod-cli.yaml` to use another root. Chrome's own temp files (its lock dir, downloads in progress) go to a small per-session `chrome-*` dir in the temp dir, never loose in `/tmp`. `rod-cli close`, the idle timeout, parent exit and SIGINT/SIGTERM/SIGHUP remove the profile and that dir. A profile left behind by a killed or crashed daemon, or a reboot, is removed when the next daemon starts.
+Each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` (the OS user cache dir; on disk, never `/tmp` or the working directory). Set `browserTempDir` in `rod-cli.yaml` to use another root. Chrome's lock dir and temp files go to a per-session `chrome-*` dir in the temp dir (`/tmp` when `TMPDIR` is longer than 40 characters), never loose in `/tmp`. `rod-cli close`, the 15-minute idle timeout and SIGINT/SIGTERM/SIGHUP remove the profile and that dir. A profile in the default root left behind by a killed (`kill -9`) or crashed daemon, or a reboot, is removed, with its `chrome-*` dir, when the next session launches its Chrome.
+
+The daemon also writes `rod-cli-<session>.port` and the shared `rod-cli-daemon.log` (started over once it exceeds 1 MiB) to the temp dir. The next daemon start removes port files of daemons that no longer run.
 
 ### Verify
 
@@ -43,7 +45,7 @@ rod-cli --version
 | **Claude Code** | Agent Skill (`SKILL.md`) | [claude-code.md](claude-code.md) |
 | **Codex CLI** | Agent Skill + AGENTS.md | [codex-cli.md](codex-cli.md) |
 | **Gemini CLI** | GEMINI.md context file | [gemini-cli.md](gemini-cli.md) |
-| **Pi (pi.dev)** | Agent Skill via bash | [pi.md](pi.md) |
+| **Pi (pi.dev)** | TypeScript extension (recommended) or Agent Skill | [pi.md](pi.md) |
 | **opencode** | Native skills + Claude compat | [opencode.md](opencode.md) |
 
 **Important:** rod-cli is NOT an MCP server. Every assistant onboards it by shelling out to the `rod-cli` binary — not via MCP tool registration. Do NOT attempt to register rod-cli as an MCP server.

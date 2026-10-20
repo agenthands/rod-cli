@@ -15,10 +15,17 @@ nature and subject to layers a JS-injecting CLI cannot touch.
 
 ## Tier 1 — Offline harness (deterministic, blocking CI)
 
-**What it is:** `tests/detection_test.go` driving the **shipped `rod-cli` binary**
-against the offline fixture in `internal/detect/` (served on `127.0.0.1`, zero
-network egress). It is the blocking gate in `.github/workflows/test.yml`
-(`go test ./... -count=1`).
+**What it is:** `tests/detection_test.go` (with `tests/stealth_test.go` for
+`navigator.webdriver`, plugins, and the UA) driving the **shipped `rod-cli` binary**
+— the prebuilt `../rod-cli`, so run `go build -o rod-cli .` first — against the
+offline fixture in `internal/detect/` (served on `127.0.0.1`, zero network egress).
+It is the blocking gate in `.github/workflows/test.yml`, which builds the binary,
+runs `./rod-cli install`, then `go test ./... -count=1`.
+
+Every `tests/` run (both tiers) keeps its sessions' browser profiles in a fresh
+`rod-cli-tests-cache-*` dir in `os.TempDir()` (`TestMain` points `XDG_CACHE_HOME`
+at it) and removes it when the run ends; a run killed before then has its dir
+removed by a later run once none of its daemons is left.
 
 **What it deterministically proves** — the **JavaScript-layer fingerprint signals**,
 each read back **from the live page** (via the `eval` command, never from a Go
@@ -34,6 +41,16 @@ config field — the project's *validate-live-not-source* rule):
 - WebRTC ICE leaks no real host IP (Phase 27 HARDEN-01).
 - Canvas / WebGL / audio readback noise is **stable within a session** (Phase 27
   HARDEN-02).
+- Fingerprint dimensions (Phase 33): media devices, battery, and codecs read back
+  plausible values; media devices and fonts read back the same within a session and
+  revert when their toggle is off (`TestAdvancedEvasionDimensions`,
+  `TestFontSpoof`). The font set is drawn for the profile's OS and the seeded
+  generator reproduces the same dimensions for the same seed; this is checked
+  without a browser at the generation layer (`TestSeededFingerprintDimensions`).
+
+The CDP baseline is checked offline too: `TestCDPFootprintBaseline`
+(`types/cdp_footprint_test.go`) reads rod-cli's per-session CDP domain ledger and
+asserts a plain session enables none of `Runtime` / `Network` / `Fetch`.
 
 **Why this tier is blocking:** it is fully offline and deterministic, so it can be a
 CI gate without flakiness. It proves the layer rod-cli *owns* — the JS/fingerprint
@@ -45,8 +62,9 @@ surface — and nothing it cannot.
 
 **What it is:** `tests/detection_live_test.go`, guarded by
 `//go:build detection_live`. It drives the real binary against **live third-party
-anti-bot challenges** — Cloudflare, DataDome — and the **CreepJS** fingerprint
-scorer, reporting each per-target verdict **informationally**.
+anti-bot challenges** — Cloudflare, DataDome — the **CreepJS** fingerprint
+scorer, and a CDP-tell probe on `example.com`, reporting each per-target verdict
+**informationally**.
 
 **It is non-blocking in BOTH senses:**
 
@@ -102,10 +120,12 @@ makes **no claim** to control them — which is exactly why even a clean live ru
   the always-on footprint is **reduced**: a plain session enables **none** of
   `Runtime` / `Network` / `Fetch` — console/request logging are opt-in flags, the
   mock interceptor is lazy, and HTTP identity coherence moved to the zero-enable
-  `Emulation` domain. The offline harness asserts this baseline deterministically
-  (Tier 1). What remains is the irreducible `Page`/`Target` enablement needed to
-  drive any CDP browser; fully obfuscating the transport (browser-patching / MITM /
-  alternate transport) is deferred to v2 (CDP-DEEP-01). See
+  `Emulation` domain. `TestCDPFootprintBaseline` asserts this baseline
+  deterministically (Tier 1). What remains is the irreducible `Page`/`Target`
+  enablement needed to drive any CDP browser. The opt-in `--cdp-proxy` (v2.0,
+  CDP-DEEP-01) strips getter values from `Runtime.getProperties` responses and,
+  with `--cdp-jitter-ms`, jitters command timing, but the CDP transport itself
+  stays observable. See
   [CDP Footprint](cdp-footprint.md) for the per-domain inventory and mitigation status.
 
 **No "undetectable" guarantee.** rod-cli validates and hardens the JS/fingerprint
@@ -118,8 +138,8 @@ best-effort data point — not proof you are invisible.
 ## See also
 
 - [CDP Footprint](cdp-footprint.md) — the per-domain CDP inventory + mitigation
-  status: how the baseline Runtime/Network/Fetch footprint was reduced (v1.7) and the
-  honest ceiling deferred to v2 (CDP-DEEP-01).
+  status: how the baseline Runtime/Network/Fetch footprint was reduced (v1.7), the
+  opt-in CDP proxy (v2.0, CDP-DEEP-01), and the honest ceiling.
 - [Stealth Configuration](stealth-config.md) — the config surface, fingerprint pins,
   proxy, hardening toggles, and humanize tuning that the harness validates.
 - [Architecture](../ARCHITECTURE.md) — the daemon + stealth engine overview.

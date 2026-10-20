@@ -2,25 +2,28 @@
 
 The recipes under [`plugins/examples/recipes/`](../../../plugins/examples/recipes/) are minimal, single-hook plugins — one script per lifecycle hook. Each defines exactly one hook, accumulates what that hook sees into a module-level array, and exposes a getter so you can read the collected state back with `plugin run <getter>`. They are the smallest possible demonstration of "load a plugin, drive the browser, watch a hook fire."
 
-Each recipe is loadable on its own. The flow is always the same: `plugin load` the recipe to bind its single hook, drive the browser so that hook fires, then `plugin run <getter>` to print what it collected as JSON. The event payload shapes are documented once in [../lifecycle-hooks.md](../lifecycle-hooks.md); these recipes only show how each hook is wired and read back.
+Each recipe is loadable on its own. The flow is always the same: open a page, `plugin load` the recipe to bind its single hook to that page, drive the page so that hook fires, then `plugin run <getter>` to print what it collected as JSON. Recipes loaded into one session share one VM, and each load attaches another listener set, so load one recipe per session (`rod-cli close` ends the session). The event payload shapes are documented once in [../lifecycle-hooks.md](../lifecycle-hooks.md); these recipes only show how each hook is wired and read back.
 
 ### onRequest — log every outgoing request
 
 [`plugins/examples/recipes/on_request.js`](../../../plugins/examples/recipes/on_request.js) records the URL and method of every outgoing network request.
 
 ```bash
-# 1. Load the recipe (binds onRequest).
-rod-cli plugin load ./plugins/examples/recipes/on_request.js
-
-# 2. Drive the browser so requests go out.
+# 1. Open a page first: hooks bind only to a page open at load time.
 rod-cli goto "https://example.test/"
 
-# 3. Read back every request the session touched.
+# 2. Load the recipe (binds onRequest).
+rod-cli plugin load ./plugins/examples/recipes/on_request.js
+
+# 3. Drive the browser so requests go out.
+rod-cli goto "https://example.test/"
+
+# 4. Read back every request the session touched.
 rod-cli plugin run getRequestLog
 ```
 
 ```json
-[{ "url": "https://example.test/", "method": "GET" }]
+[{"url":"https://example.test/","method":"GET"}]
 ```
 
 `onRequest` fires before each request leaves the browser; the recipe reads `event.Request.URL` and `event.Request.Method`. See [../lifecycle-hooks.md](../lifecycle-hooks.md) for the full `event.Request` payload.
@@ -30,18 +33,21 @@ rod-cli plugin run getRequestLog
 [`plugins/examples/recipes/on_response.js`](../../../plugins/examples/recipes/on_response.js) records the URL and HTTP status of every response received.
 
 ```bash
-# 1. Load the recipe (binds onResponse).
-rod-cli plugin load ./plugins/examples/recipes/on_response.js
-
-# 2. Drive the browser so responses arrive.
+# 1. Open a page first: hooks bind only to a page open at load time.
 rod-cli goto "https://example.test/"
 
-# 3. Read back the responses the session saw.
+# 2. Load the recipe (binds onResponse).
+rod-cli plugin load ./plugins/examples/recipes/on_response.js
+
+# 3. Drive the browser so responses arrive.
+rod-cli goto "https://example.test/"
+
+# 4. Read back the responses the session saw.
 rod-cli plugin run getResponseLog
 ```
 
 ```json
-[{ "url": "https://example.test/", "status": 200 }]
+[{"url":"https://example.test/","status":200}]
 ```
 
 `onResponse` fires when a response arrives; the recipe reads `event.Response.URL` and `event.Response.Status`. See [../lifecycle-hooks.md](../lifecycle-hooks.md) for the full `event.Response` payload.
@@ -51,18 +57,21 @@ rod-cli plugin run getResponseLog
 [`plugins/examples/recipes/on_load.js`](../../../plugins/examples/recipes/on_load.js) reads the rendered DOM through the `api` global after each page load and records the length of the HTML snapshot.
 
 ```bash
-# 1. Load the recipe (binds onLoad).
-rod-cli plugin load ./plugins/examples/recipes/on_load.js
-
-# 2. Drive the browser so a page settles and onLoad fires.
+# 1. Open a page first: hooks bind only to a page open at load time.
 rod-cli goto "https://example.test/"
 
-# 3. Read back the recorded load events.
+# 2. Load the recipe (binds onLoad).
+rod-cli plugin load ./plugins/examples/recipes/on_load.js
+
+# 3. Drive the browser so a page settles and onLoad fires.
+rod-cli goto "https://example.test/"
+
+# 4. Read back the recorded load events.
 rod-cli plugin run getLoadLog
 ```
 
 ```json
-[{ "snapshotLength": 1256 }]
+[{"snapshotLength":1256}]
 ```
 
 `onLoad` fires after the page settles. The recipe calls `api.GetSnapshot()` — the `api` global is only present inside a loaded session, so the call is guarded with a `typeof api` check and a `try/catch`. The `api.GetSnapshot()` accessor and the rest of the state API are documented in [../state-api.md](../state-api.md).
@@ -72,19 +81,22 @@ rod-cli plugin run getLoadLog
 [`plugins/examples/recipes/on_dom_node_inserted.js`](../../../plugins/examples/recipes/on_dom_node_inserted.js) records the node name of every node inserted into the DOM.
 
 ```bash
-# 1. Load the recipe (binds onDOMNodeInserted).
+# 1. Open a page first: hooks bind only to a page open at load time.
+rod-cli goto "https://example.test/"
+
+# 2. Load the recipe (binds onDOMNodeInserted).
 rod-cli plugin load ./plugins/examples/recipes/on_dom_node_inserted.js
 
-# 2. Drive the browser to a page that inserts DOM nodes (e.g. a page that
+# 3. Drive the browser to a page that inserts DOM nodes (e.g. a page that
 #    renders content dynamically after load).
 rod-cli goto "https://example.test/"
 
-# 3. Read back the names of the inserted nodes.
+# 4. Read back the names of the inserted nodes.
 rod-cli plugin run getInsertedNodes
 ```
 
 ```json
-["DIV", "SPAN", "SCRIPT"]
+["DIV","SPAN","SCRIPT"]
 ```
 
 `onDOMNodeInserted` fires each time a child node is inserted; the recipe reads `event.Node.NodeName` (`event.ParentNodeID` identifies the parent). See [../lifecycle-hooks.md](../lifecycle-hooks.md) for the full payload.

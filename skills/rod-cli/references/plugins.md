@@ -15,7 +15,7 @@ Define any of these top-level functions in the plugin; the engine no-ops the omi
 
 ## The `api` global
 
-Available after `plugin load` once a page is open:
+Available after `plugin load` once a page is open. Hooks and `api` bind to the tab that is current when you run `plugin load`:
 
 - `api.GetSnapshot()` → full-page HTML string
 - `api.GetCookies()` → cookie array
@@ -29,7 +29,7 @@ Network context comes from the `onRequest`/`onResponse` payloads, not from `api`
 rod-cli goto https://example.com                 # open a page first so hooks/api bind
 rod-cli plugin load /path/to/plugin.js           # load the plugin
 rod-cli plugin list                              # list loaded plugins
-rod-cli plugin run getResults                    # invoke a named function, print its JSON result
+rod-cli plugin run getResults                    # invoke a named function, print its return value as a string
 ```
 
 Pattern: a plugin accumulates state in module-level arrays inside its hooks and exposes a getter (e.g. `getResults`, `getFindings`) that returns `JSON.stringify(...)`. Use `plugin run <getter>` to read that state back from the CLI.

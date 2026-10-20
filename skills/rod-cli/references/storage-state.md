@@ -1,6 +1,6 @@
 # Storage State (Cookies & Storage)
 
-`rod-cli` provides direct access to the browser's storage mechanisms, for extracting session tokens or injecting authentication state directly into the daemon.
+`rod-cli` reads and writes the browser's cookies and web storage, to extract session tokens or inject authentication state into a session.
 
 ## Cookies
 
@@ -10,7 +10,7 @@ rod-cli cookie-get
 rod-cli cookie-get session_id
 ```
 
-Set and delete a cookie:
+Set and delete a cookie (both apply to the current page's URL, so open the site first):
 ```bash
 rod-cli cookie-set session_id abc123
 rod-cli cookie-delete session_id

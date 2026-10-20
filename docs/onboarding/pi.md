@@ -1,6 +1,6 @@
 # Pi (pi.dev) — rod-cli Onboarding
 
-Pi onboards rod-cli as an **Agent Skill** — a `SKILL.md` file placed under Pi's skills directory.
+Pi onboards rod-cli either as an **Agent Skill** — a `SKILL.md` file placed under Pi's skills directory (below) — or through the [first-class TypeScript extension](#first-class-extension-v22), the recommended path for Pi users.
 
 ## Install
 
@@ -44,13 +44,9 @@ Pi should invoke `rod-cli goto` and `rod-cli snapshot` to complete the task. Alt
 rod-cli --version
 ```
 
-## Advanced: TypeScript Extension (optional)
-
-For heavier first-class integration, you can wrap rod-cli as a Pi TypeScript extension. This is optional polish — the skill-based shell-out path above is sufficient for all use cases. See Pi's extension documentation for details.
-
 ## First-Class Extension (v2.2+)
 
-rod-cli now ships a first-class Pi TypeScript extension with typed tools, lifecycle hooks, and prompt guidance. This is the recommended path for Pi users.
+rod-cli ships a first-class Pi TypeScript extension with typed tools, lifecycle hooks, and prompt guidance. This is the recommended path for Pi users.
 
 ### Install
 
@@ -65,7 +61,7 @@ pi install npm:@agenthands/rod-cli-pi
 ### What you get
 
 - **16 typed browser tools** — `browse_goto`, `browse_snapshot`, `browse_click`, etc.
-- **Automatic daemon lifecycle** — browser starts on first use, cleans up on quit
+- **Automatic daemon lifecycle** — browser starts on first use; quitting Pi runs `rod-cli close`, which closes the default session and removes its profile (named sessions close on the 15-minute idle timeout)
 - **Named sessions** — `session` parameter on every tool for multi-browser workflows
 - **Token-efficient output** — markdown snapshots, not raw HTML
 

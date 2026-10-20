@@ -22,7 +22,7 @@ cp -R skills/rod-cli .agents/skills/
 
 ### 2. Optional: AGENTS.md instructions
 
-You can also add rod-cli instructions to a project's `AGENTS.md` file for additional context:
+Add rod-cli instructions to a project's `AGENTS.md` for more context:
 
 ```markdown
 # AGENTS.md

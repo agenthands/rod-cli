@@ -11,15 +11,15 @@ Installing only the binary gives you a CLI you can run by hand; installing the s
 
 ## Option 1: Install via Go (Recommended)
 
-If you have Go 1.25+ installed, you can install it globally:
+With Go 1.26.1 or newer, install it globally:
 
 ```bash
 go install github.com/agenthands/rod-cli@latest
 ```
 
-This will place the `rod-cli` binary in your `$GOPATH/bin` directory (usually `~/go/bin`). Ensure this directory is in your system's `$PATH`.
+This places the `rod-cli` binary in `$GOPATH/bin` (usually `~/go/bin`). Make sure that directory is in your `$PATH`.
 
-Once the binary is installed, you must install the local Chromium browser that `rod-cli` relies on:
+Then download the Chromium build `rod-cli` drives; the command prints where it installed it:
 
 ```bash
 rod-cli install
@@ -27,7 +27,7 @@ rod-cli install
 
 ## Option 2: Build from Source
 
-You can also clone the repository and build it manually:
+Or clone the repository and build it:
 
 ```bash
 git clone https://github.com/agenthands/rod-cli.git

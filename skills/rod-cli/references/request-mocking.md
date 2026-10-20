@@ -1,6 +1,6 @@
 # Request Mocking
 
-`rod-cli` intercepts and modifies network requests made by the browser. Use it to speed up page loads (block heavy assets) or to test edge cases with mocked responses.
+`rod-cli` answers matching browser requests with a mocked response. Use it to speed up page loads (block heavy assets) or to test edge cases with mocked responses.
 
 ## Routing Requests
 

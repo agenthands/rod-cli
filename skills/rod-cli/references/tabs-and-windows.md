@@ -1,6 +1,6 @@
 # Tabs and Windows Management
 
-By default, `rod-cli` operates on a single active browser tab. However, many workflows require opening new tabs, managing popups, or switching between contexts.
+`rod-cli` drives one current tab at a time. Use the commands below to open tabs, follow popups, and switch or close tabs.
 
 ## Listing Tabs
 To view all currently open tabs in the active browser session:
@@ -17,11 +17,11 @@ Target a tab by its index or by its 8-character ID (any unique, case-insensitive
 **Ownership rule:** Drive only tabs you created (IDs printed by `tab-new`); under `--cdp-endpoint` never navigate the user's existing tabs.
 
 ## Opening a New Tab
-You can explicitly spawn a new tab and navigate it to a URL:
+Open a new tab and navigate it to a URL (omit the URL for a blank tab):
 ```bash
 rod-cli tab-new https://example.com
 ```
-*Note: This automatically switches the active context to the new tab. Switching tabs clears the snapshot, so take a new `snapshot` before using refs. Mock routes follow the current tab.*
+*Note: This switches the current tab to the new tab. Switching tabs clears the snapshot, so take a new `snapshot` before using refs. Mock routes follow the current tab.*
 
 ## Switching Active Tabs
 If an action (like clicking a link with `target="_blank"`) opens a new tab, you must explicitly switch your CLI context to that new tab before you can interact with it.

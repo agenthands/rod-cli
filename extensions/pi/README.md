@@ -4,7 +4,7 @@ Pi extension for [rod-cli](https://github.com/agenthands/rod-cli) -- native brow
 
 ## Prerequisites
 
-1. **rod-cli binary** (Go 1.23+):
+1. **rod-cli binary** (Go 1.26.1+):
    ```bash
    go install github.com/agenthands/rod-cli@latest
    ```
@@ -37,12 +37,12 @@ pi install npm:@agenthands/rod-cli-pi
 | `browse_snapshot` | Accessibility-tree markdown snapshot of the page or one subtree | selector (optional ref or CSS: subtree only), interactive (optional: controls only), session |
 | `browse_click` | Click element by CSS selector or snapshot ref | selector (required: CSS selector or `[ref=...]` from browse_snapshot), doubleClick (optional), session |
 | `browse_type` | Type text with humanized keystroke timing | selector (required: CSS selector or `[ref=...]` from browse_snapshot), text (required), session |
-| `browse_eval` | Evaluate JavaScript on the page (max 10KB) | expression (required), session |
+| `browse_eval` | Evaluate JavaScript on the page (max 10,000 characters) | expression (required), session |
 | `browse_screenshot` | Capture a PNG and return the image itself | selector (optional ref or CSS), fullPage (optional), session |
-| `browse_wait` | Wait for a selector to appear or a fixed duration | selector (optional), timeout (optional), session |
+| `browse_wait` | Wait for a selector to appear or a fixed duration | selector (optional), timeout (optional ms, default 30000; without selector, waits this long), session |
 | `browse_tabs` | Manage browser tabs | action (list/new/close/select), url, index, session |
 | `browse_navigate` | Page history navigation | action (reload/back/forward), session |
-| `browse_scroll` | Scroll with real wheel input; reports what moved (`scrolled dy=800 y=1600/4600`, ` end` when nothing more) | direction (up/down/left/right), distance (optional: default one viewport down), selector (optional ref or CSS of an inner pane), session |
+| `browse_scroll` | Scroll with real wheel input; reports what moved (`scrolled dy=800 y=1600/4600`, ` end` when nothing more) | direction (optional: up/down/left/right, default down; up/left/right need a distance), distance (optional: default one viewport down), selector (optional ref or CSS of an inner pane), session |
 | `browse_cookies` | Manage browser cookies | action (get/set/delete/clear), name, value, session |
 | `browse_storage` | Manage localStorage and sessionStorage | action (get/set/delete/clear), storageType (local/session), key, value, session |
 | `browse_fill_form` | Fill form fields instantly (with optional submit) | selector (required: CSS selector or `[ref=...]` from browse_snapshot), text (required), submit (optional), session |
@@ -56,14 +56,16 @@ All tools accept an optional `session` parameter for multi-browser/multi-identit
 
 **Prefer native actions over `browse_eval` for interaction.** `browse_click`/`browse_type`/`browse_fill_form` dispatch real, trusted, humanized input (mouse tremor/speed, typing cadence); `browse_eval`-driven interaction (`el.click()`, setting `.value`) produces untrusted synthetic events with no humanization, defeating rod-cli's stealth design. Reserve `browse_eval` for reading page state/data.
 
+**Daemon cleanup:** when Pi quits (not on reload, fork, or resume), the extension runs `rod-cli close`, ignoring errors. This closes the default session's browser and removes its profile and Chrome temp dir. A named session's daemon stays until `rod-cli -s <name> close` or 15 minutes idle.
+
 ## Integration Paths
 
 rod-cli offers three integration paths. All use the same `rod-cli` binary underneath.
 
 | | OMP extension (`@agenthands/rod-cli-omp`) | Pi extension (`@agenthands/rod-cli-pi`) | Agent Skill (`skills/rod-cli/SKILL.md`) |
 |---|---|---|---|
-| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant (Claude Code, Codex, Gemini, opencode, ...) |
-| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy `SKILL.md` to the assistant's skills dir |
+| **Host** | OMP (oh-my-pi) | Pi (earendil) | any Agent-Skills assistant (Claude Code, Codex, opencode, ...); Gemini CLI reads it from `GEMINI.md` |
+| **Setup** | `omp plugin install npm:@agenthands/rod-cli-omp` (once published) / `omp plugin link ./extensions/omp` (today) | `pi install npm:@agenthands/rod-cli-pi` (once published) / `pi install ./extensions/pi` (today) | copy the `skills/rod-cli/` directory to the assistant's skills dir |
 | **Tools** | 16 typed `browse_*` (injected `pi.zod`) | 16 typed `browse_*` (TypeBox) | LLM shells out to `rod-cli` subcommands |
 | **Validation / lifecycle** | schema + session_start/shutdown hooks | schema + session_start/shutdown hooks | none |
 | **Best for** | OMP users (native path) | Pi users | multi-assistant / zero-npm |

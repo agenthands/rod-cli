@@ -7,10 +7,11 @@ This page walks the scanner end-to-end — loading it, driving a vulnerable page
 ## 1. Load the plugin
 
 ```bash
+rod-cli goto https://example.test/
 rod-cli plugin load ./plugins/examples/xss_scanner.js
 ```
 
-Loading is what activates a plugin: `plugin load` compiles the script in the goja VM and — when a browser page is already open in the session — binds the `api` global and attaches the CDP lifecycle listeners to it. Open a page first (e.g. `rod-cli goto <url>`) so the listeners attach. From that point the scanner's hooks fire automatically as you browse — there is no separate "start" step. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` behavior.
+Loading is what activates a plugin: `plugin load` compiles the script in the goja VM and — when a browser page is already open in the session — binds the `api` global and attaches the CDP lifecycle listeners to it. Open a page first (the `goto` above) so the listeners attach; a plugin loaded before any page is open gets no listeners, and opening a page afterwards does not attach them. From that point the scanner's hooks fire automatically as you browse — there is no separate "start" step. See [../cli-reference.md](../cli-reference.md) for the full `plugin load` behavior.
 
 ## 2. How the scanner watches the session
 
@@ -24,7 +25,7 @@ Findings and the request log accumulate in module-level arrays for the life of t
 
 ## 3. Drive a vulnerable page
 
-With the scanner loaded, browse to a page that reflects input back into its response or DOM, and submit or follow one of the scanner's payloads. For example, navigate to a search or echo endpoint and supply a payload as a query parameter:
+With the scanner loaded, browse in the same tab to a page that reflects input back into its response or DOM, and submit or follow one of the scanner's payloads. For example, navigate to a search or echo endpoint and supply a payload as a query parameter:
 
 ```bash
 rod-cli goto "https://example.test/search?q=%3Cscript%3Ealert('XSS')%3C/script%3E"
@@ -34,20 +35,14 @@ As the request goes out and the response/DOM come back, `onRequest`, `onResponse
 
 ## 4. Observe the findings
 
-Read back what the scanner collected. `plugin run <name>` invokes the JS function named `<name>` in the loaded plugin's VM and prints its returned value; the scanner's accessors return `JSON.stringify(...)`, so the CLI prints clean JSON. See [../cli-reference.md](../cli-reference.md) for the full `plugin run` behavior and error conditions.
+Read back what the scanner collected. `plugin run <name>` invokes the JS function named `<name>` in the loaded plugin's VM and prints its returned value; the scanner's accessors return `JSON.stringify(...)`, so the CLI prints compact single-line JSON. See [../cli-reference.md](../cli-reference.md) for the full `plugin run` behavior and error conditions.
 
 ```bash
 rod-cli plugin run getFindings
 ```
 
 ```json
-[
-  {
-    "type": "reflected_in_dom",
-    "payload": "<script>alert('XSS')</script>",
-    "evidence": "...value=<script>alert('XSS')</script> name=q..."
-  }
-]
+[{"type":"reflected_in_dom","payload":"<script>alert('XSS')</script>","evidence":"...value=<script>alert('XSS')</script> name=q..."}]
 ```
 
 You can also dump every request the session touched:
@@ -57,7 +52,7 @@ rod-cli plugin run getRequestLog
 ```
 
 ```json
-[{ "url": "https://example.test/search?q=...", "method": "GET" }]
+[{"url":"https://example.test/search?q=...","method":"GET"}]
 ```
 
 If no payload was reflected, `getFindings` returns an empty array (`[]`) — the scanner saw the traffic but found nothing reflected.
