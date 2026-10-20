@@ -44,6 +44,7 @@ func buildProfileTestBin(t *testing.T) string {
 	if testing.Short() {
 		t.Skip("skipping browser/spawn test in short mode")
 	}
+	privateTmp(t)
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	bin := filepath.Join(t.TempDir(), "rod-cli")
 	if out, err := exec.Command("go", "build", "-o", bin, "github.com/agenthands/rod-cli").CombinedOutput(); err != nil {
