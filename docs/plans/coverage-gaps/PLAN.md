@@ -148,7 +148,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 **Done when:** `go test ./internal/... ./utils/ -count=1 && go test -race ./internal/plugin/... -count=1` pass.
 
-### G11 [~] Go checkpoint: full Go suite
+### G11 [x] Go checkpoint: full Go suite
 **Change:** Run `go build -o rod-cli . && go vet ./... && TMPDIR=$(mktemp -d /tmp/rc.XXXX) go test ./... -count=1`, then `rm -f rod-cli`. Fix nothing here: if a test fails, return blocked and name the task whose files it touches.
 **Done when:** the command exits 0, and the TMPDIR holds only `leakless-*` and `rod-cli-daemon.log`.
 

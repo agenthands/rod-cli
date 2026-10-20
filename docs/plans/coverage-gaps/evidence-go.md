@@ -89,3 +89,4 @@ verify: G10 — pass — Done-when green (internal/utils + -race plugin), go vet
 ## G11
 
 checkpoint: go build -o rod-cli . && go vet ./... && TMPDIR=$(mktemp -d /tmp/rc.XXXX) go test ./... -count=1 — exit 0, all 13 test packages ok (actions 524.5s, tests 355.2s, daemon 105.6s); TMPDIR left only leakless-amd64-adb80298fa6a3af7ced8b1c9b5f18007 and rod-cli-daemon.log; rod-cli binary and TMPDIR removed
+verify: G11 — pass — independent rerun of go build + go vet + go test ./... -count=1 exited 0 (13 packages ok); TMPDIR held only leakless-* and rod-cli-daemon.log; no headless chrome/daemon left; binary and TMPDIR removed
