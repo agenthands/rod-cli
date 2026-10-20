@@ -33,3 +33,6 @@ tdd: TestResolveStealthUserDirProfile (types:T5 guard; passes on today's code) �
 tdd: TestSweepWithoutProcKeepsLiveOwners (types:T10 guard; passes on today's code) — red: on a mutant treating a readCmdline error as dead: profile_root_test.go:129: mine removed without /proc: stat /tmp/TestSweepWithoutProcKeepsLiveOwners3258210859/001/mine: no such file or directory — green: go test ./types/ -run TestSweepWithoutProcKeepsLiveOwners$ -count=1 passed
 done-check: go vet ./... ok; TMPDIR=$X go test ./types/ -count=1 → ok types 15.853s; touched cmd.go usage string: go test . -count=1 → ok rod-cli 1.103s (TMPDIR left only leakless-*)
 verify: G04 — pass — go vet + go test ./types/ green in a fresh TMPDIR (only leakless-* left, no chrome/daemon); T1 and T4 tests confirmed red on reverted fixes in a scratch copy; T2/T3/T5/T10 rows covered at their seams; docs updated
+
+## G05
+tdd: TestSnapshotAlwaysNotDefinedInjectsExactlyOnce (+TestSnapshotInjectsEngineOnceThenRetrySucceeds) — red (code already correct; mutation dropping `injected = true`): snapshot_seam_test.go:69: injects = 4, want 1 — green: go test ./types/ -run 'TestSnapshotInjects|TestSnapshotAlways' -count=1 passed
