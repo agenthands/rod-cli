@@ -50,7 +50,7 @@ Session-spawn flags take effect only when a session's daemon spawns (its first c
 - `--user-agent`: pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor).
 - `--locale`: pin the BCP-47 locale (e.g. en-US); derived from languages when unset.
 - `--timezone`: pin the IANA timezone (e.g. America/New_York).
-- `--platform`: pin navigator.platform (e.g. Win32, MacIntel, Linux); derived from the UA OS token when unset.
+- `--platform`: pin navigator.platform (e.g. Win32, MacIntel, Linux); derived from the UA OS token when unset, so `--user-agent` also replaces a `--profile`'s platform.
 - `--cdp-endpoint`: control browser by cdp.
 - `--console-capture`: Capture browser console messages for the console command (default off; enables Runtime CDP domain).
 - `--request-capture`: Capture network requests for the requests/`request` commands (default off; enables Network CDP domain).

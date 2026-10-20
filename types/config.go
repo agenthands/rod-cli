@@ -556,6 +556,12 @@ func ResolveStealth(cfg *Config, flags *StealthFlags) error {
 	}
 	if flags.UserAgent != "" {
 		cfg.Stealth.UserAgent = flags.UserAgent
+		// A flag UA re-anchors the platform: a profile's platform kept under a
+		// foreign UA is a fingerprint tell. --platform (below) still wins, and
+		// the gate rejects it if it contradicts the UA.
+		if p, _, ok := uaOSToPlatform(flags.UserAgent); ok {
+			cfg.Stealth.Platform = p
+		}
 	}
 	if flags.Locale != "" {
 		cfg.Stealth.Locale = flags.Locale
