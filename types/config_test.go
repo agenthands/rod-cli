@@ -314,6 +314,46 @@ func TestLoadConfigRejectsMissingAndMisnamedFiles(t *testing.T) {
 	}
 }
 
+// TestLoadConfigPartialFileKeepsDefaults pins the partial-config decision: a
+// rod-cli.yaml that sets only some keys is decoded onto a deep copy of the
+// defaults, so every key it leaves out keeps its default value.
+func TestLoadConfigPartialFileKeepsDefaults(t *testing.T) {
+	dir := chdirTemp(t)
+	p := filepath.Join(dir, ConfigName)
+	if err := os.WriteFile(p, []byte("headless: true\nloggerConfig:\n  loggerLevel: debug\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	cfg, err := LoadConfig(p)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if !cfg.Headless || cfg.LoggerConfig.LoggerLevel != "debug" {
+		t.Fatalf("keys the file sets were lost: headless=%v loggerLevel=%q", cfg.Headless, cfg.LoggerConfig.LoggerLevel)
+	}
+	if cfg.Mode != Text || cfg.LoggerConfig.LoggerPrefix != "RodCLI 🦅" || cfg.LoggerConfig.LoggerFileMaxSize != 50 {
+		t.Errorf("unset keys lost their defaults: mode=%q logger=%+v", cfg.Mode, cfg.LoggerConfig)
+	}
+	for name, p := range map[string]*bool{
+		"webrtcLeakProtection": cfg.Stealth.WebRTCLeakProtection, "canvasNoise": cfg.Stealth.CanvasNoise,
+		"fontSpoof": cfg.Stealth.FontSpoof, "mediaDevicesSpoof": cfg.Stealth.MediaDevicesSpoof,
+		"batterySpoof": cfg.Stealth.BatterySpoof, "codecSpoof": cfg.Stealth.CodecSpoof,
+	} {
+		if p == nil || !*p {
+			t.Errorf("stealth.%s = %v, want the default true", name, p)
+		}
+	}
+
+	// The defaults are a deep copy: writing through the result leaves them alone.
+	if cfg.Stealth.CanvasNoise != nil {
+		*cfg.Stealth.CanvasNoise = false
+		if !*DefaultConfig.Stealth.CanvasNoise {
+			*DefaultConfig.Stealth.CanvasNoise = true
+			t.Fatal("returned config shares the CanvasNoise pointer with DefaultConfig")
+		}
+	}
+}
+
 func TestLoadConfig_PathExistsError(t *testing.T) {
 	dir := chdirTemp(t)
 	// Create a regular file, then reference a path that treats it as a directory

@@ -902,6 +902,17 @@ var (
 	}
 )
 
+// defaultConfigCopy deep-copies DefaultConfig through a yaml round trip, so the
+// caller can write through its pointer fields without changing the defaults.
+func defaultConfigCopy() (*Config, error) {
+	var config Config
+	data, err := yaml.Marshal(DefaultConfig)
+	if err == nil {
+		err = yaml.Unmarshal(data, &config)
+	}
+	return &config, err
+}
+
 // LoadConfig Actually load the configuration file
 // If configPath is empty it reads ./rod-cli.yaml when that file exists, and
 // otherwise returns the built-in defaults without writing anything.
@@ -909,14 +920,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	if configPath == "" {
 		configPath = filepath.Join("./", ConfigName)
 		if exist, _ := utils.PathExists(configPath); !exist {
-			// The yaml round trip deep-copies DefaultConfig, so the caller can
-			// write through its pointer fields without changing the defaults.
-			var config Config
-			data, err := yaml.Marshal(DefaultConfig)
-			if err == nil {
-				err = yaml.Unmarshal(data, &config)
-			}
-			return &config, err
+			return defaultConfigCopy()
 		}
 	}
 
@@ -936,12 +940,16 @@ func LoadConfig(configPath string) (*Config, error) {
 			}
 			defer file.Close()
 
-			decoder := yaml.NewDecoder(file)
-			var config Config
-			if err := decoder.Decode(&config); err != nil {
+			// Decode onto a copy of the defaults so keys the file leaves out
+			// keep their default values.
+			config, err := defaultConfigCopy()
+			if err != nil {
 				return nil, err
 			}
-			return &config, nil
+			if err := yaml.NewDecoder(file).Decode(config); err != nil {
+				return nil, err
+			}
+			return config, nil
 		}
 		return nil, errors.Errorf("config file %s: name must be %s", configPath, ConfigName)
 	}

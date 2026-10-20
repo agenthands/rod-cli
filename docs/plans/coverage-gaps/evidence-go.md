@@ -25,3 +25,4 @@ verify: G03 — pass — go vet ok; go test ./daemon/ ok (108s, TMPDIR only leak
 
 ## G04
 tdd: TestLoadConfigRejectsMissingAndMisnamedFiles — red: config_test.go:302: missing "/tmp/TestLoadConfigRejectsMissingAndMisnamedFiles2127626620/001/does-not-exist/rod-cli.yaml": cfg=<nil> err=<nil>, want nil config and an error naming the path (then "file \"cli.yaml\": cfg=&{text ...} err=<nil>" for the inverted name check) — green: go test ./types/ -run TestLoadConfigRejectsMissingAndMisnamedFiles$ -count=1 passed
+tdd: TestLoadConfigPartialFileKeepsDefaults — red: config_test.go:335: unset keys lost their defaults: mode="" logger={LoggerLevel:debug LoggerFileName: LoggerFileMaxSize:0 LoggerFileMaxBackups:0 LoggerFileMaxAge:0 LoggerPrefix:} (and config_test.go:343: stealth.canvasNoise = <nil>, want the default true) — green: go test ./types/ -run TestLoadConfigPartialFileKeepsDefaults$ -count=1 passed
