@@ -1177,7 +1177,10 @@ func SetCookie(ctx *types.Context, name, value string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	info, _ := page.Info()
+	info, err := page.Info()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read page info")
+	}
 	err = pageSetCookies(page, []*proto.NetworkCookieParam{{
 		Name:  name,
 		Value: value,
@@ -1194,7 +1197,10 @@ func DeleteCookie(ctx *types.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	info, _ := page.Info()
+	info, err := page.Info()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read page info")
+	}
 	err = networkDeleteCookies(proto.NetworkDeleteCookies{Name: name, URL: info.URL}, page)
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to delete cookie")

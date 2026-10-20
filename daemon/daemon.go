@@ -39,6 +39,10 @@ var daemonStartTimeout = 30 * time.Second
 // pingTimeout bounds a ping round-trip. A var so tests can shrink it.
 var pingTimeout = 2 * time.Second
 
+// runAction dispatches one /execute command. A var so tests can inject a
+// panicking action.
+var runAction = executeAction
+
 // exitDaemon terminates the daemon process. If the binary was built with
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
 // accumulated coverage counters first, since os.Exit otherwise skips the
@@ -370,8 +374,12 @@ func StartServer(session string, rodCtx *types.Context) error {
 
 		select {
 		case <-execSem:
-			res, err := executeAction(rodCtx, req)
-			execSem <- struct{}{}
+			// Release in a defer: net/http recovers a panicking handler, and a
+			// release skipped by that panic would wedge the session.
+			res, err := func() (string, error) {
+				defer func() { execSem <- struct{}{} }()
+				return runAction(rodCtx, req)
+			}()
 			if err != nil {
 				json.NewEncoder(w).Encode(Response{Error: err.Error()})
 				return
