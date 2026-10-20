@@ -114,7 +114,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 **Done when:** `go test ./actions/ -run 'Press|MouseWheel|Drag|StealthCheck' -count=1` passes. The docs for `press` list the supported key names.
 
-### G07 [ ] Actions, live
+### G07 [~] Actions, live
 **Rows:**
 - actions:A3 / actions:selectOne;
 - actions:selectByValue (CSS.escape);
