@@ -303,3 +303,32 @@ func TestOutPathResolvedAgainstClientCwd(t *testing.T) {
 		}
 	}
 }
+
+// TestEvalJSONOutputShape (root-7) pins today's --json shape: a JSON object or
+// array result prints bare (uncapped by --max-output), anything else is wrapped
+// as {"result": ...}.
+func TestEvalJSONOutputShape(t *testing.T) {
+	clearPortFiles(t)
+	cases := []struct{ result, want string }{
+		{`{"a":1}`, `{"a":1}`},
+		{`hello`, `{"result":"hello"}`},
+		{`"x"`, `{"result":"\"x\""}`},
+		{`42`, `{"result":"42"}`},
+		{`[1,2]`, `[1,2]`}, // deliberate: arrays print bare, not wrapped
+	}
+	for _, tc := range cases {
+		session, _ := startRecordingDaemon(t, tc.result)
+		for _, extra := range [][]string{nil, {"--max-output", "3"}} {
+			args := append([]string{"--json", "--session", session}, extra...)
+			args = append(args, "eval", "1")
+			var err error
+			out := captureStdout(t, func() { err = runApp(args...) })
+			if tc.result == "hello" && extra != nil {
+				continue // a plain result over the cap is truncated; capOutput's own test covers it
+			}
+			if err != nil || out != tc.want+"\n" {
+				t.Errorf("result %s %v: got %q, %v; want %q", tc.result, extra, out, err, tc.want+"\n")
+			}
+		}
+	}
+}
