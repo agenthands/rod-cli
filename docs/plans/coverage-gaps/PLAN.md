@@ -133,7 +133,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 **Rows:** root:root-1 (with daemon:D1 merged), root:root-9 (extract `stealthFlagsFrom(c)` from main.go first, as a pure refactor with no behaviour change).
 **Done when:** `go test ./ -run 'Forward|StealthFlags' -count=1` passes, and `go test ./ -count=1` passes.
 
-### G10 [ ] Internal packages and cosmetic fixes
+### G10 [~] Internal packages and cosmetic fixes
 **Rows:**
 - internal:cdpproxy-read-normalize-property and internal:cdpproxy-drop;
 - internal:cdpproxy-traffic-ringbuffer-model;
