@@ -8,12 +8,24 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/agenthands/rod-cli/internal/testchrome"
+	"github.com/agenthands/rod-cli/types"
 )
 
 // TestMain points XDG_CACHE_HOME at a temp dir for the whole package, so the
-// daemons runCli spawns keep their Chrome profiles out of the user's cache.
+// daemons runCli spawns keep their Chrome profiles out of the user's cache. A
+// dir left by a killed test binary is removed by the next run's MkdirTemp once
+// none of that run's daemons is left in it.
 func TestMain(m *testing.M) {
-	cache, err := os.MkdirTemp("", "rod-cli-tests-cache-")
+	cache, err := testchrome.MkdirTemp("rod-cli-tests-cache-", func(dir string) bool {
+		// A killed run's daemons live on until their idle timeout; their
+		// profiles record Chrome temp dirs that only they can remove.
+		profiles := filepath.Join(dir, "rod-cli", "profiles")
+		types.SweepStaleProfiles(profiles)
+		left, _ := os.ReadDir(profiles)
+		return len(left) > 0
+	})
 	if err != nil {
 		panic(err)
 	}

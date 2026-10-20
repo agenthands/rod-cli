@@ -109,3 +109,6 @@ tdd: godoll TestLaunchLeavesNothingInCallerTMPDIR — red: launch left [.org.chr
 tdd: TestOpenDaemonLogStartsOverPastTheCap — red: undefined: daemonLogCap — green: go test ./daemon/ -run TestOpenDaemonLog passed (EnsureDaemon also closes its copy of the log fd)
 scan (private TMPDIR per package, both repos): only rod-cli-daemon.log (now capped) and the user's own browsers' scoped_dir notification icons in /tmp (TMPDIR unset on pids 5538/749167; 2 per hour since 14:00)
 tdd: pi integration.test.ts daemon cleanup — red: after vitest run, daemon 984150 "rod-cli --session default --headless daemon" still running — green: vitest run integration.test.ts 9 passed, no daemons left (own session pi-integration-<pid>, closed in afterAll)
+tdd: TestMkdirTempRemovesDeadTestDirs — red: internal/testchrome/testchrome_test.go:90:14: undefined: MkdirTemp — green: go test ./internal/testchrome/ -count=1 passed
+tdd: TestMkdirTempRemovesDeadTestDirs (in-use dir kept) — red: internal/testchrome/testchrome_test.go:92:34: too many arguments in call to MkdirTemp — green: go test ./internal/testchrome/ -count=1 passed
+live: tests binary killed with kill -9 left rod-cli-tests-cache-3032369357 + a daemon; a rerun kept the dir while the daemon lived; after the daemon's SIGTERM cleanup the next run removed it; no chrome-* left

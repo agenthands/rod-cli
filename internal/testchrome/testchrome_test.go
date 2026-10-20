@@ -66,3 +66,44 @@ func TestLaunchRemovesDeadTestProfiles(t *testing.T) {
 		t.Errorf("live test's profile %s was removed: %v", live, err)
 	}
 }
+
+// The tests package's cache dir is also left behind when its binary is killed;
+// the next MkdirTemp with the same prefix removes it, unless inUse says a
+// process the dead test started (a daemon) still works in it.
+func TestMkdirTempRemovesDeadTestDirs(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+	exited := exec.Command("true")
+	if err := exited.Run(); err != nil {
+		t.Fatal(err)
+	}
+	mk := func(name string, pid int) string {
+		d := filepath.Join(os.TempDir(), name)
+		if err := os.Mkdir(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(d, ownerFile), []byte(strconv.Itoa(pid)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
+	dead, live := mk("cache-dead", exited.Process.Pid), mk("cache-live", os.Getpid())
+	busy := mk("cache-busy", exited.Process.Pid)
+
+	dir, err := MkdirTemp("cache-", func(d string) bool { return d == busy })
+	if err != nil {
+		t.Fatalf("MkdirTemp: %v", err)
+	}
+
+	if _, err := os.Stat(dead); !os.IsNotExist(err) {
+		t.Errorf("dead test's dir %s still exists (stat err %v)", dead, err)
+	}
+	if _, err := os.Stat(live); err != nil {
+		t.Errorf("live test's dir %s was removed: %v", live, err)
+	}
+	if _, err := os.Stat(busy); err != nil {
+		t.Errorf("dead test's dir %s still in use was removed: %v", busy, err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, ownerFile)); string(b) != strconv.Itoa(os.Getpid()) {
+		t.Errorf("owner of %s = %q, want this test's pid", dir, b)
+	}
+}

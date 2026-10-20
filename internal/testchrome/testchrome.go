@@ -31,9 +31,8 @@ func Launch(l *launcher.Launcher) (string, func(), error) {
 	if err != nil {
 		return "", nil, err
 	}
-	removeDeadTestDirs(filepath.Dir(dir))
-	if err := os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(os.Getpid())), 0o600); err != nil {
-		os.RemoveAll(dir)
+	removeDeadTestDirs(filepath.Join(filepath.Dir(dir), "chrome-*"), nil)
+	if err := claim(dir); err != nil {
 		return "", nil, err
 	}
 	u, err := l.UserDataDir(dir).Launch()
@@ -49,18 +48,41 @@ func Launch(l *launcher.Launcher) (string, func(), error) {
 	}, nil
 }
 
-// removeDeadTestDirs removes the test Chrome dirs under root whose test process
-// has exited. A test binary killed by a timeout never runs stop.
-func removeDeadTestDirs(root string) {
-	owners, _ := filepath.Glob(filepath.Join(root, "chrome-*", ownerFile))
+// MkdirTemp creates a dir in os.TempDir() named prefix plus a random suffix,
+// owned by this test process, after removing the dirs with that prefix whose
+// test process has exited and that inUse (nil: none) does not report busy. The
+// caller removes it when done.
+func MkdirTemp(prefix string, inUse func(dir string) bool) (string, error) {
+	removeDeadTestDirs(filepath.Join(os.TempDir(), prefix+"*"), inUse)
+	dir, err := os.MkdirTemp("", prefix)
+	if err != nil {
+		return "", err
+	}
+	return dir, claim(dir)
+}
+
+// claim records this test process as dir's owner; on error dir is removed.
+func claim(dir string) error {
+	err := os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(os.Getpid())), 0o600)
+	if err != nil {
+		os.RemoveAll(dir)
+	}
+	return err
+}
+
+// removeDeadTestDirs removes the test dirs matching pattern whose test process
+// has exited, except those inUse reports busy. A test binary killed by a
+// timeout never runs its cleanup.
+func removeDeadTestDirs(pattern string, inUse func(dir string) bool) {
+	owners, _ := filepath.Glob(filepath.Join(pattern, ownerFile))
 	for _, f := range owners {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			continue
 		}
 		pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
-		if err == nil && !alive(pid) {
-			os.RemoveAll(filepath.Dir(f))
+		if dir := filepath.Dir(f); err == nil && !alive(pid) && (inUse == nil || !inUse(dir)) {
+			os.RemoveAll(dir)
 		}
 	}
 }
