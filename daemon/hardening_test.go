@@ -179,3 +179,23 @@ func TestListSessionsSkipsHungListener(t *testing.T) {
 		t.Fatal("ListSessions still blocked after 5s on a listener that never accepts")
 	}
 }
+
+func TestPingTimeoutSparesRealCommands(t *testing.T) {
+	privateTmp(t)
+	old := pingTimeout
+	pingTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { pingTimeout = old })
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+		io.WriteString(w, `{"result":"ok"}`)
+	}))
+	defer srv.Close()
+	writePortFile(t, "slow", strings.TrimPrefix(srv.URL, "http://127.0.0.1:"))
+
+	if _, err := ClientExecute("slow", Request{Command: "ping"}); err == nil {
+		t.Fatal("slow ping succeeded, want timeout")
+	}
+	if res, err := ClientExecute("slow", Request{Command: "goto"}); err != nil || res != "ok" {
+		t.Fatalf("slow goto: %q, %v; want ok (ping timeout must not apply)", res, err)
+	}
+}
