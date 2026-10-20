@@ -84,7 +84,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 **Change:** as the rows and the Decisions section say. The ping-only timeout must not shorten real commands.
 **Done when:** `go test ./daemon/ ./ -count=1` passes with the new red→green tests, and `go build -o rod-cli . && ./rod-cli --session g02 --headless sessions && ./rod-cli --session g02 close` works.
 
-### G03 [~] Daemon robustness
+### G03 [x] Daemon robustness
 **Rows:** daemon:execSem (panic must not wedge the session), daemon:D6/S3 (numeric args), daemon:D5 (close cleanup ordering), daemon:S5 (ping does not reset the idle timer; add an idle-timer seam).
 **Done when:** `go test ./daemon/ -count=1` passes.
 
