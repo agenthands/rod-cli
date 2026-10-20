@@ -7,17 +7,15 @@ import { execRodCli, type ExecFn } from "./exec";
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason);
-    const id = setTimeout(resolve, ms);
-    if (signal) {
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(id);
-          reject(signal.reason);
-        },
-        { once: true },
-      );
-    }
+    const onAbort = () => {
+      clearTimeout(id);
+      reject(signal!.reason);
+    };
+    const id = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
