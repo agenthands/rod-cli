@@ -90,3 +90,57 @@ func TestResolveStealthConsistencyGate(t *testing.T) {
 		})
 	}
 }
+
+// TestResolveStealthRejectsUnsafeFingerprintValue pins types:T3: one bad rune
+// in any fingerprint string field fails the gate, naming that field.
+func TestResolveStealthRejectsUnsafeFingerprintValue(t *testing.T) {
+	const clean = `[ -!#-\[\]-~]{0,40}`
+	bad := []rune{'"', '\\', 0x7f}
+	for r := rune(0); r <= 0x1f; r++ {
+		bad = append(bad, r)
+	}
+	fields := []string{"--user-agent", "--timezone", "--locale", "--platform", "vendor", "acceptLanguage", "languages"}
+
+	t.Run("bad rune", func(t *testing.T) {
+		rapid.Check(t, func(t *rapid.T) {
+			s := rapid.StringMatching(clean).Draw(t, "clean")
+			at := rapid.IntRange(0, len(s)).Draw(t, "at")
+			val := s[:at] + string(rapid.SampledFrom(bad).Draw(t, "bad")) + s[at:]
+			field := rapid.SampledFrom(fields).Draw(t, "field")
+
+			cfg, flags, label := &Config{}, &StealthFlags{}, field
+			switch field {
+			case "--user-agent":
+				flags.UserAgent = val
+			case "--timezone":
+				flags.Timezone = val
+			case "--locale":
+				flags.Locale = val
+			case "--platform":
+				flags.Platform = val
+			case "vendor":
+				cfg.Stealth.Vendor = val
+			case "acceptLanguage":
+				cfg.Stealth.AcceptLanguage = val
+			case "languages":
+				k := rapid.IntRange(0, 2).Draw(t, "k")
+				cfg.Stealth.Languages = []string{"en-US", "en", "de"}
+				cfg.Stealth.Languages[k] = val
+				label = fmt.Sprintf("languages[%d]", k)
+			}
+			err := ResolveStealth(cfg, flags)
+			if err == nil || !strings.HasPrefix(err.Error(), "fingerprint field "+label+" ") {
+				t.Fatalf("%s = %q: err = %v, want prefix %q", label, val, err, "fingerprint field "+label+" ")
+			}
+		})
+	})
+
+	t.Run("clean timezone", func(t *testing.T) {
+		rapid.Check(t, func(t *rapid.T) {
+			tz := rapid.StringMatching(clean).Draw(t, "tz")
+			if err := ResolveStealth(&Config{}, &StealthFlags{Timezone: tz}); err != nil {
+				t.Fatalf("timezone %q: unexpected error %v", tz, err)
+			}
+		})
+	})
+}
