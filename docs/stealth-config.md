@@ -129,7 +129,7 @@ overrides only — there is **no** TLS/JA3 spoofing (see `stealth-validation.md`
 | `--mouse-steps` | `WithMouseSteps` | interpolation steps along the path |
 | `--mouse-speed-min` / `--mouse-speed-max` | `WithMouseSpeed(min,max)` | **both** required |
 | `--mouse-deviation` | `WithMouseDeviation` | path randomness 0.0–1.0 |
-| `--scroll-duration` | none (rod-cli) | total ms spread across a `mousewheel` call's ~100 px notches; unset = random 20–60 ms gap per notch |
+| `--scroll-duration` | none (rod-cli) | ms each `mousewheel` step spreads across its ~100 px notches; unset = random 20–60 ms gap per notch |
 | `--scroll-physics` | none | ignored; accepted for config compatibility (see §6) |
 
 ### CDP footprint / capture (Phase 30, default OFF)

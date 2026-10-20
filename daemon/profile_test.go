@@ -49,8 +49,6 @@ func buildProfileTestBin(t *testing.T) string {
 	if out, err := exec.Command("go", "build", "-o", bin, "github.com/agenthands/rod-cli").CombinedOutput(); err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
-	// The spawned daemon (no --config) writes a default config in its cwd.
-	t.Cleanup(func() { os.Remove("rod-cli.yaml") })
 	return bin
 }
 

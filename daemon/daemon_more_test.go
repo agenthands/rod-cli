@@ -208,9 +208,6 @@ func TestEnsureDaemonSpawnAndClose(t *testing.T) {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
 	defer os.Remove(tmpBin)
-	// The spawned daemon (no --config) writes a default config in its cwd.
-	defer os.Remove("rod-cli.yaml")
-
 	session := uniqueSession("spawn")
 	_ = os.Remove(portFilePath(session))
 
@@ -247,7 +244,6 @@ func TestEnsureDaemonConcurrentSpawnsOne(t *testing.T) {
 		t.Fatalf("build failed: %v\n%s", err, out)
 	}
 	defer os.Remove(tmpBin)
-	defer os.Remove("rod-cli.yaml")
 
 	session := uniqueSession("concurrent")
 	pattern := "--session " + session + " .*daemon"
