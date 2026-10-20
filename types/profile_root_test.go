@@ -95,3 +95,41 @@ func TestSweepRemovesStaleProfileTempDir(t *testing.T) {
 		t.Errorf("sweep removed %s, which is not a Chrome temp dir: %v", notChrome, err)
 	}
 }
+
+// TestSweepWithoutProcKeepsLiveOwners pins types:T10: where /proc is missing
+// (macOS, Windows) a live owner PID keeps its profile, a regular file in the
+// root is left alone, and a reaped owner's profile is still removed.
+func TestSweepWithoutProcKeepsLiveOwners(t *testing.T) {
+	orig := readCmdline
+	readCmdline = func(int) (string, error) { return "", os.ErrNotExist }
+	t.Cleanup(func() { readCmdline = orig })
+
+	reaped := exec.Command("true")
+	if err := reaped.Run(); err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	mine, dead, file := filepath.Join(root, "mine"), filepath.Join(root, "dead"), filepath.Join(root, "notes.txt")
+	for dir, pid := range map[string]int{mine: os.Getpid(), dead: reaped.Process.Pid} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, ownerFile), []byte(strconv.Itoa(pid)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	SweepStaleProfiles(root)
+
+	for _, kept := range []string{mine, file} {
+		if _, err := os.Stat(kept); err != nil {
+			t.Errorf("%s removed without /proc: %v", filepath.Base(kept), err)
+		}
+	}
+	if _, err := os.Stat(dead); !os.IsNotExist(err) {
+		t.Errorf("reaped owner's profile still exists (stat err %v)", err)
+	}
+}
