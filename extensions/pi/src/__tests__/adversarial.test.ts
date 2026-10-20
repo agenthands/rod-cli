@@ -16,6 +16,12 @@ import extensionDefault from "../index";
 import { writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 
+const FAKE_BIN = "/opt/fake/rod-cli";
+vi.mock("@agenthands/rod-cli-core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agenthands/rod-cli-core")>()),
+  findRodCli: () => FAKE_BIN,
+}));
+
 const PNG_1x1 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
@@ -104,7 +110,7 @@ describe("registerLifecycle — hook registration", () => {
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
       await pi._fire("session_start", {}, { ui: pi.ui });
 
-      expect(pi.exec).toHaveBeenCalledWith("rod-cli", ["--version"], { timeout: 5000 });
+      expect(pi.exec).toHaveBeenCalledWith("/usr/bin/rod-cli", ["--version"], { timeout: 5000 });
       expect(pi.ui.notify).toHaveBeenCalledWith(
         "rod-cli v1.0.0 ready",
         "info",
@@ -139,7 +145,7 @@ describe("registerLifecycle — hook registration", () => {
       registerLifecycle(asExt(pi), "/usr/bin/rod-cli");
       await pi._fire("session_shutdown", { reason: "quit" });
 
-      expect(pi.exec).toHaveBeenCalledWith("rod-cli", ["close"], { timeout: 5000 });
+      expect(pi.exec).toHaveBeenCalledWith("/usr/bin/rod-cli", ["close"], { timeout: 5000 });
     });
 
     it("does NOT run close on reason reload", async () => {
@@ -398,5 +404,22 @@ describe("index.ts — default export (wiring)", () => {
     expect(pi.on).toHaveBeenCalledWith("session_start", expect.any(Function));
     expect(pi.on).toHaveBeenCalledWith("session_shutdown", expect.any(Function));
     expect(pi.registerTool).toHaveBeenCalledTimes(16);
+  });
+});
+
+describe("index.ts — lifecycle and tools exec the discovered binary", () => {
+  it("session_start, shutdown and tools all exec findRodCli()'s path", async () => {
+    const pi = mockPi();
+    extensionDefault(asExt(pi));
+
+    await pi._fire("session_start", {}, { ui: pi.ui });
+    expect(pi.exec).toHaveBeenLastCalledWith(FAKE_BIN, ["--version"], { timeout: 5000 });
+
+    await pi._fire("session_shutdown", { reason: "quit" });
+    expect(pi.exec).toHaveBeenLastCalledWith(FAKE_BIN, ["close"], { timeout: 5000 });
+
+    const goto = pi._tools.find((t) => t.name === "browse_goto")!;
+    await goto.execute("id", { url: "https://example.com" });
+    expect(pi.exec.mock.lastCall?.[0]).toBe(FAKE_BIN);
   });
 });
