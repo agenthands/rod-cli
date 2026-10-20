@@ -30,4 +30,14 @@ describe("waitForSelector", () => {
     expect(execFn).toHaveBeenCalledTimes(3);
     for (const call of execFn.mock.calls) expect(call[0]).toEqual(POLL_ARGV);
   });
+
+  it("rejects with the exact timeout message when the selector never appears", async () => {
+    vi.useFakeTimers();
+    const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "false\n", stderr: "" });
+    const done = expect(waitForSelector(execFn, { selector: "#x", timeoutMs: 1000 })).rejects.toThrow(
+      new Error("Timed out waiting 1000ms for selector: #x"),
+    );
+    await vi.advanceTimersByTimeAsync(1500);
+    await done;
+  });
 });
