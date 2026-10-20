@@ -5,7 +5,7 @@ go 1.26.1
 toolchain go1.26.9
 
 require (
-	github.com/agenthands/godoll v0.0.0-20261019140715-1b4884dbb1e0
+	github.com/agenthands/godoll v0.0.0-20261019164132-bb56a17c50a9
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.1
 	github.com/dop251/goja v0.0.0-20260618133527-c9b2ea77db59
