@@ -40,4 +40,13 @@ describe("waitForSelector", () => {
     await vi.advanceTimersByTimeAsync(1500);
     await done;
   });
+
+  it.each([0, -1])("with timeoutMs %i checks exactly once and does not poll", async (timeoutMs) => {
+    await waitForSelector(stdoutSeq("true\n"), { selector: "#x", timeoutMs });
+    const miss = stdoutSeq("false\n", "true\n");
+    await expect(waitForSelector(miss, { selector: "#x", timeoutMs })).rejects.toThrow(
+      new Error(`Timed out waiting ${timeoutMs}ms for selector: #x`),
+    );
+    expect(miss).toHaveBeenCalledTimes(1);
+  });
 });

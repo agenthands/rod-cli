@@ -35,7 +35,8 @@ export function buildWaitPollArgs(p: {
 /**
  * Poll for a CSS selector using rod-cli eval since no dedicated wait command
  * exists. Evaluates `document.querySelector(sel) !== null` on a 500ms interval.
- * Times out after `timeoutMs` with an error. Respects session and AbortSignal.
+ * Times out after `timeoutMs` with an error; `timeoutMs <= 0` checks once.
+ * Exec failures propagate without retry. Respects session and AbortSignal.
  */
 export async function waitForSelector(
   execFn: ExecFn,
@@ -43,9 +44,12 @@ export async function waitForSelector(
   opts?: { signal?: AbortSignal },
 ): Promise<void> {
   const deadline = Date.now() + p.timeoutMs;
-  while (Date.now() < deadline) {
+  // Always check at least once (timeoutMs <= 0 checks once and never polls).
+  // An exec rejection propagates; it is not retried.
+  for (;;) {
     const r = await execRodCli(execFn, buildWaitPollArgs({ selector: p.selector, session: p.session }), { signal: opts?.signal });
     if (r.stdout.trim() === "true") return;
+    if (Date.now() >= deadline) break;
     await sleep(500, opts?.signal);
   }
   throw new Error(
