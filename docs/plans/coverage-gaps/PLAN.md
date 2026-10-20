@@ -182,7 +182,7 @@ Why: running `cd extensions/core && npm install -D fast-check` fails with `npm e
 
 ## Final
 
-### F01 [ ] Final verification and ship
+### F01 [~] Final verification and ship
 **Change:**
 1. Full suite with a private TMPDIR and a leak scan:
 
