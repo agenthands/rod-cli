@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -56,6 +56,7 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   <input id="name" type="text" placeholder="Enter name" />
   <button id="greet">Greet</button>
   <select id="c"><option value="1">Item 1</option><option value="10">Item 10</option><option value="b">Banana</option></select>
+  <div id="pane" style="height:100px;overflow:auto"><div style="height:1000px">Pane content</div></div>
 </body></html>`;
 
 describe("integration workflow", () => {
@@ -160,6 +161,12 @@ describe("integration workflow", () => {
       it("select picks the option by its text", async () => {
         await run(buildSelectArgs({ selector: "#c", values: ["Banana"] }));
         expect(await js("document.querySelector('#c').value")).toBe("b");
+      });
+
+      it("scroll moves the inner pane, not the page", async () => {
+        await run(buildScrollArgs({ direction: "down", distance: 200, selector: "#pane" }));
+        expect(Number(await js("document.querySelector('#pane').scrollTop"))).toBeGreaterThan(0);
+        expect(await js("String(window.scrollY)")).toBe("0");
       });
     });
   });
