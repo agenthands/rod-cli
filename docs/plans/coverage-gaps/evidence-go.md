@@ -17,3 +17,4 @@ verify: G02 — pass — go vet ok; go test ./daemon/ ./ ok (97.5s/1.2s) leaving
 
 ## G03
 tdd: TestPanickingActionDoesNotWedgeSession — red: robustness_test.go:27: command after a panic: err = a previous command has not completed after 500ms; the session may be stuck on an unresponsive browser call — run `close` to force-reset it, want unknown command (session wedged) — green: go test ./daemon/ -run TestPanickingActionDoesNotWedgeSession$ -count=1 passed
+tdd: TestExecuteActionRejectsNonNumericArgs — red: robustness_test.go:47: resize map[height:600 width:abc]: err = No tab to used, call rod_navigate first, want an error naming "abc" (also request "x", mousemove "y", mousewheel dy "abc") — green: go test ./daemon/ -run TestExecuteActionRejectsNonNumericArgs$ -count=1 passed

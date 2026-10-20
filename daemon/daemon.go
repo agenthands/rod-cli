@@ -452,27 +452,44 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "press":
 		return actions.Press(ctx, req.Args["key"])
 	case "mousemove":
-		var x, y float64
-		fmt.Sscanf(req.Args["x"], "%f", &x)
-		fmt.Sscanf(req.Args["y"], "%f", &y)
+		x, err := floatArg(req.Args, "x")
+		if err != nil {
+			return "", err
+		}
+		y, err := floatArg(req.Args, "y")
+		if err != nil {
+			return "", err
+		}
 		return actions.MouseMove(ctx, x, y)
 	case "mousedown":
 		return actions.MouseDown(ctx, req.Args["button"])
 	case "mouseup":
 		return actions.MouseUp(ctx, req.Args["button"])
 	case "mousewheel":
-		var dx, dy float64
-		fmt.Sscanf(req.Args["dx"], "%f", &dx)
-		fmt.Sscanf(req.Args["dy"], "%f", &dy)
+		dx, err := floatArg(req.Args, "dx")
+		if err != nil {
+			return "", err
+		}
+		dy, err := floatArg(req.Args, "dy")
+		if err != nil {
+			return "", err
+		}
 		maxSteps := 0
 		if req.Args["end"] == "true" {
-			fmt.Sscanf(req.Args["max"], "%d", &maxSteps)
+			if maxSteps, err = intArg(req.Args, "max"); err != nil {
+				return "", err
+			}
 		}
 		return actions.MouseWheel(ctx, dx, dy, req.Args["ref"], maxSteps)
 	case "resize":
-		var w, h int
-		fmt.Sscanf(req.Args["width"], "%d", &w)
-		fmt.Sscanf(req.Args["height"], "%d", &h)
+		w, err := intArg(req.Args, "width")
+		if err != nil {
+			return "", err
+		}
+		h, err := intArg(req.Args, "height")
+		if err != nil {
+			return "", err
+		}
 		return actions.Resize(ctx, w, h)
 	case "tab-list":
 		return actions.TabList(ctx)
@@ -521,8 +538,10 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "requests":
 		return actions.NetworkRequests(ctx, req.Args["clear"] == "true")
 	case "request":
-		var index int
-		fmt.Sscanf(req.Args["index"], "%d", &index)
+		index, err := intArg(req.Args, "index")
+		if err != nil {
+			return "", err
+		}
 		return actions.NetworkRequest(ctx, index)
 	case "drag":
 		return actions.Drag(ctx, req.Args["start"], req.Args["end"])
@@ -543,6 +562,30 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown command: %s", req.Command)
 	}
+}
+
+// floatArg parses a numeric arg; an absent or empty one is 0.
+func floatArg(args map[string]string, key string) (float64, error) {
+	if args[key] == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseFloat(args[key], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: not a number", key, args[key])
+	}
+	return v, nil
+}
+
+// intArg parses an integer arg; an absent or empty one is 0.
+func intArg(args map[string]string, key string) (int, error) {
+	if args[key] == "" {
+		return 0, nil
+	}
+	v, err := strconv.Atoi(args[key])
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: not an integer", key, args[key])
+	}
+	return v, nil
 }
 
 // argList decodes a JSON string array arg; a non-JSON value (older client) is one item.
