@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,12 +15,11 @@ import (
 	"github.com/agenthands/rod-cli/types"
 )
 
-// startBareServer runs StartServer with an empty Config (no browser) in a
-// private TMPDIR and returns the session and the port its port file names.
-// Never send it `close`: that would exit the test process.
+// startBareServer runs StartServer with an empty Config (no browser) and
+// returns the session and the port its port file names. The caller sets a
+// private TMPDIR first. Never send it `close`: that would exit the test process.
 func startBareServer(t *testing.T) (session, port string) {
 	t.Helper()
-	privateTmp(t)
 	session = uniqueSession("bare")
 	go func() { _ = StartServer(session, types.NewContext(context.Background(), types.Config{})) }()
 	for i := 0; i < 200; i++ {
@@ -34,6 +34,7 @@ func startBareServer(t *testing.T) (session, port string) {
 }
 
 func TestExecuteRejectsForeignRequests(t *testing.T) {
+	privateTmp(t)
 	session, port := startBareServer(t)
 	url := "http://127.0.0.1:" + port + "/execute"
 	body := `{"command":"bogus-cmd"}`
@@ -97,5 +98,61 @@ func TestClientRefusesNonNumericPortFile(t *testing.T) {
 	}
 	if n := hits.Load(); n != 0 {
 		t.Fatalf("client dialled a port file's foreign address %d times", n)
+	}
+}
+
+// deadPort returns a port nothing listens on.
+func deadPort(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Close()
+	return strings.TrimPrefix(l.Addr().String(), "127.0.0.1:")
+}
+
+func writePortFile(t *testing.T, session, port string) string {
+	t.Helper()
+	pf := portFilePath(session)
+	if err := os.WriteFile(pf, []byte(port), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return pf
+}
+
+func TestStartServerSweepsOnlyDeadPortFiles(t *testing.T) {
+	privateTmp(t)
+	live, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer live.Close()
+
+	dead := writePortFile(t, "dead", deadPort(t))
+	alive := writePortFile(t, "alive", strings.TrimPrefix(live.Addr().String(), "127.0.0.1:"))
+	spawning := writePortFile(t, "spawning", deadPort(t))
+	release, err := lockFile(spawning + ".lock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+
+	session, _ := startBareServer(t)
+
+	if _, err := os.Stat(dead); !os.IsNotExist(err) {
+		t.Errorf("dead-port file kept: %v", err)
+	}
+	for _, pf := range []string{alive, spawning} {
+		if _, err := os.Stat(pf); err != nil {
+			t.Errorf("%s removed: %v", pf, err)
+		}
+	}
+	fi, err := os.Stat(portFilePath(session))
+	if err != nil {
+		t.Fatalf("server's own port file: %v", err)
+	}
+	if fi.Mode().Perm() != 0600 {
+		t.Fatalf("server's port file mode = %v, want 0600", fi.Mode().Perm())
 	}
 }

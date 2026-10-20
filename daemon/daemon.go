@@ -220,6 +220,26 @@ func removeDeadPortFiles() {
 	}
 }
 
+// publishPort writes the port file owner-only (0600, CreateTemp's mode) and
+// atomically, so no reader or sweep ever sees it half-written.
+func publishPort(portFile string, port int) error {
+	f, err := os.CreateTemp(filepath.Dir(portFile), filepath.Base(portFile)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprint(f, port)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), portFile)
+	}
+	if err != nil {
+		os.Remove(f.Name())
+	}
+	return err
+}
+
 func StartServer(session string, rodCtx *types.Context) error {
 	removeDeadPortFiles()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -228,7 +248,7 @@ func StartServer(session string, rodCtx *types.Context) error {
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	portFile := portFilePath(session)
-	if err := os.WriteFile(portFile, []byte(fmt.Sprint(port)), 0644); err != nil {
+	if err := publishPort(portFile, port); err != nil {
 		return err
 	}
 	defer os.Remove(portFile)
