@@ -163,7 +163,7 @@ Why: running `cd extensions/core && npm install -D fast-check` fails with `npm e
 **Change:** `cd extensions/core && npm install -D fast-check`. Commit package.json and the lockfile.
 **Done when:** the TS checks pass.
 
-### E02 [ ] Extension lifecycle, waits and validation
+### E02 [~] Extension lifecycle, waits and validation
 **Rows:**
 - ext:EXT-2 / ext:pi-lifecycle;
 - ext:EXT-3 / ext:sleep-leak, applying the waitForSelector decision;
