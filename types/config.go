@@ -217,8 +217,9 @@ type StealthConfig struct {
 	// (humanize.WithMouseDeviation).
 	MouseDeviation *float64 `yaml:"mouseDeviation" json:"mouseDeviation"`
 
-	// ScrollDuration is the base scroll animation duration in milliseconds
-	// (humanize.WithDuration).
+	// ScrollDuration is the time in milliseconds one mousewheel step spreads
+	// across its ~100px wheel notches (gap = ScrollDuration / notches). Unset:
+	// a random 20-60 ms gap between notches.
 	ScrollDuration *int `yaml:"scrollDuration" json:"scrollDuration"`
 
 	// ScrollPhysics requests physics-based (cubic-bezier-eased) scrolling

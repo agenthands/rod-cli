@@ -363,7 +363,7 @@ func getApp() *cli.App {
 			&cli.IntFlag{Name: "mouse-speed-min", Usage: "Min mouse speed in px/s; set with --mouse-speed-max"},
 			&cli.IntFlag{Name: "mouse-speed-max", Usage: "Max mouse speed in px/s; set with --mouse-speed-min"},
 			&cli.Float64Flag{Name: "mouse-deviation", Usage: "Mouse-path randomness factor 0.0-1.0"},
-			&cli.IntFlag{Name: "scroll-duration", Usage: "Base scroll animation duration in ms"},
+			&cli.IntFlag{Name: "scroll-duration", Usage: "mousewheel: ms each wheel step spreads across its ~100px notches; unset: random 20-60 ms between notches"},
 			// ponytail: --scroll-physics is accepted for config compatibility but ignored;
 			// mousewheel sends real wheel notches. Remove the flag in a breaking release.
 			&cli.BoolFlag{Name: "scroll-physics", Usage: "ignored: wheel scrolling uses real wheel notches"},
