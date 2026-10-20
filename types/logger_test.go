@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/charmbracelet/log"
 )
 
 func TestInitLogger_FullConfig(t *testing.T) {
@@ -42,4 +44,20 @@ func TestInitLogger_DefaultConfig(t *testing.T) {
 	// DefaultLoggerConfig has a non-empty level, file name and prefix.
 	InitLogger(DefaultLoggerConfig)
 	_ = os.Getenv("HOME")
+}
+
+func TestLoadConfig_DefaultLoggerWritesNothingInWorkingDirectory(t *testing.T) {
+	dir := chdirTemp(t)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+
+	cfg, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("LoadConfig(\"\"): %v", err)
+	}
+	InitLogger(cfg.LoggerConfig)
+	log.Info("Starting daemon for session test")
+
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("the default logger wrote into the working directory: %v", entries)
+	}
 }

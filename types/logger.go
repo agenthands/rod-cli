@@ -23,8 +23,10 @@ type LoggerConfig struct {
 }
 
 var DefaultLoggerConfig = LoggerConfig{
-	LoggerLevel:          "info",
-	LoggerFileName:       "./log/server.log",
+	LoggerLevel: "info",
+	// No file by default: the daemon logs to stderr, which EnsureDaemon sends
+	// to the capped rod-cli-daemon.log in TMPDIR, never into the working directory.
+	LoggerFileName:       "",
 	LoggerFileMaxBackups: 5,
 	LoggerFileMaxSize:    50,
 	LoggerFileMaxAge:     30,
