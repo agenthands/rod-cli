@@ -29,7 +29,7 @@ export function registerLifecycle(pi: ExtensionAPI, rodCliPath: string | null) {
     try {
       await pi.exec("rod-cli", ["close"], { timeout: 5000 });
     } catch {
-      // Best-effort -- daemon has its own PPID polling + idle timeout.
+      // Best-effort -- the daemon exits on its own after 15 min idle.
     }
   });
 }

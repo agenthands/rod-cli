@@ -592,7 +592,7 @@ For the architect and engineer — verify each of these before shipping:
   regardless of reason. Cons: kills daemon on `/reload`, losing browsing state.
 - **Reason-gated (chosen):** Only close on `reason === "quit"`. Pros: preserves daemon
   across reloads/forks. Cons: if the user switches projects without quitting, the
-  daemon persists (handled by PPID polling + 15-minute idle timeout).
+  daemon persists (handled by the 15-minute idle timeout).
 
 ---
 
@@ -607,11 +607,6 @@ For the architect and engineer — verify each of these before shipping:
   the exact behaviour (SIGTERM vs SIGKILL on Unix, `TerminateProcess` vs CTRL-C on
   Windows, child process tree cleanup) is not specified. **How to settle:** STACK.md
   already notes this — test with `pi.exec("sleep", ["60"])` and a 1s AbortSignal.
-- **Daemon survival across Pi session forks:** If a user forks a Pi session (`/fork`)
-  after starting the rod-cli daemon, the child session inherits the daemon's PPID
-  (which is the OLD session's PID). If the parent session exits, the PPID poll may kill
-  the daemon even though the child session is still using it. **How to settle:** test
-  with a real fork scenario and observe PPID behaviour.
 - **`@pi-ai` import in user extensions:** The `StringEnum` import is from
   `@earendil-works/pi-ai`, which is a Pi internal package available at runtime. It
   should be in `peerDependencies` (not `dependencies`) since Pi provides it. If the

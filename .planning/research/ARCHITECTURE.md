@@ -27,9 +27,9 @@
 │   main.go runDaemonServer():                                           │
 │     cfg = LoadConfig(--config)  →  override with flags  →  *Config     │
 │     rodCtx = types.NewContext(ctx, *cfg)   ◄── config frozen here      │
-│   daemon.StartServer(session, ppid, rodCtx):                           │
+│   daemon.StartServer(session, rodCtx):                                 │
 │     HTTP /execute → executeAction(rodCtx, req) → actions.*             │
-│     idle 15min timeout · PPID poll · port file in os.TempDir()         │
+│     idle 15min timeout · port file in os.TempDir()                     │
 └───────────────────────────────┬──────────────────────────────────────┘
                                  ▼
 ┌──────────────────────────────────────────────────────────────────────┐

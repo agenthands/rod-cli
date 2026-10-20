@@ -14,7 +14,7 @@ Native, token-efficient browser automation via standard I/O explicitly designed 
 1. **The Background Session (Default)**: The first command boots up a browser instance in the background and keeps it running in memory. Subsequent commands communicate with that exact same running instance.
 2. **Named Sessions**: Multi-target workflows can spawn separate isolated sessions using the `-s` flag.
 3. **The `attach` Command**: Connect the CLI to an external browser already started outside of the CLI using `--cdp`.
-4. **Zombie Safeguards**: To prevent leaving zombie browsers, `rod-cli` uses Parent Process ID (PPID) polling, explicit teardown hooks (`kill-all`), and strict idle timeouts (15 minutes).
+4. **Zombie Safeguards**: To prevent leaving zombie browsers, `rod-cli` uses explicit teardown hooks (`kill-all`), and strict idle timeouts (15 minutes).
 
 ## Current State
 
