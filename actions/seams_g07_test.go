@@ -5,8 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/agenthands/rod-cli/types"
+	"pgregory.net/rapid"
 )
 
 // liveHTML returns a live ctx whose page holds the given body HTML.
@@ -128,4 +130,41 @@ func TestTabNewBadURLLeavesTabsUnchanged(t *testing.T) {
 	if len(after) != len(pages) || active.TargetID != before.TargetID {
 		t.Fatalf("tabs %d→%d, active %s→%s; want both unchanged", len(pages), len(after), before.TargetID, active.TargetID)
 	}
+}
+
+// TestFillValueEqualsText pins actions:A4: with typos on (rate 0.5) and fast
+// typing, Fill replaces any existing value with exactly the given text.
+// Run with -rapid.checks=30; one browser serves every draw.
+func TestFillValueEqualsText(t *testing.T) {
+	ctx, cleanup := newLiveCtxCfg(t, func(c *types.Config) {
+		rate, lo, hi := float32(0.5), 1, 2
+		c.Stealth.TypoRate, c.Stealth.TypingSpeedMin, c.Stealth.TypingSpeedMax = &rate, &lo, &hi
+	})
+	defer cleanup()
+	page, _ := ctx.ControlledPage()
+	if err := page.SetDocumentContent(`<input aria-label="Field">`); err != nil {
+		t.Fatalf("SetDocumentContent: %v", err)
+	}
+	ref := refFor(t, ctx, "Field")
+	el, err := getElementByRef(ctx, ref)
+	if err != nil {
+		t.Fatalf("getElementByRef: %v", err)
+	}
+	str := rapid.StringOfN(rapid.RuneFrom(nil, unicode.L, unicode.N, unicode.P, unicode.S, unicode.Zs), 0, 20, -1)
+	rapid.Check(t, func(rt *rapid.T) {
+		old, text := str.Draw(rt, "old"), str.Draw(rt, "text")
+		if _, err := el.Eval(`v => { this.value = v }`, old); err != nil {
+			rt.Fatalf("set old value: %v", err)
+		}
+		if _, err := Fill(ctx, ref, text, false); err != nil {
+			rt.Fatalf("Fill: %v", err)
+		}
+		got, err := el.Eval(`() => this.value`)
+		if err != nil {
+			rt.Fatalf("read value: %v", err)
+		}
+		if got.Value.Str() != text {
+			rt.Fatalf("value = %q; want %q", got.Value.Str(), text)
+		}
+	})
 }
