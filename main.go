@@ -172,14 +172,8 @@ func main() {
 		err = app.Run(args)
 	}
 	if err != nil {
-		isJson := false
-		for _, arg := range os.Args {
-			if arg == "--json" {
-				isJson = true
-				break
-			}
-		}
-		if isJson {
+		// Before records the parsed --json; an error before parsing stays plain.
+		if isJSON, _ := app.Metadata["json"].(bool); isJSON {
 			// Extract just the underlying error message if it's wrapped by cli.Exit
 			msg := err.Error()
 			out, _ := json.Marshal(map[string]string{"error": msg})

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -149,5 +150,22 @@ func TestTrailingGlobalFlagWithoutValueErrors(t *testing.T) {
 		if err == nil || strings.Contains(err.Error(), "ensure daemon") {
 			t.Errorf("runApp(%q) = %v, want an argv error", args, err)
 		}
+	}
+}
+
+// TestMainJSONErrorModeFromParsedFlag (root-5): every spelling of --json that
+// parses true gets a JSON error; --json=false gets the plain one.
+func TestMainJSONErrorModeFromParsedFlag(t *testing.T) {
+	clearPortFiles(t)
+	for _, flag := range []string{"--json=true", "-json", "--json"} {
+		out, err := runMainSubprocess(t, flag, "click")
+		var m map[string]string
+		if err == nil || json.Unmarshal([]byte(strings.TrimSpace(out)), &m) != nil || !strings.Contains(m["error"], "element ref is required") {
+			t.Errorf("%s click: err %v, out %q; want a JSON error and non-zero exit", flag, err, out)
+		}
+	}
+	out, err := runMainSubprocess(t, "--json=false", "click")
+	if err == nil || strings.Contains(out, `{"error"`) || !strings.Contains(out, "element ref is required") {
+		t.Errorf("--json=false click: err %v, out %q; want a plain error", err, out)
 	}
 }

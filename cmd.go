@@ -333,7 +333,11 @@ func validateSession(s string) error {
 func getApp() *cli.App {
 	return &cli.App{
 		// Every command, the daemon included, checks --session before any file op.
-		Before: func(c *cli.Context) error { return validateSession(c.String("session")) },
+		// It also records the parsed --json so main() formats errors to match.
+		Before: func(c *cli.Context) error {
+			c.App.Metadata["json"] = c.Bool("json")
+			return validateSession(c.String("session"))
+		},
 		Name:        "rod-cli",
 		Description: "Native web browsing, scraping, and interaction CLI for AI assistants",
 		Usage:       "rod-cli [command] [options]",
