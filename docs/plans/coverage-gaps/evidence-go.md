@@ -59,3 +59,6 @@ tdd: TestStateSaveLoadRoundTripsCookiesPrivately — red: seams_g07_test.go:95: 
 tdd: TestTabNewBadURLLeavesTabsUnchanged — red: seams_g07_test.go:129: tabs 1→2, active C317C2F4B2AFF4BC879837CCAFA5E514→5D8654B128FA3573DAE5F479C2FE42B0; want both unchanged — green: go test ./actions/ -run TestTabNewBadURLLeavesTabsUnchanged -count=1 passed
 tdd: TestFillValueEqualsText — red (code already correct; mutation dropping SelectAllText before the clearing Backspace): seed 10717220915057974176: old="㈯﹞", text="" → value = "㈯"; want "" — green: go test ./actions/ -run TestFillValueEqualsText -count=1 -rapid.checks=30 passed
 verify: G07 — pass — Done-when (243s) + full actions pkg + go vet green; 6 rows tested live at seams, bug reds match diffs, Fill rapid property with constrained gen; docs updated; TMPDIR held only leakless-*, no headless chrome left
+
+## G08
+tdd: TestReorderGlobalFlagsProperties (root:root-2; passes on today's code) — red (mutation ignoring the `--` terminator): seed 7170201281461089191: in ["" "--" "--headless"] → plain tokens + tail after globals: got ["--headless" "--"], want ["--" "--headless"] — green: go test . -run TestReorderGlobalFlagsProperties -count=1 -rapid.checks=2000 passed
