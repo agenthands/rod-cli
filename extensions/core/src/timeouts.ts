@@ -17,14 +17,9 @@ export const DEFAULT_TIMEOUT = 30_000;
 export function timeoutFor(args: string[]): number {
   // Find the first non-flag argument -- that's the subcommand.
   const cmdIndex = findSubcommand(args);
-  if (cmdIndex >= 0) {
-    const cmd = args[cmdIndex];
-    if (cmd !== undefined) {
-      const timeout = TIMEOUTS[cmd];
-      if (timeout !== undefined) return timeout;
-    }
-  }
+  if (cmdIndex >= 0) return TIMEOUTS[args[cmdIndex]!] ?? DEFAULT_TIMEOUT;
   // Flags-only call (e.g. `--version`): fall back to scanning TIMEOUTS keys.
+  // Never scan when there is a subcommand: user values and session names could match a key.
   for (const [cmd, ms] of Object.entries(TIMEOUTS)) {
     if (args.includes(cmd)) return ms;
   }

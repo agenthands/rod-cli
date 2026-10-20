@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { timeoutFor } from "../timeouts";
+import { DEFAULT_TIMEOUT, timeoutFor } from "../timeouts";
 
 describe("timeoutFor", () => {
   it("returns goto timeout of 60000ms", () => {
@@ -60,5 +60,10 @@ describe("timeoutFor", () => {
 
   it("finds subcommand timeout with --session prefix", () => {
     expect(timeoutFor(["--session", "admin", "goto", "https://example.com"])).toBe(60_000);
+  });
+
+  it("ignores table keys that appear as user values or session names", () => {
+    expect(timeoutFor(["hover", "--", "close"])).toBe(DEFAULT_TIMEOUT);
+    expect(timeoutFor(["-s", "goto", "tab-list"])).toBe(DEFAULT_TIMEOUT);
   });
 });
