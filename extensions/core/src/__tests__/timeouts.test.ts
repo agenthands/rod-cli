@@ -76,6 +76,11 @@ describe("timeoutFor", () => {
 describe("withSession (property)", () => {
   const argvArb = builderCall(fc.constant(undefined)).map((c) => c.argv);
   const sessionArb = fc.oneof(fc.string({ minLength: 1 }), fc.constantFrom("close", "goto", "--version"));
+  // Names outside the session charset are rejected on their own (EXT-12), so validation is compared on valid names.
+  const validSessionArb = fc.oneof(
+    fc.stringMatching(/^[A-Za-z0-9._-]{1,64}$/).filter((n) => n !== "." && n !== ".."),
+    fc.constantFrom("close", "goto", "--version"),
+  );
   const thrown = (args: string[]) => {
     try { validateInput(args); return undefined; } catch (e) { return (e as Error).message; }
   };
@@ -87,7 +92,7 @@ describe("withSession (property)", () => {
   });
 
   it("validateInput throws for withSession(s, a) exactly when it throws for a", () => {
-    fc.assert(fc.property(sessionArb, argvArb, (s, a) => {
+    fc.assert(fc.property(validSessionArb, argvArb, (s, a) => {
       expect(thrown(withSession(s, a))).toBe(thrown(a));
     }));
   });

@@ -50,7 +50,7 @@ pi install npm:@agenthands/rod-cli-pi
 | `browse_select` | Choose options in a `<select>` by text, then value, then substring | selector (required: CSS selector or `[ref=...]`), values (required, at least one), session |
 | `browse_hover` | Hover an element with a humanized pointer path | selector (required: CSS selector or `[ref=...]`), session |
 
-All tools accept an optional `session` parameter for multi-browser/multi-identity workflows. Schemas are strict: an unknown or misspelled parameter is rejected, not ignored.
+All tools accept an optional `session` parameter for multi-browser/multi-identity workflows. A session name is 1-64 letters, digits, `.`, `_` or `-` (not `.` or `..`); any other name is rejected before rod-cli runs. Schemas are strict: an unknown or misspelled parameter is rejected, not ignored.
 
 `browse_click`, `browse_type`, and `browse_fill_form` accept either a plain CSS selector (e.g. `#submit-btn`, works immediately, no snapshot needed) or a ref token copied verbatim from the most recent `browse_snapshot`'s `[ref=sNeM]` annotation (e.g. `s1e5`).
 
