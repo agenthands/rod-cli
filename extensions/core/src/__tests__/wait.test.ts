@@ -49,4 +49,11 @@ describe("waitForSelector", () => {
     );
     expect(miss).toHaveBeenCalledTimes(1);
   });
+
+  it("propagates an exec rejection without retrying", async () => {
+    const boom = new Error("spawn failed");
+    const execFn = vi.fn().mockRejectedValue(boom);
+    await expect(waitForSelector(execFn, { selector: "#x", timeoutMs: 5000 })).rejects.toBe(boom);
+    expect(execFn).toHaveBeenCalledTimes(1);
+  });
 });
