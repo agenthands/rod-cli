@@ -115,7 +115,13 @@ describe("buildScreenshotArgs", () => {
 
   it("builds screenshot argv with --selector", () => {
     expect(buildScreenshotArgs({ selector: "#chart" })).toEqual([
-      "screenshot", "--selector", "#chart",
+      "screenshot", "--selector=#chart",
+    ]);
+  });
+
+  it("keeps a flag-like selector inside its own --selector= token", () => {
+    expect(buildScreenshotArgs({ selector: "--out", out: "/tmp/x.png", session: "admin" })).toEqual([
+      "-s", "admin", "screenshot", "--selector=--out", "--out", "/tmp/x.png",
     ]);
   });
 

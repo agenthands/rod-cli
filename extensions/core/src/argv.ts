@@ -55,7 +55,8 @@ export function buildScreenshotArgs(p: {
   session?: string;
 }): string[] {
   const args = ["screenshot"];
-  if (p.selector) args.push("--selector", p.selector);
+  // One token, so a selector that looks like a flag (or `--`) cannot become its own argv token.
+  if (p.selector) args.push(`--selector=${p.selector}`);
   if (p.out) args.push("--out", p.out);
   if (p.fullPage) args.push("--full-page");
   return withSession(p.session, args);
