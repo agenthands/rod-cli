@@ -49,3 +49,28 @@ func TestSelectByValueEscapesForCSS(t *testing.T) {
 		}
 	}
 }
+
+// TestEvaluateRunsFunctionsAndStatements pins actions:A6 / actions:evaluate:
+// statements run as a script, any function-valued source is called, and a
+// result is never printed as "<nil>".
+func TestEvaluateRunsFunctionsAndStatements(t *testing.T) {
+	ctx, cleanup := liveHTML(t, `<button aria-label="Btn">b</button>`)
+	defer cleanup()
+	for _, c := range []struct{ src, want string }{
+		{"function f(){return 5}; f()", "5"},
+		{"async function(){return 7}", "7"},
+		{"(a=1) => a+1", "2"},
+		{"() => document.title", ""},
+		{"1 + 1", "2"},
+		{"void 0", "undefined"},
+		{"({a:1})", `{"a":1}`},
+	} {
+		if got, err := Evaluate(ctx, c.src, ""); err != nil || got != c.want {
+			t.Errorf("Evaluate(%q) = %q, %v; want %q", c.src, got, err, c.want)
+		}
+	}
+	ref := refFor(t, ctx, "Btn")
+	if got, err := Evaluate(ctx, "() => null", ref); err != nil || got != "null" {
+		t.Errorf("Evaluate(() => null, ref) = %q, %v; want null", got, err)
+	}
+}

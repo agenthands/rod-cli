@@ -120,15 +120,15 @@ func TestErrPaths_EvaluateWraps(t *testing.T) {
 	}
 	elementEval = origElem
 
-	// page.Eval (function) failure
-	origPage := pageEval
-	pageEval = func(p *rod.Page, js string, args ...interface{}) (*proto.RuntimeRemoteObject, error) {
+	// call of a function-valued result: failure
+	origCall := runtimeCallFunctionOn
+	runtimeCallFunctionOn = func(req proto.RuntimeCallFunctionOn, page *rod.Page) (*proto.RuntimeCallFunctionOnResult, error) {
 		return nil, errBoom
 	}
 	if _, err := Evaluate(ctx, "() => 1", ""); err == nil {
 		t.Error("Evaluate page func expected wrapped error")
 	}
-	pageEval = origPage
+	runtimeCallFunctionOn = origCall
 
 	// proto RuntimeEvaluate (expression branch) failure
 	origRT := runtimeEvaluateCall

@@ -72,6 +72,9 @@ var (
 	runtimeEvaluateCall = func(req proto.RuntimeEvaluate, page *rod.Page) (*proto.RuntimeEvaluateResult, error) {
 		return req.Call(page)
 	}
+	runtimeCallFunctionOn = func(req proto.RuntimeCallFunctionOn, page *rod.Page) (*proto.RuntimeCallFunctionOnResult, error) {
+		return req.Call(page)
+	}
 	pageScreenshot = func(p *rod.Page, fullPage bool, req *proto.PageCaptureScreenshot) ([]byte, error) {
 		return p.Screenshot(fullPage, req)
 	}
@@ -250,7 +253,6 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 		return "", err
 	}
 
-	var valStr string
 	scriptTrimmed := strings.TrimSpace(script)
 
 	// If a ref is provided, evaluate on that specific element
@@ -264,60 +266,65 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 			return "", errors.Wrap(err, "Failed to evaluate code on element")
 		}
 		if res != nil && !res.Value.Nil() {
-			valStr = res.Value.String()
-		} else {
-			valStr = "null"
+			return res.Value.String(), nil
 		}
-		return valStr, nil
+		return "null", nil
 	}
 
-	// Global page evaluation
-	isFunc := strings.HasPrefix(scriptTrimmed, "function") ||
-		strings.HasPrefix(scriptTrimmed, "()") ||
-		strings.HasPrefix(scriptTrimmed, "async ()") ||
-		strings.HasPrefix(scriptTrimmed, "el =>") ||
-		strings.HasPrefix(scriptTrimmed, "(el) =>") ||
-		strings.HasPrefix(scriptTrimmed, "e =>") ||
-		strings.HasPrefix(scriptTrimmed, "() =>") ||
-		strings.HasPrefix(scriptTrimmed, "async () =>")
-
-	if isFunc {
-		res, err := pageEval(page, scriptTrimmed)
-		if err != nil {
-			return "", errors.Wrap(err, "Failed to evaluate code")
-		}
-		if res != nil {
-			if !res.Value.Nil() {
-				valStr = res.Value.String()
-			} else {
-				valStr = "null"
-			}
-		}
-	} else {
-		r, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
-			Expression:            scriptTrimmed,
-			ObjectGroup:           "console",
-			IncludeCommandLineAPI: true,
-			AwaitPromise:          true,
+	// Global page evaluation. Source that parses as an expression is wrapped in
+	// parens (so `function(){}` and `async function(){}` are values, as in the
+	// DevTools console); anything else runs as a script. A function value is
+	// then called; any other object comes back by value.
+	// The parse check uses new Function (Runtime.compileScript would need
+	// Runtime.enable, a detection tell); a page whose Trusted Types policy
+	// blocks it runs the source as a script.
+	expr := scriptTrimmed
+	wrapped := "(\n" + scriptTrimmed + "\n)"
+	lit, _ := json.Marshal(wrapped)
+	if c, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
+		Expression: `(() => { try { new Function("return " + ` + string(lit) + `); return true } catch (e) { return false } })()`,
+	}, page); err == nil && c.Result != nil && c.Result.Value.Bool() {
+		expr = wrapped
+	}
+	r, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
+		Expression:            expr,
+		ObjectGroup:           "console",
+		IncludeCommandLineAPI: true,
+		AwaitPromise:          true,
+	}, page)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to evaluate code")
+	}
+	if r.ExceptionDetails != nil {
+		return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+	}
+	res := r.Result
+	if res != nil && res.ObjectID != "" {
+		c, err := runtimeCallFunctionOn(proto.RuntimeCallFunctionOn{
+			FunctionDeclaration: `function() { return typeof this === 'function' ? this() : this }`,
+			ObjectID:            res.ObjectID,
+			AwaitPromise:        true,
+			ReturnByValue:       true,
 		}, page)
 		if err != nil {
 			return "", errors.Wrap(err, "Failed to evaluate code")
 		}
-		if r.ExceptionDetails != nil {
-			return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+		if c.ExceptionDetails != nil {
+			return "", fmt.Errorf("Exception: %s", c.ExceptionDetails.Exception.Description)
 		}
-		if r.Result != nil && !r.Result.Value.Nil() {
-			valStr = r.Result.Value.String()
-		} else if r.Result != nil && r.Result.Type == "string" {
-			valStr = fmt.Sprintf("%v", r.Result.Value)
-		} else if r.Result != nil {
-			valStr = fmt.Sprintf("%v", r.Result.Value)
-		} else {
-			valStr = "null"
-		}
+		res = c.Result
 	}
-
-	return valStr, nil
+	switch {
+	case res == nil || res.Type == proto.RuntimeRemoteObjectTypeUndefined:
+		return "undefined", nil
+	case res.UnserializableValue != "":
+		return string(res.UnserializableValue), nil
+	case res.Value.Nil():
+		return "null", nil
+	case res.Type == proto.RuntimeRemoteObjectTypeString:
+		return res.Value.Str(), nil
+	}
+	return res.Value.JSON("", ""), nil
 }
 
 func Screenshot(ctx *types.Context, name, selector, out string, fullPage bool) (string, error) {
