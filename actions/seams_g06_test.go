@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -100,5 +101,28 @@ func TestDragReleasesButtonOnlyWhenPressed(t *testing.T) {
 	_, err = Drag(ctx, src, dst)
 	if err == nil || !strings.HasPrefix(err.Error(), "Failed to press mouse on drag source: boom") || ups != 0 {
 		t.Errorf("mouseDown fails: err %v, mouseUp calls %d; want press error and 0 releases", err, ups)
+	}
+}
+
+// TestMouseWheelHorizontalThenEnd pins actions:A10 on a fake horizontal
+// scroller (MaxX 1000): dx=300 moves x only, then --end stops at the limit.
+func TestMouseWheelHorizontalThenEnd(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	x := 0.0
+	origMeasure, origScroll, origMove, origSettle := measureScroll, mouseScroll, moveToPoint, wheelSettle
+	measureScroll = func(el *rod.Element) ([]scrollBox, error) {
+		return []scrollBox{{X: x, MaxX: 1000, VW: 800, VH: 600}}, nil
+	}
+	mouseScroll = func(p *rod.Page, dx, dy float64) error { x = math.Min(1000, math.Max(0, x+dx)); return nil }
+	moveToPoint = func(p *rod.Page, pt humanize.Point, opts ...humanize.MouseOption) error { return nil }
+	wheelSettle = 0
+	t.Cleanup(func() { measureScroll, mouseScroll, moveToPoint, wheelSettle = origMeasure, origScroll, origMove, origSettle })
+
+	if got, err := MouseWheel(ctx, 300, 0, "", 0); err != nil || got != "scrolled dx=300 x=300/1000 dy=0 y=0/0" {
+		t.Fatalf("dx=300: got %q, err %v", got, err)
+	}
+	if got, err := MouseWheel(ctx, 300, 0, "", 50); err != nil || got != "scrolled dx=700 x=1000/1000 dy=0 y=0/0 end" {
+		t.Fatalf("dx=300 --end: got %q, err %v", got, err)
 	}
 }
