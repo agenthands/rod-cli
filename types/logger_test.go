@@ -10,6 +10,8 @@ import (
 
 func TestInitLogger_FullConfig(t *testing.T) {
 	dir := chdirTemp(t)
+	// Later logging must not recreate the log file in the removed temp dir.
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
 
 	cfg := LoggerConfig{
 		LoggerLevel:          "debug",
