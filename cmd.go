@@ -319,7 +319,7 @@ func getApp() *cli.App {
 		Usage:       "rod-cli [command] [options]",
 		Version:     banner.Version,
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "config file path"},
+			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "config file path (default: ./rod-cli.yaml if it exists, else built-in defaults)"},
 			&cli.StringFlag{Name: "cdp-endpoint", Aliases: []string{"cdp"}, Usage: "control browser by cdp"},
 			&cli.BoolFlag{Name: "headless", Aliases: []string{"hl"}, Usage: "enable headless"},
 			&cli.BoolFlag{Name: "banner", Aliases: []string{"b"}, Usage: "show startup banner (default off)"},

@@ -227,38 +227,40 @@ func chdirTemp(t *testing.T) string {
 	return dir
 }
 
-func TestInitDefaultConfig_CreatesFile(t *testing.T) {
-	dir := chdirTemp(t)
-
-	if err := InitDefaultConfig(); err != nil {
-		t.Fatalf("InitDefaultConfig: %v", err)
-	}
-
-	p := filepath.Join(dir, ConfigName)
-	if _, err := os.Stat(p); err != nil {
-		t.Fatalf("expected config file created: %v", err)
-	}
-
-	// Calling again should hit the "already exists" early-return branch.
-	if err := InitDefaultConfig(); err != nil {
-		t.Fatalf("InitDefaultConfig second call: %v", err)
-	}
-}
-
-func TestLoadConfig_EmptyPathCreatesDefault(t *testing.T) {
+func TestLoadConfig_EmptyPathNoFileUsesDefaultsAndWritesNothing(t *testing.T) {
 	dir := chdirTemp(t)
 
 	cfg, err := LoadConfig("")
 	if err != nil {
 		t.Fatalf("LoadConfig(\"\"): %v", err)
 	}
-	if cfg == nil {
-		t.Fatal("expected config, got nil")
+	if cfg.Mode != Text || cfg.LoggerConfig.LoggerLevel != "info" || !boolVal(cfg.Stealth.CanvasNoise, false) {
+		t.Fatalf("expected the built-in defaults, got %+v", cfg)
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("LoadConfig wrote into the working directory: %v", entries)
 	}
 
-	// The default config file must have been created in cwd.
-	if _, err := os.Stat(filepath.Join(dir, ConfigName)); err != nil {
-		t.Fatalf("expected %s created: %v", ConfigName, err)
+	// Writing through the returned config must not change the defaults.
+	*cfg.Stealth.CanvasNoise = false
+	if !*DefaultConfig.Stealth.CanvasNoise {
+		*DefaultConfig.Stealth.CanvasNoise = true
+		t.Fatal("returned config shares the CanvasNoise pointer with DefaultConfig")
+	}
+}
+
+func TestLoadConfig_EmptyPathReadsLocalFile(t *testing.T) {
+	dir := chdirTemp(t)
+	if err := os.WriteFile(filepath.Join(dir, ConfigName), []byte("mode: vision\nheadless: true\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	cfg, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("LoadConfig(\"\"): %v", err)
+	}
+	if cfg.Mode != Vision || !cfg.Headless {
+		t.Fatalf("expected values from ./%s, got mode=%q headless=%v", ConfigName, cfg.Mode, cfg.Headless)
 	}
 }
 
@@ -314,27 +316,6 @@ func TestLoadConfig_NotFound(t *testing.T) {
 	cfg, _ := LoadConfig(p)
 	if cfg != nil {
 		t.Fatalf("expected nil config for missing path, got %+v", cfg)
-	}
-}
-
-func TestInitDefaultConfig_CreateFails(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root bypasses directory permissions")
-	}
-	dir := chdirTemp(t)
-	// Make cwd non-writable so os.Create of rod-cli.yaml fails.
-	if err := os.Chmod(dir, 0o555); err != nil {
-		t.Fatalf("chmod: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
-
-	if err := InitDefaultConfig(); err == nil {
-		t.Fatal("expected error creating config in read-only dir")
-	}
-
-	// LoadConfig("") should propagate the init failure (covers its error wrap).
-	if _, err := LoadConfig(""); err == nil {
-		t.Fatal("expected LoadConfig error when init default config fails")
 	}
 }
 

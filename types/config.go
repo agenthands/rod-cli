@@ -901,38 +901,21 @@ var (
 	}
 )
 
-// InitDefaultConfig Generate the default configuration file
-func InitDefaultConfig() error {
-
-	// First, check if the configuration file exists at the default path. If it exists, do not generate the default configuration file.
-	defaultConfigPath := filepath.Join("./", ConfigName)
-	if exist, _ := utils.PathExists(defaultConfigPath); exist {
-		return nil
-	}
-
-	// if default config file not exist, create it
-	defaultConfig, err := os.Create(defaultConfigPath)
-	if err != nil {
-		return err
-	}
-
-	encoder := yaml.NewEncoder(defaultConfig)
-	defer encoder.Close()
-
-	err = encoder.Encode(DefaultConfig)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // LoadConfig Actually load the configuration file
-// if ConfigPath is empty, generate the default configuration file in the current directory
+// If configPath is empty it reads ./rod-cli.yaml when that file exists, and
+// otherwise returns the built-in defaults without writing anything.
 func LoadConfig(configPath string) (*Config, error) {
 	if configPath == "" {
 		configPath = filepath.Join("./", ConfigName)
-		if err := InitDefaultConfig(); err != nil {
-			return nil, errors.Wrapf(err, "init default config failed")
+		if exist, _ := utils.PathExists(configPath); !exist {
+			// The yaml round trip deep-copies DefaultConfig, so the caller can
+			// write through its pointer fields without changing the defaults.
+			var config Config
+			data, err := yaml.Marshal(DefaultConfig)
+			if err == nil {
+				err = yaml.Unmarshal(data, &config)
+			}
+			return &config, err
 		}
 	}
 

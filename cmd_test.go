@@ -678,15 +678,6 @@ func TestRunDaemonServerBadConfig(t *testing.T) {
 // surfaces. This is the T-25-03 mitigation (no silent default identity).
 func TestRunDaemonServerBadProfile(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-profile.json")
-	// runDaemonServer with no --config writes a default config in cwd; chdir into
-	// a temp dir so the repo is not polluted.
-	orig, _ := os.Getwd()
-	work := t.TempDir()
-	if err := os.Chdir(work); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(orig) })
-
 	err := runApp("--profile", missing, "daemon")
 	if err == nil {
 		t.Fatal("expected loud error for non-existent profile")
@@ -714,8 +705,6 @@ func TestRunDaemonServerStarts(t *testing.T) {
 	}()
 
 	defer os.Remove(pf)
-	// runDaemonServer with no --config writes a default config in cwd.
-	defer os.Remove("rod-cli.yaml")
 
 	if !waitForPong(pf) {
 		t.Fatal("runDaemonServer did not start a reachable daemon")

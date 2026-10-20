@@ -115,3 +115,6 @@ live: tests binary killed with kill -9 left rod-cli-tests-cache-3032369357 + a d
 
 ## Review-found issues (2026-10-20)
 change: G3 godoll cmd/godoll build (unused rod import, go mod tidy -> go 1.26.0, test_output.log removed) — cd cmd/godoll && go build ./... && go vet ./... ; make build ; GOBIN=<tmp> make install — all succeeded, binaries print version (godoll b138191)
+tdd: TestLoadConfig_EmptyPathNoFileUsesDefaultsAndWritesNothing — red: config_test.go:259: LoadConfig wrote into the working directory: [- rod-cli.yaml] — green: go test ./types/ -run TestLoadConfig_EmptyPath -count=1 passed (InitDefaultConfig and its two tests deleted; defaults deep-copied via a yaml round trip)
+tdd: TestLoadConfig_EmptyPathReadsLocalFile — red not observed (reading an existing ./rod-cli.yaml already worked)
+change: R2 tracked rod-cli.yaml (== current defaults) and tests/rod-cli.yaml (old defaults; e2e binary runs with cmd.Dir "..", never read it) git rm'd; untracked extensions/pi/rod-cli.yaml was an old generated default (browserTempDir ./rod/browser), deleted — go test ./types/ -count=1; go test . -run TestRunDaemonServerBad -count=1 — ok
