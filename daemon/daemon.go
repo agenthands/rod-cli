@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -280,7 +281,17 @@ func StartServer(session string, rodCtx *types.Context) error {
 	execSem := make(chan struct{}, 1)
 	execSem <- struct{}{}
 
+	wantHost := fmt.Sprintf("127.0.0.1:%d", port)
 	mux.HandleFunc("/execute", func(w http.ResponseWriter, r *http.Request) {
+		// Only the rod-cli client may drive the session: a browser page can
+		// reach 127.0.0.1 too, but it sends an Origin, a simple Content-Type,
+		// or (via DNS rebinding) a foreign Host.
+		_, hasOrigin := r.Header["Origin"]
+		if mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); hasOrigin || mt != "application/json" || r.Host != wantHost {
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(Response{Error: "forbidden: not a rod-cli client request"})
+			return
+		}
 		idleTimer.Reset(15 * time.Minute)
 		var req Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
