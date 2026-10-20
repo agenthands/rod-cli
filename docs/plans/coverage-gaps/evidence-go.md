@@ -22,3 +22,6 @@ tdd: TestCloseCleansUpBeforeReply (D5 guard; passes on today's code) — red: on
 tdd: TestPingDoesNotResetIdleTimer — red: robustness_test.go:78: daemon polled by ping every 50ms never idled out after 300ms: ping resets the idle timer — green: go test ./daemon/ -run TestPingDoesNotResetIdleTimer$ -count=1 passed
 done-check: go vet ./... ok; TMPDIR=$X go test ./daemon/ -count=1 → ok daemon 105.541s (TMPDIR left only leakless-*); touched actions too: go test ./actions/ -count=1 → ok 320.830s (only leakless-*)
 verify: G03 — pass — go vet ok; go test ./daemon/ ok (108s, TMPDIR only leakless-*, no leaked procs); reds re-confirmed in scratch copy for execSem panic, S3 Sscanf, S5 ping reset; D5 guard green; docs updated for idle timeout
+
+## G04
+tdd: TestLoadConfigRejectsMissingAndMisnamedFiles — red: config_test.go:302: missing "/tmp/TestLoadConfigRejectsMissingAndMisnamedFiles2127626620/001/does-not-exist/rod-cli.yaml": cfg=<nil> err=<nil>, want nil config and an error naming the path (then "file \"cli.yaml\": cfg=&{text ...} err=<nil>" for the inverted name check) — green: go test ./types/ -run TestLoadConfigRejectsMissingAndMisnamedFiles$ -count=1 passed

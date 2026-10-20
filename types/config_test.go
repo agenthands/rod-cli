@@ -290,32 +290,27 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_WrongFileName(t *testing.T) {
+// TestLoadConfigRejectsMissingAndMisnamedFiles pins types:T4: a missing path or
+// a file not named exactly ConfigName returns (nil, err), never (nil, nil),
+// which used to nil-deref under --headless.
+func TestLoadConfigRejectsMissingAndMisnamedFiles(t *testing.T) {
 	dir := chdirTemp(t)
 
-	// A file whose base name is NOT contained in ConfigName.
-	p := filepath.Join(dir, "totally-unrelated-name.yaml")
-	if err := os.WriteFile(p, []byte("mode: text\n"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
+	missing := filepath.Join(dir, "does-not-exist", ConfigName)
+	cfg, err := LoadConfig(missing)
+	if cfg != nil || err == nil || !strings.Contains(err.Error(), missing) {
+		t.Fatalf("missing %q: cfg=%v err=%v, want nil config and an error naming the path", missing, cfg, err)
 	}
 
-	// NOTE: the wrong-name branch wraps a nil error, so errors.Wrapf returns a
-	// nil error. The contract that matters here is that no config is returned.
-	cfg, _ := LoadConfig(p)
-	if cfg != nil {
-		t.Fatalf("expected nil config for wrong file name, got %+v", cfg)
-	}
-}
-
-func TestLoadConfig_NotFound(t *testing.T) {
-	dir := chdirTemp(t)
-
-	p := filepath.Join(dir, "does-not-exist", ConfigName)
-	// NOTE: the not-found branch also wraps a nil error, so the returned error
-	// is nil; the meaningful guarantee is that no config is returned.
-	cfg, _ := LoadConfig(p)
-	if cfg != nil {
-		t.Fatalf("expected nil config for missing path, got %+v", cfg)
+	for _, name := range []string{"other.yaml", "cli.yaml", "yaml"} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte("mode: text\n"), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		cfg, err := LoadConfig(p)
+		if cfg != nil || err == nil {
+			t.Errorf("file %q: cfg=%v err=%v, want nil config and an error", name, cfg, err)
+		}
 	}
 }
 

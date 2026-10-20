@@ -929,7 +929,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	if exist {
 		// validate config file name
 		fileName := utils.FileName(configPath)
-		if strings.Contains(ConfigName, fileName) {
+		if fileName == ConfigName {
 			file, err := os.Open(configPath)
 			if err != nil {
 				return nil, err
@@ -943,7 +943,7 @@ func LoadConfig(configPath string) (*Config, error) {
 			}
 			return &config, nil
 		}
-		return nil, errors.Wrapf(err, "config file name is wrong")
+		return nil, errors.Errorf("config file %s: name must be %s", configPath, ConfigName)
 	}
-	return nil, errors.Wrapf(err, "config path %s not found", configPath)
+	return nil, errors.Errorf("config path %s not found", configPath)
 }
