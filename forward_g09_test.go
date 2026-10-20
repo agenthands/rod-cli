@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agenthands/rod-cli/types"
 	"github.com/urfave/cli/v2"
 	"pgregory.net/rapid"
 )
@@ -197,6 +198,100 @@ func TestFlagForwardingRoundTrip(t *testing.T) {
 				// --headless/--vision forward only when true; compare by value.
 				if name != "headless" && name != "vision" && c.IsSet(name) != set {
 					rt.Fatalf("--%s: daemon IsSet=%v, client set=%v", name, c.IsSet(name), set)
+				}
+			}
+		})
+	})
+}
+
+// fwdClientOnly are the forwarded flags that configure the daemon outside
+// StealthFlags (types.Config).
+var fwdClientOnly = map[string]bool{"config": true, "cdp-endpoint": true, "headless": true, "vision": true}
+
+func optStr(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func optPtr[T any](p *T) any {
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
+// stealthFieldOf maps each forwarded stealth flag to its StealthFlags field;
+// nil means the field is unset.
+var stealthFieldOf = map[string]func(types.StealthFlags) any{
+	"proxy":               func(s types.StealthFlags) any { return optStr(s.Proxy) },
+	"profile":             func(s types.StealthFlags) any { return optStr(s.Profile) },
+	"user-agent":          func(s types.StealthFlags) any { return optStr(s.UserAgent) },
+	"locale":              func(s types.StealthFlags) any { return optStr(s.Locale) },
+	"timezone":            func(s types.StealthFlags) any { return optStr(s.Timezone) },
+	"platform":            func(s types.StealthFlags) any { return optStr(s.Platform) },
+	"webrtc-protection":   func(s types.StealthFlags) any { return optPtr(s.WebRTCLeakProtection) },
+	"canvas-noise":        func(s types.StealthFlags) any { return optPtr(s.CanvasNoise) },
+	"font-spoof":          func(s types.StealthFlags) any { return optPtr(s.FontSpoof) },
+	"media-devices-spoof": func(s types.StealthFlags) any { return optPtr(s.MediaDevicesSpoof) },
+	"battery-spoof":       func(s types.StealthFlags) any { return optPtr(s.BatterySpoof) },
+	"codec-spoof":         func(s types.StealthFlags) any { return optPtr(s.CodecSpoof) },
+	"console-capture":     func(s types.StealthFlags) any { return optPtr(s.ConsoleCapture) },
+	"request-capture":     func(s types.StealthFlags) any { return optPtr(s.RequestCapture) },
+	"cdp-proxy":           func(s types.StealthFlags) any { return optPtr(s.CDPProxy) },
+	"cdp-jitter-ms":       func(s types.StealthFlags) any { return optPtr(s.CDPJitterMs) },
+	"no-cdp-proxy":        func(s types.StealthFlags) any { return optPtr(s.NoCDPProxy) },
+	"typing-speed-min":    func(s types.StealthFlags) any { return optPtr(s.TypingSpeedMin) },
+	"typing-speed-max":    func(s types.StealthFlags) any { return optPtr(s.TypingSpeedMax) },
+	"typo-rate":           func(s types.StealthFlags) any { return optPtr(s.TypoRate) },
+	"mouse-tremor":        func(s types.StealthFlags) any { return optPtr(s.MouseTremor) },
+	"mouse-steps":         func(s types.StealthFlags) any { return optPtr(s.MouseSteps) },
+	"mouse-speed-min":     func(s types.StealthFlags) any { return optPtr(s.MouseSpeedMin) },
+	"mouse-speed-max":     func(s types.StealthFlags) any { return optPtr(s.MouseSpeedMax) },
+	"mouse-deviation":     func(s types.StealthFlags) any { return optPtr(s.MouseDeviation) },
+	"scroll-duration":     func(s types.StealthFlags) any { return optPtr(s.ScrollDuration) },
+	"scroll-physics":      func(s types.StealthFlags) any { return optPtr(s.ScrollPhysics) },
+}
+
+// TestStealthFlagsFromCapturesForwarded (root-9): on the daemon side, every
+// forwarded stealth flag lands in its StealthFlags field with the client's
+// value, an unset flag leaves its field unset, and ProxyAuth comes from the env.
+func TestStealthFlagsFromCapturesForwarded(t *testing.T) {
+	for _, f := range getApp().Flags {
+		name := f.Names()[0]
+		if !fwdExcluded[name] && !fwdClientOnly[name] && stealthFieldOf[name] == nil {
+			t.Fatalf("--%s is forwarded but has no StealthFlags field in the table", name)
+		}
+	}
+	r := newFwdRig(t)
+	i := 0
+	rapid.Check(t, func(rt *rapid.T) {
+		i++
+		session := fmt.Sprintf("sf-%d", i)
+		d := drawClientFlags(rt)
+		argv, env := r.spawn(rt, session, d)
+		for _, e := range env {
+			if v, ok := strings.CutPrefix(e, "ROD_CLI_PROXY_AUTH="); ok {
+				os.Setenv("ROD_CLI_PROXY_AUTH", v)
+			}
+		}
+		defer os.Unsetenv("ROD_CLI_PROXY_AUTH")
+
+		reparse(rt, argv, func(c *cli.Context) {
+			sf := stealthFlagsFrom(c)
+			if sf.ProxyAuth != fwdSentinel {
+				rt.Fatalf("ProxyAuth %q, want the sentinel", sf.ProxyAuth)
+			}
+			for name, field := range stealthFieldOf {
+				want, set := d.set[name]
+				if !set {
+					want = nil
+				} else if name == "typo-rate" {
+					want = float32(want.(float64))
+				}
+				if got := field(sf); got != want {
+					rt.Fatalf("--%s: StealthFlags field %#v, client set %#v", name, got, want)
 				}
 			}
 		})

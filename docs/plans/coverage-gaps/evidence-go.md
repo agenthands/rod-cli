@@ -73,3 +73,4 @@ verify: G08 — pass — go vet ok, go test ./ ok (TMPDIR left only leakless-*);
 ## G09
 
 tdd: TestFlagForwardingRoundTrip — red (mutation: scroll-physics forwarding disabled in cmd.go, reverted): seed 1086706180945155239: all flags unset but --scroll-physics=true → "--scroll-physics: daemon IsSet=false, client set=true" — green: go test ./ -run TestFlagForwardingRoundTrip -count=1 passed
+tdd: TestStealthFlagsFromCapturesForwarded — red: ./forward_g09_test.go:282:10: undefined: stealthFlagsFrom (then mutation check, cdp-proxy capture disabled and reverted: seed 3444157833076526046: --cdp-proxy=false → "--cdp-proxy: StealthFlags field <nil>, client set false") — green: go test ./ -run StealthFlags -count=1 passed
