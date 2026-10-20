@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/coverage"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -61,16 +62,31 @@ func portFilePath(session string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("rod-cli-%s.port", session))
 }
 
-func ClientExecute(session string, req Request) (string, error) {
-	portFile := portFilePath(session)
-	portData, err := os.ReadFile(portFile)
+// readPort parses a port file. Anything but a bare port number is refused, so
+// a tampered file can never send the client to another host.
+func readPort(portFile string) (int, error) {
+	b, err := os.ReadFile(portFile)
 	if err != nil {
+		return 0, err
+	}
+	port, err := strconv.Atoi(string(b))
+	if err != nil || port < 1 || port > 65535 {
+		return 0, fmt.Errorf("invalid port file %s: %q", portFile, b)
+	}
+	return port, nil
+}
+
+func ClientExecute(session string, req Request) (string, error) {
+	port, err := readPort(portFilePath(session))
+	if os.IsNotExist(err) {
 		return "", fmt.Errorf("daemon not running")
 	}
-	port := string(portData)
+	if err != nil {
+		return "", err
+	}
 
 	body, _ := json.Marshal(req)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%s/execute", port), "application/json", bytes.NewReader(body))
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/execute", port), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -193,8 +209,8 @@ func removeDeadPortFiles() {
 		if err != nil || !ok {
 			continue
 		}
-		if b, err := os.ReadFile(f); err == nil {
-			if c, err := net.DialTimeout("tcp", "127.0.0.1:"+strings.TrimSpace(string(b)), time.Second); err == nil {
+		if port, err := readPort(f); err == nil {
+			if c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second); err == nil {
 				c.Close()
 			} else {
 				os.Remove(f)

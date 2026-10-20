@@ -4,8 +4,10 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -70,5 +72,30 @@ func TestExecuteRejectsForeignRequests(t *testing.T) {
 	// The real client still gets through to dispatch.
 	if _, err := ClientExecute(session, Request{Command: "bogus-cmd"}); err == nil || !strings.Contains(err.Error(), "unknown command") {
 		t.Fatalf("ClientExecute: err = %v, want unknown command", err)
+	}
+}
+
+func TestClientRefusesNonNumericPortFile(t *testing.T) {
+	privateTmp(t)
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		io.WriteString(w, `{"result":"pong"}`)
+	}))
+	defer srv.Close()
+	local := strings.TrimPrefix(srv.URL, "http://")
+
+	for _, content := range []string{"1@evil.example:80", "1@" + local, local, "0", "70000", " 1"} {
+		session := uniqueSession("evilport")
+		if err := os.WriteFile(portFilePath(session), []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := ClientExecute(session, Request{Command: "ping"})
+		if err == nil || !strings.Contains(err.Error(), "invalid port file") {
+			t.Errorf("port file %q: err = %v, want invalid port file", content, err)
+		}
+	}
+	if n := hits.Load(); n != 0 {
+		t.Fatalf("client dialled a port file's foreign address %d times", n)
 	}
 }

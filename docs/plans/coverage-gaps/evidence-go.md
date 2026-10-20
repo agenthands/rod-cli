@@ -7,3 +7,4 @@ verify: G01 — pass — go vet + go test ./daemon/ ./ green in private TMPDIR (
 
 ## G02
 tdd: TestExecuteRejectsForeignRequests — red: hardening_test.go:65: status 200 body {"error":"unknown command: bogus-cmd"} : want 403 before dispatch (origin, text/plain, no content-type, host) — green: go test ./daemon/ -run TestExecuteRejectsForeignRequests$ -count=1 passed
+tdd: TestClientRefusesNonNumericPortFile — red: hardening_test.go:95: port file "1@evil.example:80": err = Post "http://127.0.0.1:***@evil.example:80/execute": dial tcp: lookup evil.example: i/o timeout, want invalid port file (and "client dialled a port file's foreign address 1 times" for "1@127.0.0.1:<port>") — green: go test ./daemon/ -run TestClientRefusesNonNumericPortFile$ -count=1 passed
