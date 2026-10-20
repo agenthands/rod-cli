@@ -332,11 +332,12 @@ func pruneInteractive(n *yaml.Node) *yaml.Node {
 			if p := pruneInteractive(v); p != nil {
 				kept = append(kept, k, p)
 			} else if isInteractive(k.Value) {
-				if len(n.Content) == 2 {
-					return k // `- link "x": {/url: ...}` collapses to `- link "x"`
-				}
-				kept = append(kept, k, v)
+				// the control stays; its non-interactive children go
+				kept = append(kept, k, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!null", Value: "null"})
 			}
+		}
+		if len(kept) == 2 && kept[1].Tag == "!!null" {
+			return kept[0] // `- link "x": {/url: ...}` collapses to `- link "x"`
 		}
 		n.Content = kept
 	case yaml.ScalarNode:

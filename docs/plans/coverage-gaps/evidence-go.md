@@ -36,3 +36,4 @@ verify: G04 — pass — go vet + go test ./types/ green in a fresh TMPDIR (only
 
 ## G05
 tdd: TestSnapshotAlwaysNotDefinedInjectsExactlyOnce (+TestSnapshotInjectsEngineOnceThenRetrySucceeds) — red (code already correct; mutation dropping `injected = true`): snapshot_seam_test.go:69: injects = 4, want 1 — green: go test ./types/ -run 'TestSnapshotInjects|TestSnapshotAlways' -count=1 passed
+tdd: TestPruneInteractiveDropsControlTextInMultiKeyMapping — red: prune_test.go:49: got: - button "A" [ref=s1e1]: click me / want: - button "A" [ref=s1e1] — green: go test ./types/ -run TestPrune -count=1 passed
