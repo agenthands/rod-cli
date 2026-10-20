@@ -88,7 +88,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 **Rows:** daemon:execSem (panic must not wedge the session), daemon:D6/S3 (numeric args), daemon:D5 (close cleanup ordering), daemon:S5 (ping does not reset the idle timer; add an idle-timer seam).
 **Done when:** `go test ./daemon/ -count=1` passes.
 
-### G04 [~] Config and stealth resolution
+### G04 [x] Config and stealth resolution
 **Rows:**
 - types:T4 / types:LoadConfig, including the partial-config merge decision;
 - types:T1 / types:platform (property);
