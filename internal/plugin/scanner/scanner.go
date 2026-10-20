@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
@@ -415,6 +416,12 @@ func ExtractEvidence(html, payload string) string {
 	end := idx + len(payload) + 50
 	if end > len(html) {
 		end = len(html)
+	}
+	for start < idx && !utf8.RuneStart(html[start]) {
+		start++
+	}
+	for end < len(html) && !utf8.RuneStart(html[end]) {
+		end--
 	}
 	return html[start:end]
 }

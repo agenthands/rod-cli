@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/agenthands/rod-cli/types"
 	"github.com/pkg/errors"
@@ -37,7 +38,11 @@ func CDPTraffic(ctx *types.Context, jsonOut bool) (string, error) {
 		// Truncate long messages for readability
 		preview := string(msg.Raw)
 		if len(preview) > 120 {
-			preview = preview[:120] + "..."
+			cut := 120
+			for cut > 0 && !utf8.RuneStart(preview[cut]) {
+				cut--
+			}
+			preview = preview[:cut] + "..."
 		}
 		fmt.Fprintf(&b, "  %3d  %-4s  %s\n", i+1, strings.ToUpper(msg.Direction), preview)
 	}

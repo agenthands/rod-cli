@@ -377,7 +377,14 @@ func snapshotRootExpr(root string) (string, error) {
 		return "", errors.Errorf("snapshot %s does not support iframe refs yet", root)
 	}
 	if m := snapRefRe.FindStringSubmatch(root); m != nil {
-		return fmt.Sprintf(`(()=>{const s=snapshotEngine._lastAriaSnapshot;if(!s||s.generation!==%s)throw new Error("stale ref %s: run snapshot");const e=s.elements.get(%s);if(!e)throw new Error("no element for ref %s");return e})()`, m[1], root, m[2], root), nil
+		// Re-format the digits as decimal ints: "s007e012" must not reach JS
+		// as the legacy octal literal 012.
+		gen, err1 := strconv.Atoi(m[1])
+		el, err2 := strconv.Atoi(m[2])
+		if err1 != nil || err2 != nil {
+			return "", errors.Errorf("invalid ref %s", root)
+		}
+		return fmt.Sprintf(`(()=>{const s=snapshotEngine._lastAriaSnapshot;if(!s||s.generation!==%d)throw new Error("stale ref %s: run snapshot");const e=s.elements.get(%d);if(!e)throw new Error("no element for ref %s");return e})()`, gen, root, el, root), nil
 	}
 	sel, _ := json.Marshal(root)
 	msg, _ := json.Marshal("no element matches " + root)

@@ -166,22 +166,14 @@ func TestGetChinaZoneTime_ValidRFC3339(t *testing.T) {
 }
 
 func TestGetChinaZoneTime_InvalidString(t *testing.T) {
-	// Parse error -> zero time, formatted in CST. Must not panic and returns
-	// a non-empty, formatted string.
-	got := GetChinaZoneTime("not-a-time")
-	if got == "" {
-		t.Fatal("expected non-empty formatted string for invalid input")
-	}
-	// Zero time year is 0001.
-	if !strings.HasPrefix(got, "0001-01-01") {
-		t.Fatalf("expected zero-time formatting, got %q", got)
+	// Parse error -> the input is returned unchanged, not a zero time.
+	if got := GetChinaZoneTime("not-a-time"); got != "not-a-time" {
+		t.Fatalf("expected input passed through, got %q", got)
 	}
 }
-
 func TestGetChinaZoneTime_Empty(t *testing.T) {
-	got := GetChinaZoneTime("")
-	if !strings.HasPrefix(got, "0001-01-01") {
-		t.Fatalf("expected zero-time formatting for empty input, got %q", got)
+	if got := GetChinaZoneTime(""); got != "" {
+		t.Fatalf("expected empty result for empty input, got %q", got)
 	}
 }
 
