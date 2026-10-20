@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/dop251/goja"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 // PluginEngine wraps a goja.Runtime to safely execute external JavaScript.
@@ -14,8 +15,9 @@ import (
 // while RunFunc runs on the daemon's request goroutine, so mu guards every
 // VM use.
 type PluginEngine struct {
-	mu sync.Mutex
-	vm *goja.Runtime
+	mu    sync.Mutex
+	vm    *goja.Runtime
+	bound map[proto.TargetTargetID]bool // pages with live lifecycle listeners
 }
 
 // NewPluginEngine creates a new plugin engine instance.
