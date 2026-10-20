@@ -11,6 +11,7 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
+	"github.com/ysmood/gson"
 )
 
 // TestPressSendsNamedKeyNeverFirstByte pins actions:A2: a named key is sent as
@@ -119,7 +120,9 @@ func TestMouseWheelHorizontalThenEnd(t *testing.T) {
 	mouseScroll = func(p *rod.Page, dx, dy float64) error { x = math.Min(1000, math.Max(0, x+dx)); return nil }
 	moveToPoint = func(p *rod.Page, pt humanize.Point, opts ...humanize.MouseOption) error { return nil }
 	wheelSettle = 0
-	t.Cleanup(func() { measureScroll, mouseScroll, moveToPoint, wheelSettle = origMeasure, origScroll, origMove, origSettle })
+	t.Cleanup(func() {
+		measureScroll, mouseScroll, moveToPoint, wheelSettle = origMeasure, origScroll, origMove, origSettle
+	})
 
 	if got, err := MouseWheel(ctx, 300, 0, "", 0); err != nil || got != "scrolled dx=300 x=300/1000 dy=0 y=0/0" {
 		t.Fatalf("dx=300: got %q, err %v", got, err)
@@ -154,6 +157,61 @@ func TestMouseWheelScrollDurationSpacesNotches(t *testing.T) {
 	for i := 1; i < len(at); i++ {
 		if gap := at[i].Sub(at[i-1]); gap < 90*time.Millisecond {
 			t.Errorf("gap %d = %v, want >= 90ms", i, gap)
+		}
+	}
+}
+
+// TestStealthCheckRawVerdicts pins actions:A13 with the live-page reads
+// stubbed: all good signals give PASS; bad ones give the exact FAIL line; a
+// read error fails its signal as read-error.
+func TestStealthCheckRawVerdicts(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	good := map[string]string{
+		"webdriver": "undefined", "pluginsLength": "5", "userAgent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0",
+		"webglVendor": "Google Inc. (NVIDIA)", "webglRenderer": "ANGLE (NVIDIA GeForce)", "permissionsConsistent": "true",
+		"languages": "en-US,en", "screen": "1920x1080", "windowChrome": "true", "chromeRuntime": "true", "timezone": "Europe/Riga",
+	}
+	var signals map[string]string
+	readErr := ""
+	orig := runtimeEvaluateCall
+	runtimeEvaluateCall = func(req proto.RuntimeEvaluate, page *rod.Page) (*proto.RuntimeEvaluateResult, error) {
+		name, isRead := strings.CutPrefix(req.Expression, "String(window.__detect.")
+		name = strings.TrimSuffix(name, ")")
+		switch {
+		case !isRead && strings.Contains(req.Expression, "__detect.ready"):
+			return &proto.RuntimeEvaluateResult{Result: &proto.RuntimeRemoteObject{Value: gson.New(true)}}, nil
+		case !isRead: // the probe injection
+			return &proto.RuntimeEvaluateResult{Result: &proto.RuntimeRemoteObject{}}, nil
+		case name == readErr:
+			return nil, errBoom
+		}
+		return &proto.RuntimeEvaluateResult{Result: &proto.RuntimeRemoteObject{Value: gson.New(signals[name])}}, nil
+	}
+	t.Cleanup(func() { runtimeEvaluateCall = orig })
+
+	cases := []struct {
+		name, readErr string
+		bad           map[string]string
+		want          string
+	}{
+		{"all pass", "", nil, "PASS"},
+		{"listed fail", "", map[string]string{
+			"webdriver": "true", "pluginsLength": "0", "userAgent": "Mozilla/5.0 HeadlessChrome/130.0.0.0",
+			"webglRenderer": "Google SwiftShader", "screen": "0x0", "windowChrome": "false", "timezone": "UTC",
+		}, "FAIL webdriver=FAIL(true) pluginsLength=FAIL(0) userAgent=FAIL(HeadlessChrome) webglRenderer=FAIL(Google SwiftShader) screen=FAIL(0x0) windowChrome=FAIL(absent) timezone=FAIL(UTC)"},
+		{"read error", "languages", nil, "FAIL languages=FAIL(read-error: boom)"},
+	}
+	for _, c := range cases {
+		signals, readErr = map[string]string{}, c.readErr
+		for k, v := range good {
+			signals[k] = v
+		}
+		for k, v := range c.bad {
+			signals[k] = v
+		}
+		if got, err := StealthCheck(ctx, "", true, false); err != nil || got != c.want {
+			t.Errorf("%s: got %q, err %v; want %q", c.name, got, err, c.want)
 		}
 	}
 }
