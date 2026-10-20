@@ -71,4 +71,12 @@ describe("waitForSelector", () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(execFn).toHaveBeenCalledTimes(1);
   });
+
+  it("puts -s <session> after the --raw/--max-output prefix", async () => {
+    const execFn = stdoutSeq("true\n");
+    await waitForSelector(execFn, { selector: "#x", timeoutMs: 1000, session: "admin" });
+    expect(execFn.mock.calls[0]![0]).toEqual([
+      "--raw", "--max-output", "51200", "-s", "admin", "eval", "--", '!!document.querySelector("#x")',
+    ]);
+  });
 });
