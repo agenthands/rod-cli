@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -167,6 +167,11 @@ describe("integration workflow", () => {
         await run(buildScrollArgs({ direction: "down", distance: 200, selector: "#pane" }));
         expect(Number(await js("document.querySelector('#pane').scrollTop"))).toBeGreaterThan(0);
         expect(await js("String(window.scrollY)")).toBe("0");
+      });
+
+      it("hover leaves the pointer over the element", async () => {
+        await run(buildHoverArgs({ selector: "#greet" }));
+        expect(await js("document.querySelector('#greet').matches(':hover')")).toBe("true");
       });
     });
   });
