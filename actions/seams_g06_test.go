@@ -7,6 +7,7 @@ import (
 	"github.com/agenthands/godoll/humanize"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 // TestPressSendsNamedKeyNeverFirstByte pins actions:A2: a named key is sent as
@@ -51,5 +52,53 @@ func TestMouseWheelEmptyMeasureIsError(t *testing.T) {
 
 	if got, err := MouseWheel(ctx, 0, 0, "", 0); err == nil || !strings.Contains(err.Error(), "Failed to measure scroll") {
 		t.Fatalf("MouseWheel = %q, %v; want a Failed to measure scroll error", got, err)
+	}
+}
+
+// TestDragReleasesButtonOnlyWhenPressed pins actions:A7: a failed move to the
+// target releases the button exactly once; a failed press never releases it.
+func TestDragReleasesButtonOnlyWhenPressed(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	// Both refs from one snapshot: a ref resolves only against its own snapshot.
+	refs := func() (string, string) {
+		snap, err := Snapshot(ctx, "", false)
+		if err != nil {
+			t.Fatalf("Snapshot: %v", err)
+		}
+		var src, dst string
+		for _, line := range strings.Split(snap, "\n") {
+			if m := refRe.FindStringSubmatch(line); m != nil && strings.Contains(line, "Drag Source") {
+				src = m[1]
+			} else if m != nil && strings.Contains(line, "Drag Dest") {
+				dst = m[1]
+			}
+		}
+		return src, dst
+	}
+	src, dst := refs()
+
+	moves, ups, downErr := 0, 0, error(nil)
+	origMove, origDown, origUp := moveToElement, pageMouseDown, pageMouseUp
+	moveToElement = func(p *rod.Page, el *rod.Element, opts ...humanize.MouseOption) error {
+		if moves++; moves == 2 {
+			return errBoom
+		}
+		return nil
+	}
+	pageMouseDown = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { return downErr }
+	pageMouseUp = func(p *rod.Page, btn proto.InputMouseButton, clicks int) error { ups++; return nil }
+	t.Cleanup(func() { moveToElement, pageMouseDown, pageMouseUp = origMove, origDown, origUp })
+
+	_, err := Drag(ctx, src, dst)
+	if err == nil || !strings.HasPrefix(err.Error(), "Failed to move to drag target: boom") || ups != 1 {
+		t.Errorf("2nd move fails: err %v, mouseUp calls %d; want move-to-target error and 1 release", err, ups)
+	}
+
+	moves, ups, downErr = 0, 0, errBoom
+	src, dst = refs()
+	_, err = Drag(ctx, src, dst)
+	if err == nil || !strings.HasPrefix(err.Error(), "Failed to press mouse on drag source: boom") || ups != 0 {
+		t.Errorf("mouseDown fails: err %v, mouseUp calls %d; want press error and 0 releases", err, ups)
 	}
 }
