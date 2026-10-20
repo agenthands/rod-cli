@@ -70,7 +70,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 ## Go track
 
-### G01 [~] Daemon test hygiene and session-name validation
+### G01 [x] Daemon test hygiene and session-name validation
 **Rows:** Prerequisite "Daemon test hygiene (S8)", daemon:S6.
 **Change:**
 - Every daemon test that pings, writes or deletes port files sets a private TMPDIR. This covers TestListSessionsPrunesDead, TestInProcessDaemonPingAndActions, TestStartServerAnswersPing and the EnsureDaemon tests.
