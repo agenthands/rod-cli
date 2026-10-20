@@ -23,7 +23,7 @@ rod-cli -s=guest click "#join"
 ```
 
 ## Listing Sessions
-To see all background daemons currently running (it also deletes the port files of daemons that no longer answer):
+To see all background daemons currently running (a daemon that does not answer within 2 seconds is left out; the port files of daemons whose port no longer listens are deleted):
 ```bash
 rod-cli sessions
 ```
@@ -40,7 +40,7 @@ A session also shuts down by itself after 15 minutes with no command, and on SIG
 ## Session files
 - Profile: one directory per session under `~/.cache/rod-cli/profiles` on Linux (Go's `os.UserCacheDir()`/`rod-cli/profiles`), unless the config sets `browserTempDir` (the old value `./rod/browser` counts as unset). It holds `owner.pid` (the daemon's PID) and `chrome-tmp` (the path of the session Chrome's temp dir). A session started with `--cdp-endpoint` drives that browser and has no profile.
 - Chrome temp dir: `$TMPDIR/chrome-XXXX` (`/tmp/chrome-XXXX` when `TMPDIR` is longer than 40 characters), used as Chrome's `TMPDIR`. It is deleted together with the profile.
-- Port file: `$TMPDIR/rod-cli-<session>.port`, plus `<port file>.lock` while a daemon is starting.
+- Port file: `$TMPDIR/rod-cli-<session>.port` (owner-only, 0600, holding just the port number; any other content is refused), plus `<port file>.lock` while a daemon is starting. The daemon listens on `127.0.0.1` only and refuses requests that carry an `Origin` header, a Content-Type other than `application/json`, or a Host other than `127.0.0.1:<port>`, so a web page cannot drive the session.
 - Daemon log: `$TMPDIR/rod-cli-daemon.log`, shared by all sessions and started over once it exceeds 1 MiB. Read it when a daemon fails to start.
 
 A daemon killed with `kill -9` leaves its profile, Chrome temp dir and port file behind. The next daemon start deletes port files of dead daemons. The next session that launches its Chrome under the default profile root deletes every profile there whose `owner.pid` is missing, names a dead PID, or names a PID now used by a process that is not rod-cli; a profile under a custom `browserTempDir` is never swept.

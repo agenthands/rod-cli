@@ -76,7 +76,7 @@ rod-cli -s=user close
 
 Unless `--cdp-endpoint` attaches it to an existing browser, each session's Chrome gets a fresh profile under `~/.cache/rod-cli/profiles` (the OS user cache dir; the config's `browserTempDir` overrides it) and its own temp dir, `$TMPDIR/chrome-XXXX` (`/tmp/chrome-XXXX` when `TMPDIR` is longer than 40 characters). Both are removed when the session closes, after 15 minutes idle, or when the daemon gets SIGTERM, SIGINT or SIGHUP. A daemon killed with `kill -9` leaves them behind; the next daemon start removes the port files of dead daemons, and the next session that launches Chrome under the default profile root removes their profiles and temp dirs.
 
-Daemon files live in the OS temp dir: `rod-cli-<session>.port` per session, and the shared log `rod-cli-daemon.log`, which a daemon start truncates once it exceeds 1 MiB.
+Daemon files live in the OS temp dir: `rod-cli-<session>.port` per session (owner-only, holding just the port number), and the shared log `rod-cli-daemon.log`, which a daemon start truncates once it exceeds 1 MiB.
 
 ## Targeting Elements
 
