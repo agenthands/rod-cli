@@ -485,10 +485,11 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 	return fmt.Sprintf("Selected %s in %s", strings.Join(labels, ", "), ref), nil
 }
 
-// selectOne selects the option matching v: option text, then value, then
-// case-insensitive substring of the text.
+// selectOne selects the option matching v: exact (trimmed) option text, then
+// value, then case-insensitive substring of the text.
 func selectOne(el *rod.Element, v string) error {
-	if elementSelect(el, []string{v}, true, rod.SelectorTypeText) == nil || selectByValue(el, v) == nil {
+	exact := `^\s*` + regexp.QuoteMeta(v) + `\s*$`
+	if elementSelect(el, []string{exact}, true, rod.SelectorTypeRegex) == nil || selectByValue(el, v) == nil {
 		return nil
 	}
 	res, err := elementEval(el, `(v) => {

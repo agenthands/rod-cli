@@ -50,3 +50,6 @@ tdd: TestMouseWheelHorizontalThenEnd — red (code already correct; mutation rea
 tdd: TestMouseWheelScrollDurationSpacesNotches — red (code already correct; mutation dropping the *time.Millisecond unit): seams_g06_test.go:156: gap 1 = 5.17µs, want >= 90ms — green: go test ./actions/ -run TestMouseWheelScrollDurationSpacesNotches -count=1 passed
 tdd: TestStealthCheckRawVerdicts — red (code already correct; mutation relaxing pluginsLength to n >= 0): seams_g06_test.go:212: listed fail: got "FAIL webdriver=FAIL(true) userAgent=FAIL(HeadlessChrome) …" (pluginsLength=FAIL(0) missing) — green: go test ./actions/ -run TestStealthCheckRawVerdicts -count=1 passed
 verify: G06 — pass — Done-when `go test ./actions/ -run 'Press|MouseWheel|Drag|StealthCheck'` ok (81s), vet clean, TMPDIR left only leakless-*; A2/A5 reds hold on old code; press key names listed in SKILL.md
+
+## G07
+tdd: TestSelectPrefersExactTextThenValue — red: seams_g07_test.go:34: Select("1") = "Selected \"Item 10\" in s1e3", <nil>; want "Selected \"Item 1\" in s1e3" — green: go test ./actions/ -run TestSelectPrefersExactTextThenValue -count=1 passed
