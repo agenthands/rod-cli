@@ -951,6 +951,9 @@ func TabNew(ctx *types.Context, url string) (string, error) {
 	if browser == nil {
 		return "", errors.New("No active browser")
 	}
+	if url != "" && url != "about:blank" && !utils.IsHttp(url) {
+		return "", errors.New("invalid URL") // before creating the tab: no orphan about:blank
+	}
 	page, err := browserPage(browser, proto.TargetCreateTarget{})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to create new tab")

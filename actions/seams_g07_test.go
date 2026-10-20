@@ -109,3 +109,23 @@ func TestStateSaveLoadRoundTripsCookiesPrivately(t *testing.T) {
 		t.Fatalf("cookies after load = %q; want sess=1 and pers=2", got)
 	}
 }
+
+// TestTabNewBadURLLeavesTabsUnchanged pins actions:tabnew-orphan: a URL that
+// Navigate would refuse errors before any tab is created or switched to.
+func TestTabNewBadURLLeavesTabsUnchanged(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	before, _ := ctx.ControlledPage()
+	pages, err := ctx.GetBrowser().Pages()
+	if err != nil {
+		t.Fatalf("Pages: %v", err)
+	}
+	if _, err := TabNew(ctx, "file:///x"); err == nil {
+		t.Fatal("TabNew(file:///x) succeeded; want invalid URL error")
+	}
+	after, _ := ctx.GetBrowser().Pages()
+	active, _ := ctx.ControlledPage()
+	if len(after) != len(pages) || active.TargetID != before.TargetID {
+		t.Fatalf("tabs %d→%d, active %s→%s; want both unchanged", len(pages), len(after), before.TargetID, active.TargetID)
+	}
+}
