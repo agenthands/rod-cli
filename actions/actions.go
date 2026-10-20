@@ -1032,30 +1032,35 @@ func TabSelect(ctx *types.Context, sel string) (string, error) {
 	return out, nil
 }
 
-// parseKey parses a string to input.Key
-func parseKey(keyStr string) input.Key {
-	switch keyStr {
-	case "Enter":
-		return input.Enter
-	case "Tab":
-		return input.Tab
-	case "Backspace":
-		return input.Backspace
-	case "Escape":
-		return input.Escape
-	case "ArrowUp":
-		return input.ArrowUp
-	case "ArrowDown":
-		return input.ArrowDown
-	case "ArrowLeft":
-		return input.ArrowLeft
-	case "ArrowRight":
-		return input.ArrowRight
+// namedKeys maps `press` key names to rod keys (skills/rod-cli/SKILL.md lists them).
+var namedKeys = map[string]input.Key{
+	"Enter": input.Enter, "Tab": input.Tab, "Backspace": input.Backspace, "Escape": input.Escape,
+	"Space": input.Space, "Delete": input.Delete, "Insert": input.Insert,
+	"Home": input.Home, "End": input.End, "PageUp": input.PageUp, "PageDown": input.PageDown,
+	"ArrowUp": input.ArrowUp, "ArrowDown": input.ArrowDown, "ArrowLeft": input.ArrowLeft, "ArrowRight": input.ArrowRight,
+	"Shift": input.ShiftLeft, "Control": input.ControlLeft, "Alt": input.AltLeft, "Meta": input.MetaLeft,
+	"CapsLock": input.CapsLock, "ContextMenu": input.ContextMenu,
+	"F1": input.F1, "F2": input.F2, "F3": input.F3, "F4": input.F4, "F5": input.F5, "F6": input.F6,
+	"F7": input.F7, "F8": input.F8, "F9": input.F9, "F10": input.F10, "F11": input.F11, "F12": input.F12,
+}
+
+// parseKey resolves a key name, or a single character on the US keyboard
+// layout, to an input.Key; anything else is an `unknown key` error.
+func parseKey(keyStr string) (input.Key, error) {
+	if k, ok := namedKeys[keyStr]; ok {
+		return k, nil
 	}
-	if len(keyStr) > 0 {
-		return input.Key(rune(keyStr[0]))
+	if r := []rune(keyStr); len(r) == 1 && keyDefined(input.Key(r[0])) {
+		return input.Key(r[0]), nil
 	}
-	return input.Key(0)
+	return 0, fmt.Errorf("unknown key %q", keyStr)
+}
+
+// keyDefined reports whether rod's keymap has k (Key.Info panics otherwise).
+func keyDefined(k input.Key) (ok bool) {
+	defer func() { ok = recover() == nil }()
+	k.Info()
+	return
 }
 
 // Press triggers a raw keyboard key press
@@ -1064,7 +1069,11 @@ func Press(ctx *types.Context, key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := keyboardPress(page.Keyboard, parseKey(key)); err != nil {
+	k, err := parseKey(key)
+	if err != nil {
+		return "", err
+	}
+	if err := keyboardPress(page.Keyboard, k); err != nil {
 		return "", fmt.Errorf("failed to press key %s: %w", key, err)
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)

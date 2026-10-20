@@ -88,7 +88,7 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli drop --path [file-path] [selector]`: Drop a file onto an element.
 
 ### Advanced Input & Dialogs
-- `rod-cli press [key]`: Simulate a raw keyboard key press (e.g., `Enter`, `Tab`, `Escape`).
+- `rod-cli press [key]`: Simulate a raw keyboard key press. Key names: `Enter`, `Tab`, `Backspace`, `Escape`, `Space`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Shift`, `Control`, `Alt`, `Meta`, `CapsLock`, `ContextMenu`, `F1`–`F12`, or one US-keyboard character (`a`, `A`, `1`, `/`). Any other key (such as `é`) fails with `unknown key`.
 - `rod-cli mousemove [x] [y]`: Move the mouse to absolute coordinates.
 - `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
 - `rod-cli mouseup [left|right|middle]`: Trigger mouse up.

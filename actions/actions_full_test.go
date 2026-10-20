@@ -723,14 +723,6 @@ func TestPress(t *testing.T) {
 	}
 }
 
-func TestParseKey(t *testing.T) {
-	// directly exercise all branches
-	cases := []string{"Enter", "Tab", "Backspace", "Escape", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "z", ""}
-	for _, c := range cases {
-		_ = parseKey(c)
-	}
-}
-
 func TestMouse(t *testing.T) {
 	ctx, cleanup := newLiveCtx(t)
 	defer cleanup()

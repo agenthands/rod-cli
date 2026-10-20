@@ -41,3 +41,6 @@ tdd: TestSnapshotPruneKeepsEveryInteractiveRef / TestSnapshotPruneDropsRefsWitho
 tdd: TestRouteRemovePartialThenLastDropsInterceptor — red (code already correct; mutation dropping `ctx.interceptor = nil` in RemoveRoute): routes_test.go:43: interceptor kept after the last route was removed — green: go test ./types/ -run TestRoute -count=1 passed
 tdd: TestRouteNewestOverlappingPatternWins — red: routes_test.go:54: run 0: served "broad", want newest — green: go test ./types/ -run TestRoute -count=1 passed
 verify: G05 — pass — snapshot/prune/route tests green (types, actions); T6 rapid property model-oracle, T7 inject-once, T8 partial remove + interceptor nil, route-order newest-wins via insertion-ordered slice (map order fails old code), pruneInteractive matches doc comment; request-mocking.md updated; no leaks
+
+## G06
+tdd: TestPressSendsNamedKeyNeverFirstByte — red: seams_g06_test.go:29: Press("Delete"): sent [68], err <nil>; want [302] (also é sent [195]) — green: go test ./actions/ -run TestPressSendsNamedKeyNeverFirstByte -count=1 passed
