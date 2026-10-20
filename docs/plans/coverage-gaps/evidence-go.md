@@ -85,3 +85,7 @@ tdd: TestTrafficDefaultCapAndNoAliasing — red not observed on today's code; mu
 tdd: TestConcurrentHooksAndRunFunc — red: (go test -race) testing.go:1712: race detected during execution of test — green: go test -race ./internal/plugin/ -run TestConcurrentHooksAndRunFunc -count=1 passed (no Makefile exists; the -race run is added to the CI test target .github/workflows/test.yml)
 tdd: TestPluginLoadTwiceSingleDispatch — red: plugin_bind_test.go:55: onLoad count after one navigation = 2, want 1 — green: go test ./actions/ -run TestPluginLoadTwiceSingleDispatch -count=1 passed
 verify: G10 — pass — Done-when green (internal/utils + -race plugin), go vet clean, no leaks; each bug fix reverted in a scratch copy turns its test red (IsHttp, cdpproxy drop, goja race, bind-twice)
+
+## G11
+
+checkpoint: go build -o rod-cli . && go vet ./... && TMPDIR=$(mktemp -d /tmp/rc.XXXX) go test ./... -count=1 — exit 0, all 13 test packages ok (actions 524.5s, tests 355.2s, daemon 105.6s); TMPDIR left only leakless-amd64-adb80298fa6a3af7ced8b1c9b5f18007 and rod-cli-daemon.log; rod-cli binary and TMPDIR removed
