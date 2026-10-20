@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -140,6 +140,21 @@ describe("integration workflow", () => {
       await execRodCli(execFn, ["localstorage-set", "--", "testkey", "testval"], { signal: AbortSignal.timeout(10000) });
       const result = await execRodCli(execFn, ["localstorage-get", "--", "testkey"], { signal: AbortSignal.timeout(10000) });
       expect(result.stdout).toContain("testval");
+    });
+
+    // ext:EXT-6: each core builder's argv, run by the repo binary, leaves the expected DOM state.
+    describe("core builders against the binary", () => {
+      const run = (args: string[]) => execRodCli(execFn, args, { signal: AbortSignal.timeout(15000) });
+      const js = async (expression: string) => (await run(buildEvalArgs({ expression }))).stdout.trim();
+
+      beforeAll(async () => {
+        await run(buildGotoArgs({ url }));
+      });
+
+      it("fill sets the input value", async () => {
+        await run(buildFillFormArgs({ selector: "#name", text: "Ada Lovelace" }));
+        expect(await js("document.querySelector('#name').value")).toBe("Ada Lovelace");
+      });
     });
   });
 

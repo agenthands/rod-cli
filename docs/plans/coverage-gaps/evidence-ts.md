@@ -23,3 +23,7 @@ tdd: captureScreenshot returns the PNG as base64 and removes the temp file — r
 tdd: captureScreenshot rejects and removes the temp file when rod-cli exits non-zero after writing it — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/screenshot.test.ts) passed
 tdd: execRodCli rejects a path-escaping session (/../../tmp/evil) before exec and passes admin — red: AssertionError: promise resolved "{ stdout: '', stderr: '', code: +0 }" instead of rejecting — green: (cd extensions/core && npx vitest run src/__tests__/exec.test.ts) passed (EXT-5 validateInput property narrowed to charset-valid session names; validate.ts says "characters")
 verify: E02 — pass — TS checks green (core 159, pi 41, omp 32), TMPDIR left only leakless-*/daemon log; reverting lifecycle/wait/validate fixes in a scratch copy turns EXT-2, EXT-3(a), timeoutMs<=0 and EXT-12 tests red; mutations (no rm, retry, ignore abort, drop session) caught; READMEs updated
+
+## E03
+
+tdd: fill sets the input value — red (mutation: fill text +"x"): AssertionError: expected 'Ada Lovelacex' to be 'Ada Lovelace' // Object.is equality — green: (cd extensions/pi && go build -o ../../rod-cli ../.. && npx vitest run src/__tests__/integration.test.ts) passed
