@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -55,6 +55,7 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   <p id="msg">Hello from fixture</p>
   <input id="name" type="text" placeholder="Enter name" />
   <button id="greet">Greet</button>
+  <select id="c"><option value="1">Item 1</option><option value="10">Item 10</option><option value="b">Banana</option></select>
 </body></html>`;
 
 describe("integration workflow", () => {
@@ -154,6 +155,11 @@ describe("integration workflow", () => {
       it("fill sets the input value", async () => {
         await run(buildFillFormArgs({ selector: "#name", text: "Ada Lovelace" }));
         expect(await js("document.querySelector('#name').value")).toBe("Ada Lovelace");
+      });
+
+      it("select picks the option by its text", async () => {
+        await run(buildSelectArgs({ selector: "#c", values: ["Banana"] }));
+        expect(await js("document.querySelector('#c').value")).toBe("b");
       });
     });
   });

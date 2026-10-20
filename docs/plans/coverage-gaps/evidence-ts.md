@@ -27,3 +27,4 @@ verify: E02 — pass — TS checks green (core 159, pi 41, omp 32), TMPDIR left 
 ## E03
 
 tdd: fill sets the input value — red (mutation: fill text +"x"): AssertionError: expected 'Ada Lovelacex' to be 'Ada Lovelace' // Object.is equality — green: (cd extensions/pi && go build -o ../../rod-cli ../.. && npx vitest run src/__tests__/integration.test.ts) passed
+tdd: select picks the option by its text — red: Error: rod-cli exited 1: ... FATA Failed to find element by ref #c: locator frame failed (no <select id="c"> in FIXTURE_HTML yet) — green: (cd extensions/pi && go build -o ../../rod-cli ../.. && npx vitest run src/__tests__/integration.test.ts) passed
