@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, buildTabsArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, buildTabsArgs, waitForSelector, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -205,6 +205,11 @@ describe("integration workflow", () => {
         lines = await tabs();
         expect(lines).toHaveLength(1);
         expect(lines[0]).not.toContain("#t2");
+      });
+
+      // ext:EXT-7: waitForSelector reads the real eval output.
+      it("waitForSelector resolves for a present element", async () => {
+        await expect(waitForSelector(execFn, { selector: "#msg", timeoutMs: 5000 })).resolves.toBeUndefined();
       });
     });
   });
