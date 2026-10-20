@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/agenthands/rod-cli/types"
 	"github.com/urfave/cli/v2"
 	"pgregory.net/rapid"
 )
@@ -167,5 +169,70 @@ func TestMainJSONErrorModeFromParsedFlag(t *testing.T) {
 	out, err := runMainSubprocess(t, "--json=false", "click")
 	if err == nil || strings.Contains(out, `{"error"`) || !strings.Contains(out, "element ref is required") {
 		t.Errorf("--json=false click: err %v, out %q; want a plain error", err, out)
+	}
+}
+
+// TestProfileListFormatsAgreeWithoutSpawning (root-4): --profile=list prints the
+// built-in names in every format, and never spawns a daemon, even before a
+// subcommand (os.Args[0] is missing, so a spawn would fail).
+func TestProfileListFormatsAgreeWithoutSpawning(t *testing.T) {
+	clearPortFiles(t)
+	oldArg0 := os.Args[0]
+	os.Args[0] = filepath.Join(os.TempDir(), "rod-cli-definitely-missing-binary-xyz")
+	t.Cleanup(func() { os.Args[0] = oldArg0 })
+	names := types.BuiltinProfileNames()
+	if len(names) == 0 {
+		t.Fatal("no built-in profiles")
+	}
+	run := func(args ...string) string {
+		t.Helper()
+		var err error
+		out := captureStdout(t, func() { err = runApp(args...) })
+		if err != nil {
+			t.Fatalf("runApp(%q): %v", args, err)
+		}
+		return out
+	}
+
+	if got := strings.Fields(run("--raw", "--profile=list")); strings.Join(got, ",") != strings.Join(names, ",") {
+		t.Errorf("--raw: got %q, want %q", got, names)
+	}
+
+	var doc struct {
+		Profiles []struct {
+			Name, Platform, UserAgent, Screen string
+			HardwareConcurrency, DeviceMemory  int
+		}
+	}
+	if err := json.Unmarshal([]byte(run("--json", "--profile=list")), &doc); err != nil {
+		t.Fatal(err)
+	}
+	screen := regexp.MustCompile(`^\d+x\d+$`)
+	var jsonNames []string
+	for _, p := range doc.Profiles {
+		jsonNames = append(jsonNames, p.Name)
+		if p.Platform == "" || p.UserAgent == "" || p.HardwareConcurrency <= 0 || p.DeviceMemory <= 0 || !screen.MatchString(p.Screen) {
+			t.Errorf("--json: incomplete profile %+v", p)
+		}
+	}
+	if strings.Join(jsonNames, ",") != strings.Join(names, ",") {
+		t.Errorf("--json names: got %q, want %q", jsonNames, names)
+	}
+
+	lines := strings.Split(strings.TrimSpace(run("--profile=list")), "\n")
+	if len(lines) != len(names) {
+		t.Fatalf("default: %d lines, want %d: %q", len(lines), len(names), lines)
+	}
+	for i, l := range lines {
+		if f := strings.Fields(l); len(f) == 0 || f[0] != names[i] {
+			t.Errorf("default line %d = %q, want it to start with %q", i, l, names[i])
+		}
+	}
+
+	if got := strings.Fields(run("--raw", "--profile=list", "snapshot")); strings.Join(got, ",") != strings.Join(names, ",") {
+		t.Errorf("with a subcommand: got %q, want %q", got, names)
+	}
+	if entries, _ := os.ReadDir(os.TempDir()); len(entries) != 0 {
+		t.Errorf("TMPDIR not empty, a daemon was touched: %v", entries)
 	}
 }
