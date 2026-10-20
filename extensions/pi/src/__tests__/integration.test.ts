@@ -211,6 +211,12 @@ describe("integration workflow", () => {
       it("waitForSelector resolves for a present element", async () => {
         await expect(waitForSelector(execFn, { selector: "#msg", timeoutMs: 5000 })).resolves.toBeUndefined();
       });
+
+      it("waitForSelector times out on a missing element with the exact message", async () => {
+        await expect(waitForSelector(execFn, { selector: "#nope", timeoutMs: 1000 })).rejects.toThrow(
+          new Error("Timed out waiting 1000ms for selector: #nope"),
+        );
+      });
     });
   });
 
