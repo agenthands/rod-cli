@@ -509,7 +509,29 @@ func selectOne(el *rod.Element, v string) error {
 }
 
 func selectByValue(el *rod.Element, v string) error {
-	return elementSelect(el, []string{"[value=" + strconv.Quote(v) + "]"}, true, rod.SelectorTypeCSSSector)
+	return elementSelect(el, []string{"[value=" + cssString(v) + "]"}, true, rod.SelectorTypeCSSSector)
+}
+
+// cssString quotes v as a CSS string (CSSOM "serialize a string", the quoted
+// form of CSS.escape); strconv.Quote's \t or \u escapes mean other things in CSS.
+func cssString(v string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range v {
+		switch {
+		case r == 0:
+			b.WriteRune('\uFFFD')
+		case r < 0x20 || r == 0x7f:
+			fmt.Fprintf(&b, "\\%x ", r)
+		case r == '"' || r == '\\':
+			b.WriteByte('\\')
+			b.WriteRune(r)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 func Check(ctx *types.Context, ref string) (string, error) {

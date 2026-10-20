@@ -35,3 +35,17 @@ func TestSelectPrefersExactTextThenValue(t *testing.T) {
 		}
 	}
 }
+
+// TestSelectByValueEscapesForCSS pins actions:selectByValue: an option value
+// holding a tab (or a quote or backslash) is still selectable by value.
+func TestSelectByValueEscapesForCSS(t *testing.T) {
+	ctx, cleanup := liveHTML(t, `<select aria-label="Odd"><option value="x">Plain</option><option value="a&#9;b">Tabbed</option><option value="q&quot;\z">Quoted</option></select>`)
+	defer cleanup()
+	ref := refFor(t, ctx, "Odd")
+	for in, want := range map[string]string{"a\tb": "Tabbed", `q"\z`: "Quoted"} {
+		out, err := Select(ctx, ref, []string{in})
+		if exp := `Selected "` + want + `" in ` + ref; err != nil || out != exp {
+			t.Errorf("Select(%q) = %q, %v; want %q", in, out, err, exp)
+		}
+	}
+}
