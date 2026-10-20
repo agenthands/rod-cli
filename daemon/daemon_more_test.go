@@ -35,6 +35,20 @@ func uniqueSession(prefix string) string {
 	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
 }
 
+// privateTmp points TMPDIR (read by os.TempDir) at a fresh dir so the port
+// files, locks and logs a test writes, pings or prunes are its own, never the
+// developer's live sessions. The dir is short because a daemon's Chrome needs a
+// TMPDIR of 40 characters or less.
+func privateTmp(t *testing.T) {
+	t.Helper()
+	d, err := os.MkdirTemp("/tmp", "rc-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(d) })
+	t.Setenv("TMPDIR", d)
+}
+
 func TestPortFilePath(t *testing.T) {
 	p := portFilePath("abc")
 	if !strings.Contains(p, "rod-cli-abc.port") {
@@ -43,6 +57,7 @@ func TestPortFilePath(t *testing.T) {
 }
 
 func TestClientExecuteNoDaemon(t *testing.T) {
+	privateTmp(t)
 	session := uniqueSession("nodaemon")
 	// Ensure no port file exists.
 	_ = os.Remove(portFilePath(session))
@@ -57,6 +72,7 @@ func TestClientExecuteNoDaemon(t *testing.T) {
 }
 
 func TestClientExecuteBadPort(t *testing.T) {
+	privateTmp(t)
 	// Write a port file pointing at a port nobody is listening on so the
 	// http.Post path returns a connection error (exercises the err branch).
 	session := uniqueSession("badport")
@@ -73,6 +89,7 @@ func TestClientExecuteBadPort(t *testing.T) {
 }
 
 func TestClientExecuteDecodeError(t *testing.T) {
+	privateTmp(t)
 	// Server returns a non-JSON body so the decoder errors.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "not json at all")
@@ -94,6 +111,7 @@ func TestClientExecuteDecodeError(t *testing.T) {
 }
 
 func TestClientExecuteErrorResponse(t *testing.T) {
+	privateTmp(t)
 	// Server returns a Response with a non-empty Error field.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"error":"boom"}`)
@@ -115,6 +133,7 @@ func TestClientExecuteErrorResponse(t *testing.T) {
 }
 
 func TestClientExecuteSuccessResponse(t *testing.T) {
+	privateTmp(t)
 	// Server returns a Result so the success path is covered too.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"result":"ok"}`)
@@ -136,6 +155,7 @@ func TestClientExecuteSuccessResponse(t *testing.T) {
 }
 
 func TestStartServerAnswersPing(t *testing.T) {
+	privateTmp(t)
 	// Exercise StartServer's TCP listen, port-file write and /execute handler
 	// without a browser (ping only) and without triggering any os.Exit path.
 	session := uniqueSession("ping")
@@ -161,6 +181,7 @@ func TestStartServerAnswersPing(t *testing.T) {
 }
 
 func TestListSessionsPrunesDead(t *testing.T) {
+	privateTmp(t)
 	// A stale port file with a dead port should be pruned and not returned.
 	session := uniqueSession("stale")
 	pf := portFilePath(session)
@@ -185,6 +206,7 @@ func TestListSessionsPrunesDead(t *testing.T) {
 }
 
 func TestEnsureDaemonFails(t *testing.T) {
+	privateTmp(t)
 	// Point at a non-existent executable so cmd.Start fails immediately.
 	session := uniqueSession("ensurefail")
 	_ = os.Remove(portFilePath(session))
@@ -196,6 +218,7 @@ func TestEnsureDaemonFails(t *testing.T) {
 }
 
 func TestEnsureDaemonSpawnAndClose(t *testing.T) {
+	privateTmp(t)
 	if testing.Short() {
 		t.Skip("skipping browser/spawn test in short mode")
 	}
@@ -235,6 +258,7 @@ func TestEnsureDaemonSpawnAndClose(t *testing.T) {
 }
 
 func TestEnsureDaemonConcurrentSpawnsOne(t *testing.T) {
+	privateTmp(t)
 	if testing.Short() {
 		t.Skip("skipping browser/spawn test in short mode")
 	}
@@ -284,6 +308,7 @@ func writeScript(t *testing.T, body string) string {
 }
 
 func TestEnsureDaemonFailsFastWhenProcessExits(t *testing.T) {
+	privateTmp(t)
 	exe := writeScript(t, "exit 3")
 	start := time.Now()
 	err := EnsureDaemon(uniqueSession("exits"), exe, nil, nil)
@@ -299,6 +324,7 @@ func TestEnsureDaemonFailsFastWhenProcessExits(t *testing.T) {
 }
 
 func TestEnsureDaemonKillsOnTimeout(t *testing.T) {
+	privateTmp(t)
 	old := daemonStartTimeout
 	daemonStartTimeout = 1 * time.Second
 	defer func() { daemonStartTimeout = old }()
@@ -337,6 +363,7 @@ func TestExecuteActionUnknownCommand(t *testing.T) {
 // the session name and a cleanup func.
 func startInProcessDaemon(t *testing.T) (string, *types.Context, func()) {
 	t.Helper()
+	privateTmp(t)
 
 	u := testchrome.MustLaunch(t, launcher.New().Headless(true))
 	ctx := types.NewContext(context.Background(), types.Config{CDPEndpoint: u})

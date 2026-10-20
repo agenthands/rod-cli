@@ -4,13 +4,20 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/dop251/goja"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 // PluginEngine wraps a goja.Runtime to safely execute external JavaScript.
+// goja.Runtime is not goroutine-safe: hooks fire on rod's event goroutine
+// while RunFunc runs on the daemon's request goroutine, so mu guards every
+// VM use.
 type PluginEngine struct {
-	vm *goja.Runtime
+	mu    sync.Mutex
+	vm    *goja.Runtime
+	bound map[proto.TargetTargetID]bool // pages with live lifecycle listeners
 }
 
 // NewPluginEngine creates a new plugin engine instance.
@@ -20,11 +27,15 @@ func NewPluginEngine() *PluginEngine {
 
 // Init instantiates the underlying goja.Runtime.
 func (e *PluginEngine) Init() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	e.vm = goja.New()
 }
 
 // LoadScript reads a file from the given path and executes it in the JS VM.
 func (e *PluginEngine) LoadScript(path string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.vm == nil {
 		return fmt.Errorf("plugin engine not initialized")
 	}
@@ -63,6 +74,8 @@ func (e *PluginEngine) LoadScript(path string) error {
 // accessors (getFindings/getRequestLog) already JSON.stringify their output, so
 // the CLI sees clean JSON without any Go-side json.Marshal.
 func (e *PluginEngine) RunFunc(name string) (string, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.vm == nil {
 		return "", fmt.Errorf("plugin engine not initialized")
 	}

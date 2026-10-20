@@ -72,6 +72,9 @@ var (
 	runtimeEvaluateCall = func(req proto.RuntimeEvaluate, page *rod.Page) (*proto.RuntimeEvaluateResult, error) {
 		return req.Call(page)
 	}
+	runtimeCallFunctionOn = func(req proto.RuntimeCallFunctionOn, page *rod.Page) (*proto.RuntimeCallFunctionOnResult, error) {
+		return req.Call(page)
+	}
 	pageScreenshot = func(p *rod.Page, fullPage bool, req *proto.PageCaptureScreenshot) ([]byte, error) {
 		return p.Screenshot(fullPage, req)
 	}
@@ -250,7 +253,6 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 		return "", err
 	}
 
-	var valStr string
 	scriptTrimmed := strings.TrimSpace(script)
 
 	// If a ref is provided, evaluate on that specific element
@@ -264,60 +266,65 @@ func Evaluate(ctx *types.Context, script string, ref string) (string, error) {
 			return "", errors.Wrap(err, "Failed to evaluate code on element")
 		}
 		if res != nil && !res.Value.Nil() {
-			valStr = res.Value.String()
-		} else {
-			valStr = "null"
+			return res.Value.String(), nil
 		}
-		return valStr, nil
+		return "null", nil
 	}
 
-	// Global page evaluation
-	isFunc := strings.HasPrefix(scriptTrimmed, "function") ||
-		strings.HasPrefix(scriptTrimmed, "()") ||
-		strings.HasPrefix(scriptTrimmed, "async ()") ||
-		strings.HasPrefix(scriptTrimmed, "el =>") ||
-		strings.HasPrefix(scriptTrimmed, "(el) =>") ||
-		strings.HasPrefix(scriptTrimmed, "e =>") ||
-		strings.HasPrefix(scriptTrimmed, "() =>") ||
-		strings.HasPrefix(scriptTrimmed, "async () =>")
-
-	if isFunc {
-		res, err := pageEval(page, scriptTrimmed)
-		if err != nil {
-			return "", errors.Wrap(err, "Failed to evaluate code")
-		}
-		if res != nil {
-			if !res.Value.Nil() {
-				valStr = res.Value.String()
-			} else {
-				valStr = "null"
-			}
-		}
-	} else {
-		r, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
-			Expression:            scriptTrimmed,
-			ObjectGroup:           "console",
-			IncludeCommandLineAPI: true,
-			AwaitPromise:          true,
+	// Global page evaluation. Source that parses as an expression is wrapped in
+	// parens (so `function(){}` and `async function(){}` are values, as in the
+	// DevTools console); anything else runs as a script. A function value is
+	// then called; any other object comes back by value.
+	// The parse check uses new Function (Runtime.compileScript would need
+	// Runtime.enable, a detection tell); a page whose Trusted Types policy
+	// blocks it runs the source as a script.
+	expr := scriptTrimmed
+	wrapped := "(\n" + scriptTrimmed + "\n)"
+	lit, _ := json.Marshal(wrapped)
+	if c, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
+		Expression: `(() => { try { new Function("return " + ` + string(lit) + `); return true } catch (e) { return false } })()`,
+	}, page); err == nil && c.Result != nil && c.Result.Value.Bool() {
+		expr = wrapped
+	}
+	r, err := runtimeEvaluateCall(proto.RuntimeEvaluate{
+		Expression:            expr,
+		ObjectGroup:           "console",
+		IncludeCommandLineAPI: true,
+		AwaitPromise:          true,
+	}, page)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to evaluate code")
+	}
+	if r.ExceptionDetails != nil {
+		return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+	}
+	res := r.Result
+	if res != nil && res.ObjectID != "" {
+		c, err := runtimeCallFunctionOn(proto.RuntimeCallFunctionOn{
+			FunctionDeclaration: `function() { return typeof this === 'function' ? this() : this }`,
+			ObjectID:            res.ObjectID,
+			AwaitPromise:        true,
+			ReturnByValue:       true,
 		}, page)
 		if err != nil {
 			return "", errors.Wrap(err, "Failed to evaluate code")
 		}
-		if r.ExceptionDetails != nil {
-			return "", fmt.Errorf("Exception: %s", r.ExceptionDetails.Exception.Description)
+		if c.ExceptionDetails != nil {
+			return "", fmt.Errorf("Exception: %s", c.ExceptionDetails.Exception.Description)
 		}
-		if r.Result != nil && !r.Result.Value.Nil() {
-			valStr = r.Result.Value.String()
-		} else if r.Result != nil && r.Result.Type == "string" {
-			valStr = fmt.Sprintf("%v", r.Result.Value)
-		} else if r.Result != nil {
-			valStr = fmt.Sprintf("%v", r.Result.Value)
-		} else {
-			valStr = "null"
-		}
+		res = c.Result
 	}
-
-	return valStr, nil
+	switch {
+	case res == nil || res.Type == proto.RuntimeRemoteObjectTypeUndefined:
+		return "undefined", nil
+	case res.UnserializableValue != "":
+		return string(res.UnserializableValue), nil
+	case res.Value.Nil():
+		return "null", nil
+	case res.Type == proto.RuntimeRemoteObjectTypeString:
+		return res.Value.Str(), nil
+	}
+	return res.Value.JSON("", ""), nil
 }
 
 func Screenshot(ctx *types.Context, name, selector, out string, fullPage bool) (string, error) {
@@ -370,7 +377,14 @@ func snapshotRootExpr(root string) (string, error) {
 		return "", errors.Errorf("snapshot %s does not support iframe refs yet", root)
 	}
 	if m := snapRefRe.FindStringSubmatch(root); m != nil {
-		return fmt.Sprintf(`(()=>{const s=snapshotEngine._lastAriaSnapshot;if(!s||s.generation!==%s)throw new Error("stale ref %s: run snapshot");const e=s.elements.get(%s);if(!e)throw new Error("no element for ref %s");return e})()`, m[1], root, m[2], root), nil
+		// Re-format the digits as decimal ints: "s007e012" must not reach JS
+		// as the legacy octal literal 012.
+		gen, err1 := strconv.Atoi(m[1])
+		el, err2 := strconv.Atoi(m[2])
+		if err1 != nil || err2 != nil {
+			return "", errors.Errorf("invalid ref %s", root)
+		}
+		return fmt.Sprintf(`(()=>{const s=snapshotEngine._lastAriaSnapshot;if(!s||s.generation!==%d)throw new Error("stale ref %s: run snapshot");const e=s.elements.get(%d);if(!e)throw new Error("no element for ref %s");return e})()`, gen, root, el, root), nil
 	}
 	sel, _ := json.Marshal(root)
 	msg, _ := json.Marshal("no element matches " + root)
@@ -485,10 +499,11 @@ func Select(ctx *types.Context, ref string, values []string) (string, error) {
 	return fmt.Sprintf("Selected %s in %s", strings.Join(labels, ", "), ref), nil
 }
 
-// selectOne selects the option matching v: option text, then value, then
-// case-insensitive substring of the text.
+// selectOne selects the option matching v: exact (trimmed) option text, then
+// value, then case-insensitive substring of the text.
 func selectOne(el *rod.Element, v string) error {
-	if elementSelect(el, []string{v}, true, rod.SelectorTypeText) == nil || selectByValue(el, v) == nil {
+	exact := `^\s*` + regexp.QuoteMeta(v) + `\s*$`
+	if elementSelect(el, []string{exact}, true, rod.SelectorTypeRegex) == nil || selectByValue(el, v) == nil {
 		return nil
 	}
 	res, err := elementEval(el, `(v) => {
@@ -508,7 +523,29 @@ func selectOne(el *rod.Element, v string) error {
 }
 
 func selectByValue(el *rod.Element, v string) error {
-	return elementSelect(el, []string{"[value=" + strconv.Quote(v) + "]"}, true, rod.SelectorTypeCSSSector)
+	return elementSelect(el, []string{"[value=" + cssString(v) + "]"}, true, rod.SelectorTypeCSSSector)
+}
+
+// cssString quotes v as a CSS string (CSSOM "serialize a string", the quoted
+// form of CSS.escape); strconv.Quote's \t or \u escapes mean other things in CSS.
+func cssString(v string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range v {
+		switch {
+		case r == 0:
+			b.WriteRune('\uFFFD')
+		case r < 0x20 || r == 0x7f:
+			fmt.Fprintf(&b, "\\%x ", r)
+		case r == '"' || r == '\\':
+			b.WriteByte('\\')
+			b.WriteRune(r)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 func Check(ctx *types.Context, ref string) (string, error) {
@@ -772,8 +809,11 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 	}
 
 	first, err := measureScroll(anchor)
-	if err != nil || len(first) == 0 {
+	if err != nil {
 		return "", errors.Wrap(err, "Failed to measure scroll")
+	}
+	if len(first) == 0 {
+		return "", errors.New("Failed to measure scroll: no scroll container")
 	}
 	dxReq := dx != 0
 	if dx == 0 && dy == 0 {
@@ -918,6 +958,9 @@ func TabNew(ctx *types.Context, url string) (string, error) {
 	if browser == nil {
 		return "", errors.New("No active browser")
 	}
+	if url != "" && url != "about:blank" && !utils.IsHttp(url) {
+		return "", errors.New("invalid URL") // before creating the tab: no orphan about:blank
+	}
 	page, err := browserPage(browser, proto.TargetCreateTarget{})
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to create new tab")
@@ -1032,30 +1075,35 @@ func TabSelect(ctx *types.Context, sel string) (string, error) {
 	return out, nil
 }
 
-// parseKey parses a string to input.Key
-func parseKey(keyStr string) input.Key {
-	switch keyStr {
-	case "Enter":
-		return input.Enter
-	case "Tab":
-		return input.Tab
-	case "Backspace":
-		return input.Backspace
-	case "Escape":
-		return input.Escape
-	case "ArrowUp":
-		return input.ArrowUp
-	case "ArrowDown":
-		return input.ArrowDown
-	case "ArrowLeft":
-		return input.ArrowLeft
-	case "ArrowRight":
-		return input.ArrowRight
+// namedKeys maps `press` key names to rod keys (skills/rod-cli/SKILL.md lists them).
+var namedKeys = map[string]input.Key{
+	"Enter": input.Enter, "Tab": input.Tab, "Backspace": input.Backspace, "Escape": input.Escape,
+	"Space": input.Space, "Delete": input.Delete, "Insert": input.Insert,
+	"Home": input.Home, "End": input.End, "PageUp": input.PageUp, "PageDown": input.PageDown,
+	"ArrowUp": input.ArrowUp, "ArrowDown": input.ArrowDown, "ArrowLeft": input.ArrowLeft, "ArrowRight": input.ArrowRight,
+	"Shift": input.ShiftLeft, "Control": input.ControlLeft, "Alt": input.AltLeft, "Meta": input.MetaLeft,
+	"CapsLock": input.CapsLock, "ContextMenu": input.ContextMenu,
+	"F1": input.F1, "F2": input.F2, "F3": input.F3, "F4": input.F4, "F5": input.F5, "F6": input.F6,
+	"F7": input.F7, "F8": input.F8, "F9": input.F9, "F10": input.F10, "F11": input.F11, "F12": input.F12,
+}
+
+// parseKey resolves a key name, or a single character on the US keyboard
+// layout, to an input.Key; anything else is an `unknown key` error.
+func parseKey(keyStr string) (input.Key, error) {
+	if k, ok := namedKeys[keyStr]; ok {
+		return k, nil
 	}
-	if len(keyStr) > 0 {
-		return input.Key(rune(keyStr[0]))
+	if r := []rune(keyStr); len(r) == 1 && keyDefined(input.Key(r[0])) {
+		return input.Key(r[0]), nil
 	}
-	return input.Key(0)
+	return 0, fmt.Errorf("unknown key %q", keyStr)
+}
+
+// keyDefined reports whether rod's keymap has k (Key.Info panics otherwise).
+func keyDefined(k input.Key) (ok bool) {
+	defer func() { ok = recover() == nil }()
+	k.Info()
+	return
 }
 
 // Press triggers a raw keyboard key press
@@ -1064,7 +1112,11 @@ func Press(ctx *types.Context, key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := keyboardPress(page.Keyboard, parseKey(key)); err != nil {
+	k, err := parseKey(key)
+	if err != nil {
+		return "", err
+	}
+	if err := keyboardPress(page.Keyboard, k); err != nil {
 		return "", fmt.Errorf("failed to press key %s: %w", key, err)
 	}
 	page.WaitDOMStable(defaultWaitStableDur, defaultDomDiff)
@@ -1177,7 +1229,10 @@ func SetCookie(ctx *types.Context, name, value string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	info, _ := page.Info()
+	info, err := page.Info()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read page info")
+	}
 	err = pageSetCookies(page, []*proto.NetworkCookieParam{{
 		Name:  name,
 		Value: value,
@@ -1194,7 +1249,10 @@ func DeleteCookie(ctx *types.Context, name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	info, _ := page.Info()
+	info, err := page.Info()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read page info")
+	}
 	err = networkDeleteCookies(proto.NetworkDeleteCookies{Name: name, URL: info.URL}, page)
 	if err != nil {
 		return "", errors.Wrap(err, "Failed to delete cookie")
@@ -1293,8 +1351,8 @@ func RouteList(ctx *types.Context) (string, error) {
 		return "No active routes", nil
 	}
 	var res strings.Builder
-	for pattern := range routes {
-		res.WriteString(fmt.Sprintf("- %s\n", pattern))
+	for _, r := range routes {
+		res.WriteString(fmt.Sprintf("- %s\n", r.Pattern))
 	}
 	return res.String(), nil
 }
@@ -1407,7 +1465,11 @@ func StateSave(ctx *types.Context, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := osWriteFile(path, b, 0644); err != nil {
+	// The jar holds session cookies: owner-only, also when overwriting an older file.
+	if err := osWriteFile(path, b, 0600); err != nil {
+		return "", err
+	}
+	if err := os.Chmod(path, 0600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Saved state to %s", path), nil

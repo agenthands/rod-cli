@@ -8,7 +8,11 @@ Without a target, the script is executed in the context of the global `window`.
 ```bash
 rod-cli eval "document.title"
 rod-cli eval "performance.timing.navigationStart"
+rod-cli eval "function f(){ return 5 }; f()"   # statements run as a script
+rod-cli eval "async () => (await fetch('/x')).status"   # a function value is called and awaited
 ```
+
+Source that is a function (`() => …`, `async function(){…}`) is called and its result printed. Objects and arrays print as JSON, `undefined` prints `undefined`, `null` prints `null`.
 
 ## Targeting Specific Elements
 To evaluate code against a specific element from the snapshot, provide the element reference as the second argument. This ref is the exact `[ref=…]` token printed by `rod-cli snapshot` next to each element (e.g. `s1e5`) — copy it verbatim. Refs are scoped to the snapshot that produced them: they stop resolving after the next `snapshot`, after a navigation or reload, and when the element leaves the DOM, so re-run `snapshot` to get a fresh ref if one stops resolving. The script is evaluated with `this` bound to the DOM element.

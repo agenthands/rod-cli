@@ -42,3 +42,14 @@ func TestPruneInteractiveFlattensMultiChildWrapperKeepsSiblings(t *testing.T) {
 		"- list:\n  - link \"A\" [ref=s1e1]\n  - link \"B\" [ref=s1e2]\n- button \"C\" [ref=s1e3]\n",
 		"- link \"A\" [ref=s1e1]\n- link \"B\" [ref=s1e2]\n- button \"C\" [ref=s1e3]\n")
 }
+
+// The doc comment is the spec: a control's non-interactive children are dropped
+// even when it shares a mapping with other keys.
+func TestPruneInteractiveDropsControlTextInMultiKeyMapping(t *testing.T) {
+	assertPrune(t,
+		"- button \"A\" [ref=s1e1]: click me\n  paragraph: hi\n",
+		"- button \"A\" [ref=s1e1]\n")
+	assertPrune(t,
+		"- button \"A\" [ref=s1e1]: click me\n  link \"B\" [ref=s1e2]:\n    - /url: /b\n",
+		"- button \"A\" [ref=s1e1]: null\n  link \"B\" [ref=s1e2]: null\n")
+}

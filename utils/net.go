@@ -3,5 +3,6 @@ package utils
 import "strings"
 
 func IsHttp(raw string) bool {
-	return strings.HasPrefix(strings.TrimSpace(raw), "http://") || strings.HasPrefix(strings.TrimSpace(raw), "https://")
+	s := strings.ToLower(strings.TrimSpace(raw))
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }

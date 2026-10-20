@@ -93,7 +93,7 @@ func TestBindLifecycle_ForwardsDOMNodeInserted(t *testing.T) {
 	// The hook firing is timing-dependent across CDP; the key coverage goal is
 	// that the callback path executes without panicking. We assert the counter
 	// is readable (and non-negative).
-	val := engine.vm.Get("domInsertCount")
+	val := vmGet(engine, "domInsertCount")
 	if val == nil {
 		t.Fatal("expected domInsertCount to be defined")
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -246,9 +247,12 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 //
 // A bare "--" terminator stops reordering: everything from that point on is
 // passed through untouched, per the POSIX end-of-flags convention.
-func reorderGlobalFlags(app *cli.App, args []string) []string {
+//
+// A value flag at the very end has no value; it is an error rather than a flag
+// that would swallow the subcommand (or be ignored by it) once hoisted.
+func reorderGlobalFlags(app *cli.App, args []string) ([]string, error) {
 	if len(args) == 0 {
-		return args
+		return args, nil
 	}
 
 	takesValue := make(map[string]bool, len(app.Flags)*2)
@@ -281,7 +285,10 @@ func reorderGlobalFlags(app *cli.App, args []string) []string {
 		}
 
 		global = append(global, tok)
-		if tv && !hasValue && i+1 < len(args) {
+		if tv && !hasValue {
+			if i+1 == len(args) {
+				return nil, fmt.Errorf("flag needs an argument: %s", tok)
+			}
 			i++
 			global = append(global, args[i])
 		}
@@ -291,7 +298,7 @@ func reorderGlobalFlags(app *cli.App, args []string) []string {
 	out = append(out, args[0])
 	out = append(out, global...)
 	out = append(out, rest...)
-	return out
+	return out, nil
 }
 
 // globalFlagName strips leading dashes and any "=value" suffix from a flag
@@ -312,14 +319,31 @@ func globalFlagName(tok string) (name string, hasValue bool) {
 	return trimmed, false
 }
 
+var sessionNameRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+
+// validateSession refuses a session name that could leave TMPDIR when it is
+// joined into the port, lock and log paths ("x/../../etc/foo", ".", "..").
+func validateSession(s string) error {
+	if !sessionNameRe.MatchString(s) || s == "." || s == ".." {
+		return fmt.Errorf("invalid session name %q: use letters, digits, '.', '_' or '-' (max 64)", s)
+	}
+	return nil
+}
+
 func getApp() *cli.App {
 	return &cli.App{
+		// Every command, the daemon included, checks --session before any file op.
+		// It also records the parsed --json so main() formats errors to match.
+		Before: func(c *cli.Context) error {
+			c.App.Metadata["json"] = c.Bool("json")
+			return validateSession(c.String("session"))
+		},
 		Name:        "rod-cli",
 		Description: "Native web browsing, scraping, and interaction CLI for AI assistants",
 		Usage:       "rod-cli [command] [options]",
 		Version:     banner.Version,
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "config file path (default: ./rod-cli.yaml if it exists, else built-in defaults)"},
+			&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "path to a file named rod-cli.yaml (default: ./rod-cli.yaml if it exists, else built-in defaults)"},
 			&cli.StringFlag{Name: "cdp-endpoint", Aliases: []string{"cdp"}, Usage: "control browser by cdp"},
 			&cli.BoolFlag{Name: "headless", Aliases: []string{"hl"}, Usage: "enable headless"},
 			&cli.BoolFlag{Name: "banner", Aliases: []string{"b"}, Usage: "show startup banner (default off)"},

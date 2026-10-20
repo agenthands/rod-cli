@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/coverage"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -34,17 +36,29 @@ var execAcquireTimeout = 60 * time.Second
 // daemon to answer ping before killing it. A var so tests can shrink it.
 var daemonStartTimeout = 30 * time.Second
 
+// pingTimeout bounds a ping round-trip. A var so tests can shrink it.
+var pingTimeout = 2 * time.Second
+
+// runAction dispatches one /execute command. A var so tests can inject a
+// panicking action.
+var runAction = executeAction
+
 // exitDaemon terminates the daemon process. If the binary was built with
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
 // accumulated coverage counters first, since os.Exit otherwise skips the
 // coverage runtime's atexit writer. In a normal build WriteCountersDir returns
-// an error and is ignored, so this is a no-op in production.
-func exitDaemon(code int) {
+// an error and is ignored, so this is a no-op in production. A var so tests
+// can observe an exit without ending the test process.
+var exitDaemon = func(code int) {
 	if dir := os.Getenv("GOCOVERDIR"); dir != "" {
 		_ = coverage.WriteCountersDir(dir)
 	}
 	os.Exit(code)
 }
+
+// idleTimeout is how long a daemon waits without a command before it shuts
+// down. A var so tests can shrink it.
+var idleTimeout = 15 * time.Minute
 
 type Request struct {
 	Command string            `json:"command"`
@@ -60,16 +74,37 @@ func portFilePath(session string) string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("rod-cli-%s.port", session))
 }
 
-func ClientExecute(session string, req Request) (string, error) {
-	portFile := portFilePath(session)
-	portData, err := os.ReadFile(portFile)
+// readPort parses a port file. Anything but a bare port number is refused, so
+// a tampered file can never send the client to another host.
+func readPort(portFile string) (int, error) {
+	b, err := os.ReadFile(portFile)
 	if err != nil {
+		return 0, err
+	}
+	port, err := strconv.Atoi(string(b))
+	if err != nil || port < 1 || port > 65535 {
+		return 0, fmt.Errorf("invalid port file %s: %q", portFile, b)
+	}
+	return port, nil
+}
+
+func ClientExecute(session string, req Request) (string, error) {
+	port, err := readPort(portFilePath(session))
+	if os.IsNotExist(err) {
 		return "", fmt.Errorf("daemon not running")
 	}
-	port := string(portData)
+	if err != nil {
+		return "", err
+	}
 
+	// Only ping is bounded: a hung daemon must not hang `sessions` or the
+	// readiness poll, while real commands legitimately run for up to ~105s.
+	client := http.DefaultClient
+	if req.Command == "ping" {
+		client = &http.Client{Timeout: pingTimeout}
+	}
 	body, _ := json.Marshal(req)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%s/execute", port), "application/json", bytes.NewReader(body))
+	resp, err := client.Post(fmt.Sprintf("http://127.0.0.1:%d/execute", port), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -94,11 +129,10 @@ func ListSessions() ([]string, error) {
 	for _, f := range files {
 		base := filepath.Base(f)
 		session := strings.TrimSuffix(strings.TrimPrefix(base, "rod-cli-"), ".port")
-		_, err := ClientExecute(session, Request{Command: "ping"})
-		if err == nil {
+		if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil {
 			active = append(active, session)
 		} else {
-			os.Remove(f)
+			removeIfDead(f)
 		}
 	}
 	return active, nil
@@ -183,24 +217,53 @@ func EnsureDaemon(session string, exePath string, flags []string, extraEnv []str
 }
 
 // removeDeadPortFiles removes the port files of daemons that no longer listen:
-// killed or crashed ones never ran their cleanup. A session whose start lock is
-// held is mid-spawn and is skipped, so its new port file is never removed.
+// killed or crashed ones never ran their cleanup.
 func removeDeadPortFiles() {
 	files, _ := filepath.Glob(filepath.Join(os.TempDir(), "rod-cli-*.port"))
 	for _, f := range files {
-		release, ok, err := tryLockFile(f + ".lock")
-		if err != nil || !ok {
-			continue
-		}
-		if b, err := os.ReadFile(f); err == nil {
-			if c, err := net.DialTimeout("tcp", "127.0.0.1:"+strings.TrimSpace(string(b)), time.Second); err == nil {
-				c.Close()
-			} else {
-				os.Remove(f)
-			}
-		}
-		release()
+		removeIfDead(f)
 	}
+}
+
+// removeIfDead removes port file f when nothing listens on its port or it
+// names no valid port. It skips f while its start lock is held (mid-spawn).
+func removeIfDead(f string) {
+	release, ok, err := tryLockFile(f + ".lock")
+	if err != nil || !ok {
+		return
+	}
+	defer release()
+	port, err := readPort(f)
+	if os.IsNotExist(err) {
+		return
+	}
+	if err == nil {
+		if c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second); err == nil {
+			c.Close()
+			return
+		}
+	}
+	os.Remove(f)
+}
+
+// publishPort writes the port file owner-only (0600, CreateTemp's mode) and
+// atomically, so no reader or sweep ever sees it half-written.
+func publishPort(portFile string, port int) error {
+	f, err := os.CreateTemp(filepath.Dir(portFile), filepath.Base(portFile)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprint(f, port)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), portFile)
+	}
+	if err != nil {
+		os.Remove(f.Name())
+	}
+	return err
 }
 
 func StartServer(session string, rodCtx *types.Context) error {
@@ -211,7 +274,7 @@ func StartServer(session string, rodCtx *types.Context) error {
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 	portFile := portFilePath(session)
-	if err := os.WriteFile(portFile, []byte(fmt.Sprint(port)), 0644); err != nil {
+	if err := publishPort(portFile, port); err != nil {
 		return err
 	}
 	defer os.Remove(portFile)
@@ -232,7 +295,7 @@ func StartServer(session string, rodCtx *types.Context) error {
 	}()
 
 	mux := http.NewServeMux()
-	idleTimer := time.NewTimer(15 * time.Minute)
+	idleTimer := time.NewTimer(idleTimeout)
 	// execSem serializes executeAction across concurrent /execute requests,
 	// as a 1-buffered channel acting as a mutex WITH a bounded acquire
 	// timeout (sync.Mutex has none). The session model is one shared
@@ -280,18 +343,30 @@ func StartServer(session string, rodCtx *types.Context) error {
 	execSem := make(chan struct{}, 1)
 	execSem <- struct{}{}
 
+	wantHost := fmt.Sprintf("127.0.0.1:%d", port)
 	mux.HandleFunc("/execute", func(w http.ResponseWriter, r *http.Request) {
-		idleTimer.Reset(15 * time.Minute)
+		// Only the rod-cli client may drive the session: a browser page can
+		// reach 127.0.0.1 too, but it sends an Origin, a simple Content-Type,
+		// or (via DNS rebinding) a foreign Host.
+		_, hasOrigin := r.Header["Origin"]
+		if mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); hasOrigin || mt != "application/json" || r.Host != wantHost {
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(Response{Error: "forbidden: not a rod-cli client request"})
+			return
+		}
 		var req Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			json.NewEncoder(w).Encode(Response{Error: err.Error()})
 			return
 		}
 
+		// ping does not count as use: `sessions` and readiness polls would
+		// otherwise keep every daemon alive forever.
 		if req.Command == "ping" {
 			json.NewEncoder(w).Encode(Response{Result: "pong"})
 			return
 		}
+		idleTimer.Reset(idleTimeout)
 		if req.Command == "close" {
 			// Clean up before answering, so the browser and profile are gone
 			// when the client's close returns.
@@ -306,8 +381,12 @@ func StartServer(session string, rodCtx *types.Context) error {
 
 		select {
 		case <-execSem:
-			res, err := executeAction(rodCtx, req)
-			execSem <- struct{}{}
+			// Release in a defer: net/http recovers a panicking handler, and a
+			// release skipped by that panic would wedge the session.
+			res, err := func() (string, error) {
+				defer func() { execSem <- struct{}{} }()
+				return runAction(rodCtx, req)
+			}()
 			if err != nil {
 				json.NewEncoder(w).Encode(Response{Error: err.Error()})
 				return
@@ -380,27 +459,44 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "press":
 		return actions.Press(ctx, req.Args["key"])
 	case "mousemove":
-		var x, y float64
-		fmt.Sscanf(req.Args["x"], "%f", &x)
-		fmt.Sscanf(req.Args["y"], "%f", &y)
+		x, err := floatArg(req.Args, "x")
+		if err != nil {
+			return "", err
+		}
+		y, err := floatArg(req.Args, "y")
+		if err != nil {
+			return "", err
+		}
 		return actions.MouseMove(ctx, x, y)
 	case "mousedown":
 		return actions.MouseDown(ctx, req.Args["button"])
 	case "mouseup":
 		return actions.MouseUp(ctx, req.Args["button"])
 	case "mousewheel":
-		var dx, dy float64
-		fmt.Sscanf(req.Args["dx"], "%f", &dx)
-		fmt.Sscanf(req.Args["dy"], "%f", &dy)
+		dx, err := floatArg(req.Args, "dx")
+		if err != nil {
+			return "", err
+		}
+		dy, err := floatArg(req.Args, "dy")
+		if err != nil {
+			return "", err
+		}
 		maxSteps := 0
 		if req.Args["end"] == "true" {
-			fmt.Sscanf(req.Args["max"], "%d", &maxSteps)
+			if maxSteps, err = intArg(req.Args, "max"); err != nil {
+				return "", err
+			}
 		}
 		return actions.MouseWheel(ctx, dx, dy, req.Args["ref"], maxSteps)
 	case "resize":
-		var w, h int
-		fmt.Sscanf(req.Args["width"], "%d", &w)
-		fmt.Sscanf(req.Args["height"], "%d", &h)
+		w, err := intArg(req.Args, "width")
+		if err != nil {
+			return "", err
+		}
+		h, err := intArg(req.Args, "height")
+		if err != nil {
+			return "", err
+		}
 		return actions.Resize(ctx, w, h)
 	case "tab-list":
 		return actions.TabList(ctx)
@@ -449,8 +545,10 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	case "requests":
 		return actions.NetworkRequests(ctx, req.Args["clear"] == "true")
 	case "request":
-		var index int
-		fmt.Sscanf(req.Args["index"], "%d", &index)
+		index, err := intArg(req.Args, "index")
+		if err != nil {
+			return "", err
+		}
 		return actions.NetworkRequest(ctx, index)
 	case "drag":
 		return actions.Drag(ctx, req.Args["start"], req.Args["end"])
@@ -471,6 +569,30 @@ func executeAction(ctx *types.Context, req Request) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown command: %s", req.Command)
 	}
+}
+
+// floatArg parses a numeric arg; an absent or empty one is 0.
+func floatArg(args map[string]string, key string) (float64, error) {
+	if args[key] == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseFloat(args[key], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: not a number", key, args[key])
+	}
+	return v, nil
+}
+
+// intArg parses an integer arg; an absent or empty one is 0.
+func intArg(args map[string]string, key string) (int, error) {
+	if args[key] == "" {
+		return 0, nil
+	}
+	v, err := strconv.Atoi(args[key])
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s %q: not an integer", key, args[key])
+	}
+	return v, nil
 }
 
 // argList decodes a JSON string array arg; a non-JSON value (older client) is one item.

@@ -273,7 +273,7 @@ type Context struct {
 	consoleDropped int
 	requestsDropped int
 	interceptor *network.Interceptor
-	routes      map[string]string
+	routes      []Route // insertion order; the newest route wins on overlap
 	fingerprint *rodfingerprint.Fingerprint
 	// profile is the active stealth.Profile that drives BOTH godoll's evasion JS
 	// injection and the rod-cli network interceptor. It is built in preparePage by
@@ -326,7 +326,6 @@ func NewContext(ctx context.Context, cfg Config) *Context {
 		stdContext: ctx,
 		config:     cfg,
 		mode:       cfg.Mode,
-		routes:     make(map[string]string),
 		cdpDomains: make(map[string]bool),
 	}
 	// Generate the per-session canvas/audio noise seed ONCE (crypto/rand for an
@@ -991,13 +990,15 @@ func (ctx *Context) updateInterceptorRules() {
 
 	ctx.interceptor.ClearRules()
 
-	for pattern, body := range ctx.routes {
+	// godoll serves the first matching rule, so add the newest route first
+	// (Playwright semantics: the most recently added route wins).
+	for _, r := range slices.Backward(ctx.routes) {
 		ctx.interceptor.AddRule(network.InterceptRule{
-			URLPattern: pattern,
+			URLPattern: r.Pattern,
 			Action:     network.Mock,
 			MockResponse: &network.MockResponse{
 				StatusCode: 200,
-				Body:       body,
+				Body:       r.Body,
 				Headers: map[string]string{
 					"Content-Type": "text/plain",
 				},
@@ -1032,7 +1033,7 @@ func (ctx *Context) ensureInterceptorEnabled(page *rod.Page) {
 func (ctx *Context) AddRoute(pattern, body string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	ctx.routes[pattern] = body
+	ctx.routes = append(slices.DeleteFunc(ctx.routes, func(r Route) bool { return r.Pattern == pattern }), Route{pattern, body})
 	if ctx.interceptor == nil {
 		ctx.ensureInterceptorEnabled(ctx.page)
 		return
@@ -1046,7 +1047,7 @@ func (ctx *Context) AddRoute(pattern, body string) {
 func (ctx *Context) RemoveRoute(pattern string) {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	delete(ctx.routes, pattern)
+	ctx.routes = slices.DeleteFunc(ctx.routes, func(r Route) bool { return r.Pattern == pattern })
 	if len(ctx.routes) == 0 && ctx.interceptor != nil {
 		ctx.interceptor.Disable()
 		ctx.interceptor = nil
@@ -1055,14 +1056,14 @@ func (ctx *Context) RemoveRoute(pattern string) {
 	ctx.updateInterceptorRules()
 }
 
-func (ctx *Context) GetRoutes() map[string]string {
+// Route is one mock route: requests matching Pattern are answered with Body.
+type Route struct{ Pattern, Body string }
+
+// GetRoutes returns the mock routes in insertion order.
+func (ctx *Context) GetRoutes() []Route {
 	ctx.stateLock.Lock()
 	defer ctx.stateLock.Unlock()
-	res := make(map[string]string)
-	for k, v := range ctx.routes {
-		res[k] = v
-	}
-	return res
+	return slices.Clone(ctx.routes)
 }
 
 // Close the browser

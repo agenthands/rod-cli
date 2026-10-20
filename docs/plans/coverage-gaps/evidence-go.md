@@ -1,0 +1,102 @@
+# Evidence: Go track
+
+## G01
+tdd: TestListSessionsPrunesDead (daemon test hygiene, privateTmp in every port-file/lock/daemon test) — red: with TMPDIR=$X holding rod-cli-devsession.port, `go test ./daemon/ -run TestListSessionsPrunesDead$` deleted it ("RED: dev port file rod-cli-devsession.port deleted by TestListSessionsPrunesDead") — green: same run left it in place ("GREEN: dev port file survived"); `TMPDIR=$X go test ./daemon/ -count=1` passed and left only leakless-* and the planted port file
+tdd: TestSessionNameRejectedBeforeFileOps — red: cmd_test.go:920: session "x/../../../etc/foo": err = failed to ensure daemon: open /tmp/etc/foo.port.lock: no such file or directory, want "invalid session name \"x/../../../etc/foo\": use letters, digits, '.', '_' or '-' (max 64)" — green: go test . -run TestSessionNameRejectedBeforeFileOps$ -count=1 passed
+verify: G01 — pass — go vet + go test ./daemon/ ./ green in private TMPDIR (only leakless-* left, no chrome/daemon left); binary rejects --session x/../../../etc/foo with invalid session name before any file op; TestSessionNameRejectedBeforeFileOps red on pre-fix cmd.go; all port-file/daemon tests use privateTmp; docs updated
+
+## G02
+tdd: TestExecuteRejectsForeignRequests — red: hardening_test.go:65: status 200 body {"error":"unknown command: bogus-cmd"} : want 403 before dispatch (origin, text/plain, no content-type, host) — green: go test ./daemon/ -run TestExecuteRejectsForeignRequests$ -count=1 passed
+tdd: TestClientRefusesNonNumericPortFile — red: hardening_test.go:95: port file "1@evil.example:80": err = Post "http://127.0.0.1:***@evil.example:80/execute": dial tcp: lookup evil.example: i/o timeout, want invalid port file (and "client dialled a port file's foreign address 1 times" for "1@127.0.0.1:<port>") — green: go test ./daemon/ -run TestClientRefusesNonNumericPortFile$ -count=1 passed
+tdd: TestStartServerSweepsOnlyDeadPortFiles — red: hardening_test.go:156: server's port file mode = -rw-r--r--, want 0600 — green: go test ./daemon/ -run TestStartServerSweepsOnlyDeadPortFiles$ -count=1 passed
+tdd: TestListSessionsSkipsHungListener — red: hardening_test.go:179: ListSessions still blocked after 5s on a listener that never accepts — green: go test ./daemon/ -run TestListSessionsSkipsHungListener$ -count=1 passed
+tdd: TestPingTimeoutSparesRealCommands (guard for "ping-only timeout must not shorten real commands") — red: on a mutant applying the timeout to every command: hardening_test.go:199: slow goto: "", Post "http://127.0.0.1:35051/execute": context deadline exceeded (Client.Timeout exceeded while awaiting headers); want ok (ping timeout must not apply) — green: go test ./daemon/ -run TestPingTimeoutSparesRealCommands$ -count=1 passed
+tdd: TestListSessionsKeepsLockedPortFile — red: hardening_test.go:216: ListSessions removed a port file whose .lock is held: stat /tmp/rc-2493288792/rod-cli-spawning.port: no such file or directory — green: go test ./daemon/ -run TestListSessionsKeepsLockedPortFile$ -count=1 passed
+done-check: go vet ./... ok; TMPDIR=$X go test ./daemon/ ./ -count=1 → ok daemon 98.177s, ok rod-cli 1.219s (TMPDIR left only leakless-*); go build -o rod-cli . && ./rod-cli --session g02 --headless sessions → "No active sessions" exit 0; ./rod-cli --session g02 close → "closing" exit 0 (TMPDIR left only rod-cli-daemon.log; ./rod-cli removed)
+verify: G02 — pass — go vet ok; go test ./daemon/ ./ ok (97.5s/1.2s) leaving only leakless-*; sessions/close smoke ok leaving only rod-cli-daemon.log, no stray processes; all 5 bug tests red on pre-G02 daemon.go in a scratch copy; ping bypasses execSem so the 2s ping bound cannot evict busy daemons; USAGE.md and session-management.md updated
+
+## G03
+tdd: TestPanickingActionDoesNotWedgeSession — red: robustness_test.go:27: command after a panic: err = a previous command has not completed after 500ms; the session may be stuck on an unresponsive browser call — run `close` to force-reset it, want unknown command (session wedged) — green: go test ./daemon/ -run TestPanickingActionDoesNotWedgeSession$ -count=1 passed
+tdd: TestExecuteActionRejectsNonNumericArgs — red: robustness_test.go:47: resize map[height:600 width:abc]: err = No tab to used, call rod_navigate first, want an error naming "abc" (also request "x", mousemove "y", mousewheel dy "abc") — green: go test ./daemon/ -run TestExecuteActionRejectsNonNumericArgs$ -count=1 passed
+tdd: TestCloseCleansUpBeforeReply (D5 guard; passes on today's code) — red: on a mutant moving cleanup after the reply: profile_test.go:156: /tmp/rc-469023472/rod-cli-close-1792511873852289776.port survived the close reply (stat err <nil>) — green: TMPDIR=$X go test ./daemon/ -run TestCloseCleansUpBeforeReply$ -count=1 passed (TMPDIR left empty)
+tdd: TestPingDoesNotResetIdleTimer — red: robustness_test.go:78: daemon polled by ping every 50ms never idled out after 300ms: ping resets the idle timer — green: go test ./daemon/ -run TestPingDoesNotResetIdleTimer$ -count=1 passed
+done-check: go vet ./... ok; TMPDIR=$X go test ./daemon/ -count=1 → ok daemon 105.541s (TMPDIR left only leakless-*); touched actions too: go test ./actions/ -count=1 → ok 320.830s (only leakless-*)
+verify: G03 — pass — go vet ok; go test ./daemon/ ok (108s, TMPDIR only leakless-*, no leaked procs); reds re-confirmed in scratch copy for execSem panic, S3 Sscanf, S5 ping reset; D5 guard green; docs updated for idle timeout
+
+## G04
+tdd: TestLoadConfigRejectsMissingAndMisnamedFiles — red: config_test.go:302: missing "/tmp/TestLoadConfigRejectsMissingAndMisnamedFiles2127626620/001/does-not-exist/rod-cli.yaml": cfg=<nil> err=<nil>, want nil config and an error naming the path (then "file \"cli.yaml\": cfg=&{text ...} err=<nil>" for the inverted name check) — green: go test ./types/ -run TestLoadConfigRejectsMissingAndMisnamedFiles$ -count=1 passed
+tdd: TestLoadConfigPartialFileKeepsDefaults — red: config_test.go:335: unset keys lost their defaults: mode="" logger={LoggerLevel:debug LoggerFileName: LoggerFileMaxSize:0 LoggerFileMaxBackups:0 LoggerFileMaxAge:0 LoggerPrefix:} (and config_test.go:343: stealth.canvasNoise = <nil>, want the default true) — green: go test ./types/ -run TestLoadConfigPartialFileKeepsDefaults$ -count=1 passed
+tdd: TestResolveStealthPlatformFollowsFlagUA (property, types:T1) — red: seed 6714572942049403960: profile "macos-applesilicon-chrome", UA "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.0.0 Safari/537.36": platform = "MacIntel", want "Win32" — green: go test ./types/ -run TestResolveStealthPlatformFollowsFlagUA$ -count=1 passed
+tdd: TestResolveStealthConsistencyGate (types:T2 guard; passes on today's code) — red: on a mutant dropping the UA-path validateHardwareAndScreen: stealth_property_test.go:80: err = <nil>, want one containing "implausible screen geometry"; on a mutant silencing the platform reject: stealth_property_test.go:80: err = <nil>, want one containing "contradicts UA OS" — green: go test ./types/ -run TestResolveStealthConsistencyGate$ -count=1 passed
+tdd: TestResolveStealthRejectsUnsafeFingerprintValue (property, types:T3 guard; passes on today's code) — red: on a mutant with r < 0x1f: seed 1097816382882712470: --user-agent = "\x1f": err = <nil>, want prefix "fingerprint field --user-agent "; on a mutant dropping vendor from the check list: seed 9098470085895846184: vendor = "\"": err = <nil>, want prefix "fingerprint field vendor " — green: go test ./types/ -run TestResolveStealthRejectsUnsafeFingerprintValue -count=1 passed
+tdd: TestResolveStealthUserDirProfile (types:T5 guard; passes on today's code) — red: on a mutant dropping the D-02 home fallback: stealth_property_test.go:166: custom: load stealth profile "profiles/custom.json": open profiles/custom.json: no such file or directory — green: go test ./types/ -run TestResolveStealthUserDirProfile$ -count=1 passed
+tdd: TestSweepWithoutProcKeepsLiveOwners (types:T10 guard; passes on today's code) — red: on a mutant treating a readCmdline error as dead: profile_root_test.go:129: mine removed without /proc: stat /tmp/TestSweepWithoutProcKeepsLiveOwners3258210859/001/mine: no such file or directory — green: go test ./types/ -run TestSweepWithoutProcKeepsLiveOwners$ -count=1 passed
+done-check: go vet ./... ok; TMPDIR=$X go test ./types/ -count=1 → ok types 15.853s; touched cmd.go usage string: go test . -count=1 → ok rod-cli 1.103s (TMPDIR left only leakless-*)
+verify: G04 — pass — go vet + go test ./types/ green in a fresh TMPDIR (only leakless-* left, no chrome/daemon); T1 and T4 tests confirmed red on reverted fixes in a scratch copy; T2/T3/T5/T10 rows covered at their seams; docs updated
+
+## G05
+tdd: TestSnapshotAlwaysNotDefinedInjectsExactlyOnce (+TestSnapshotInjectsEngineOnceThenRetrySucceeds) — red (code already correct; mutation dropping `injected = true`): snapshot_seam_test.go:69: injects = 4, want 1 — green: go test ./types/ -run 'TestSnapshotInjects|TestSnapshotAlways' -count=1 passed
+tdd: TestPruneInteractiveDropsControlTextInMultiKeyMapping — red: prune_test.go:49: got: - button "A" [ref=s1e1]: click me / want: - button "A" [ref=s1e1] — green: go test ./types/ -run TestPrune -count=1 passed
+tdd: TestSnapshotPruneKeepsEveryInteractiveRef / TestSnapshotPruneDropsRefsWithoutInteractiveDescendant / TestSnapshotPruneIsFixedPoint — red (code already correct; mutation restoring the old in-place `kept := n.Content[:0]` flatten aliasing): seed 1459430295848317567: interactive "button [ref=s1e1]" lost (in: generic wrappers around buttons + `- generic: [- button [ref=s1e1]]`; out: three bare buttons) — green: go test ./types/ -run TestSnapshotPrune -count=1 -rapid.checks=1000 passed
+tdd: TestRouteRemovePartialThenLastDropsInterceptor — red (code already correct; mutation dropping `ctx.interceptor = nil` in RemoveRoute): routes_test.go:43: interceptor kept after the last route was removed — green: go test ./types/ -run TestRoute -count=1 passed
+tdd: TestRouteNewestOverlappingPatternWins — red: routes_test.go:54: run 0: served "broad", want newest — green: go test ./types/ -run TestRoute -count=1 passed
+verify: G05 — pass — snapshot/prune/route tests green (types, actions); T6 rapid property model-oracle, T7 inject-once, T8 partial remove + interceptor nil, route-order newest-wins via insertion-ordered slice (map order fails old code), pruneInteractive matches doc comment; request-mocking.md updated; no leaks
+
+## G06
+tdd: TestPressSendsNamedKeyNeverFirstByte — red: seams_g06_test.go:29: Press("Delete"): sent [68], err <nil>; want [302] (also é sent [195]) — green: go test ./actions/ -run TestPressSendsNamedKeyNeverFirstByte -count=1 passed
+tdd: TestMouseWheelEmptyMeasureIsError — red: seams_g06_test.go:53: MouseWheel = "", <nil>; want a Failed to measure scroll error — green: go test ./actions/ -run TestMouseWheelEmptyMeasureIsError -count=1 passed
+tdd: TestDragReleasesButtonOnlyWhenPressed — red (code already correct; mutation dropping the deferred pageMouseUp): seams_g06_test.go:95: 2nd move fails: err Failed to move to drag target: boom, mouseUp calls 0; want move-to-target error and 1 release — green: go test ./actions/ -run TestDragReleasesButtonOnlyWhenPressed -count=1 passed
+tdd: TestMouseWheelHorizontalThenEnd — red (code already correct; mutation reading a.Y/a.MaxY in the horizontal atLimit): seams_g06_test.go:123: dx=300: got "scrolled dx=300 x=300/1000 dy=0 y=0/0 end", err <nil> — green: go test ./actions/ -run TestMouseWheelHorizontalThenEnd -count=1 passed
+tdd: TestMouseWheelScrollDurationSpacesNotches — red (code already correct; mutation dropping the *time.Millisecond unit): seams_g06_test.go:156: gap 1 = 5.17µs, want >= 90ms — green: go test ./actions/ -run TestMouseWheelScrollDurationSpacesNotches -count=1 passed
+tdd: TestStealthCheckRawVerdicts — red (code already correct; mutation relaxing pluginsLength to n >= 0): seams_g06_test.go:212: listed fail: got "FAIL webdriver=FAIL(true) userAgent=FAIL(HeadlessChrome) …" (pluginsLength=FAIL(0) missing) — green: go test ./actions/ -run TestStealthCheckRawVerdicts -count=1 passed
+verify: G06 — pass — Done-when `go test ./actions/ -run 'Press|MouseWheel|Drag|StealthCheck'` ok (81s), vet clean, TMPDIR left only leakless-*; A2/A5 reds hold on old code; press key names listed in SKILL.md
+
+## G07
+tdd: TestSelectPrefersExactTextThenValue — red: seams_g07_test.go:34: Select("1") = "Selected \"Item 10\" in s1e3", <nil>; want "Selected \"Item 1\" in s1e3" — green: go test ./actions/ -run TestSelectPrefersExactTextThenValue -count=1 passed
+tdd: TestSelectByValueEscapesForCSS — red: seams_g07_test.go:48: Select("a\tb") = "", no option matches "a\tb"; want "Selected \"Tabbed\" in s1e3" — green: go test ./actions/ -run TestSelectByValueEscapesForCSS -count=1 passed
+tdd: TestEvaluateRunsFunctionsAndStatements — red: seams_g07_test.go:69: Evaluate("(a=1) => a+1") = "<nil>", <nil>; want "2" (also "function f(){return 5}; f()" → SyntaxError: Unexpected token ';', "async function(){return 7}" → Function statements require a function name) — green: go test ./actions/ -run TestEvaluateRunsFunctionsAndStatements -count=1 passed
+tdd: TestStateSaveLoadRoundTripsCookiesPrivately — red: seams_g07_test.go:95: state file mode = -rw-r--r--, <nil>; want no group/other bits — green: go test ./actions/ -run TestStateSaveLoadRoundTripsCookiesPrivately -count=1 passed
+tdd: TestTabNewBadURLLeavesTabsUnchanged — red: seams_g07_test.go:129: tabs 1→2, active C317C2F4B2AFF4BC879837CCAFA5E514→5D8654B128FA3573DAE5F479C2FE42B0; want both unchanged — green: go test ./actions/ -run TestTabNewBadURLLeavesTabsUnchanged -count=1 passed
+tdd: TestFillValueEqualsText — red (code already correct; mutation dropping SelectAllText before the clearing Backspace): seed 10717220915057974176: old="㈯﹞", text="" → value = "㈯"; want "" — green: go test ./actions/ -run TestFillValueEqualsText -count=1 -rapid.checks=30 passed
+verify: G07 — pass — Done-when (243s) + full actions pkg + go vet green; 6 rows tested live at seams, bug reds match diffs, Fill rapid property with constrained gen; docs updated; TMPDIR held only leakless-*, no headless chrome left
+
+## G08
+tdd: TestReorderGlobalFlagsProperties (root:root-2; passes on today's code) — red (mutation ignoring the `--` terminator): seed 7170201281461089191: in ["" "--" "--headless"] → plain tokens + tail after globals: got ["--headless" "--"], want ["--" "--headless"] — green: go test . -run TestReorderGlobalFlagsProperties -count=1 -rapid.checks=2000 passed
+tdd: TestTrailingGlobalFlagWithoutValueErrors (root:root-3 / root:trailing-flag) — red: cli_g08_test.go:146: runApp(["sessions" "--session"]) = nil, want an error (also ["goto" "https://x" "-s"]) — green: go test . -run TestTrailingGlobalFlagWithoutValueErrors -count=1 passed
+tdd: TestMainJSONErrorModeFromParsedFlag (root:root-5 / root:json-detect) — red: cli_g08_test.go:164: --json=true click: err exit status 1, out "2026/10/20 20:31:46 FATA element ref is required\n"; want a JSON error and non-zero exit (also -json click) — green: go test . -run TestMainJSONErrorModeFromParsedFlag -count=1 passed
+tdd: TestProfileListFormatsAgreeWithoutSpawning (root:root-4; passes on today's code) — red (mutation dropping the maybeHandleProfileList guard in runClientCommand): cli_g08_test.go:232: runApp(["--raw" "--profile=list" "snapshot"]): failed to ensure daemon: fork/exec …/rod-cli-definitely-missing-binary-xyz: no such file or directory — green: go test . -run TestProfileListFormatsAgreeWithoutSpawning -count=1 passed
+tdd: TestOutPathResolvedAgainstClientCwd (root:root-6; passes on today's code) — red (mutation sending --out unresolved): cli_g08_test.go:302: screenshot request 0: out = "rel/x.png", want "/tmp/rc.GZfU/TestOutPathResolvedAgainstClientCwd835211078/002/rel/x.png" (also pdf) — green: go test . -run TestOutPathResolvedAgainstClientCwd -count=1 passed
+tdd: TestEvalJSONOutputShape (root:root-7 / root:eval-json-shape; pins today's shape, passes on today's code) — red (mutation treating only objects as JSON values): cli_g08_test.go:330: result [1,2] []: got "{\"result\":\"[1,2]\"}\n", <nil>; want "[1,2]\n" (with --max-output 3 the array was also cut) — green: go test . -run TestEvalJSONOutputShape -count=1 passed
+done-check: go vet ./... ok; TMPDIR=$X go test ./ -count=1 → ok github.com/agenthands/rod-cli 1.281s (TMPDIR left only leakless-*)
+verify: G08 — pass — go vet ok, go test ./ ok (TMPDIR left only leakless-*); rows root-2..7 at their seams; root-3/root-5 tests red when the fixes are reverted in a scratch copy; docs updated for trailing value flag
+
+## G09
+
+tdd: TestFlagForwardingRoundTrip — red (mutation: scroll-physics forwarding disabled in cmd.go, reverted): seed 1086706180945155239: all flags unset but --scroll-physics=true → "--scroll-physics: daemon IsSet=false, client set=true" — green: go test ./ -run TestFlagForwardingRoundTrip -count=1 passed
+tdd: TestStealthFlagsFromCapturesForwarded — red: ./forward_g09_test.go:282:10: undefined: stealthFlagsFrom (then mutation check, cdp-proxy capture disabled and reverted: seed 3444157833076526046: --cdp-proxy=false → "--cdp-proxy: StealthFlags field <nil>, client set false") — green: go test ./ -run StealthFlags -count=1 passed
+verify: G09 — pass — root-1/D1 round-trip and root-9 stealthFlagsFrom properties green; refactor is behaviour-preserving; scratch mutations (cdp-proxy forward, mouse-steps capture) both caught; TMPDIR clean
+
+## G10
+
+tdd: TestIsHttpSchemeCase — red: net_test.go:17: IsHttp("Https://example.com") = false, want true — green: go test ./utils/ -run TestIsHttp -count=1 passed
+tdd: TestReadNormalizesGetPropertiesProperty — red: seed 15198709855505079634: {"id":1,"result":{"exceptionDetails":{"exceptionId":1,"text":""},"result":[{"get":{...},"name":""}]}} → got result without exceptionDetails — green: go test ./internal/cdpproxy/ -run TestReadNormalizesGetPropertiesProperty -count=1 passed
+tdd: TestTrafficRingBufferModel — red not observed on today's code (passes first run); mutation check (logMessage `>=`→`>`, reverted): seed 17648088359615489968: "Traffic len 2, want 1" — green: go test ./internal/cdpproxy/ -run TestTrafficRingBufferModel -count=1 passed
+tdd: TestTrafficDefaultCapAndNoAliasing — red not observed on today's code; mutation check (logMessage stores caller slice without copy, reverted): "Traffic aliases caller buffers: first {"Yethod":"E"}, last {"Yethod":"E"}" — green: go test ./internal/cdpproxy/ -run TestTrafficDefaultCapAndNoAliasing -count=1 passed
+tdd: TestConcurrentHooksAndRunFunc — red: (go test -race) testing.go:1712: race detected during execution of test — green: go test -race ./internal/plugin/ -run TestConcurrentHooksAndRunFunc -count=1 passed (no Makefile exists; the -race run is added to the CI test target .github/workflows/test.yml)
+tdd: TestPluginLoadTwiceSingleDispatch — red: plugin_bind_test.go:55: onLoad count after one navigation = 2, want 1 — green: go test ./actions/ -run TestPluginLoadTwiceSingleDispatch -count=1 passed
+verify: G10 — pass — Done-when green (internal/utils + -race plugin), go vet clean, no leaks; each bug fix reverted in a scratch copy turns its test red (IsHttp, cdpproxy drop, goja race, bind-twice)
+
+## G11
+
+checkpoint: go build -o rod-cli . && go vet ./... && TMPDIR=$(mktemp -d /tmp/rc.XXXX) go test ./... -count=1 — exit 0, all 13 test packages ok (actions 524.5s, tests 355.2s, daemon 105.6s); TMPDIR left only leakless-amd64-adb80298fa6a3af7ced8b1c9b5f18007 and rod-cli-daemon.log; rod-cli binary and TMPDIR removed
+verify: G11 — pass — independent rerun of go build + go vet + go test ./... -count=1 exited 0 (13 packages ok); TMPDIR held only leakless-* and rod-cli-daemon.log; no headless chrome/daemon left; binary and TMPDIR removed
+
+## F01
+
+verify: full suite (go build, go vet, TMPDIR=$T go test ./..., race internal/plugin, core/pi/omp vitest+bun+tsc) exit 0; $T held only leakless-amd64-adb80298fa6a3af7ced8b1c9b5f18007 and rod-cli-daemon.log
+verify: govulncheck@latest ./... — No vulnerabilities found.
+verify: F01 — pass — independent rerun: build, vet, TMPDIR=$T go test ./..., race plugin, core/pi/omp vitest+bun+tsc exit 0; $T held only leakless-* and rod-cli-daemon.log; govulncheck No vulnerabilities found; status clean
+
+## Summary
+
+coverage (go test ./... -count=1 -coverpkg=./...): start 82.2%, end 90.4% (total statements)

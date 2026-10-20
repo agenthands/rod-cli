@@ -290,32 +290,67 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_WrongFileName(t *testing.T) {
+// TestLoadConfigRejectsMissingAndMisnamedFiles pins types:T4: a missing path or
+// a file not named exactly ConfigName returns (nil, err), never (nil, nil),
+// which used to nil-deref under --headless.
+func TestLoadConfigRejectsMissingAndMisnamedFiles(t *testing.T) {
 	dir := chdirTemp(t)
 
-	// A file whose base name is NOT contained in ConfigName.
-	p := filepath.Join(dir, "totally-unrelated-name.yaml")
-	if err := os.WriteFile(p, []byte("mode: text\n"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
+	missing := filepath.Join(dir, "does-not-exist", ConfigName)
+	cfg, err := LoadConfig(missing)
+	if cfg != nil || err == nil || !strings.Contains(err.Error(), missing) {
+		t.Fatalf("missing %q: cfg=%v err=%v, want nil config and an error naming the path", missing, cfg, err)
 	}
 
-	// NOTE: the wrong-name branch wraps a nil error, so errors.Wrapf returns a
-	// nil error. The contract that matters here is that no config is returned.
-	cfg, _ := LoadConfig(p)
-	if cfg != nil {
-		t.Fatalf("expected nil config for wrong file name, got %+v", cfg)
+	for _, name := range []string{"other.yaml", "cli.yaml", "yaml"} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte("mode: text\n"), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		cfg, err := LoadConfig(p)
+		if cfg != nil || err == nil {
+			t.Errorf("file %q: cfg=%v err=%v, want nil config and an error", name, cfg, err)
+		}
 	}
 }
 
-func TestLoadConfig_NotFound(t *testing.T) {
+// TestLoadConfigPartialFileKeepsDefaults pins the partial-config decision: a
+// rod-cli.yaml that sets only some keys is decoded onto a deep copy of the
+// defaults, so every key it leaves out keeps its default value.
+func TestLoadConfigPartialFileKeepsDefaults(t *testing.T) {
 	dir := chdirTemp(t)
+	p := filepath.Join(dir, ConfigName)
+	if err := os.WriteFile(p, []byte("headless: true\nloggerConfig:\n  loggerLevel: debug\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
 
-	p := filepath.Join(dir, "does-not-exist", ConfigName)
-	// NOTE: the not-found branch also wraps a nil error, so the returned error
-	// is nil; the meaningful guarantee is that no config is returned.
-	cfg, _ := LoadConfig(p)
-	if cfg != nil {
-		t.Fatalf("expected nil config for missing path, got %+v", cfg)
+	cfg, err := LoadConfig(p)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if !cfg.Headless || cfg.LoggerConfig.LoggerLevel != "debug" {
+		t.Fatalf("keys the file sets were lost: headless=%v loggerLevel=%q", cfg.Headless, cfg.LoggerConfig.LoggerLevel)
+	}
+	if cfg.Mode != Text || cfg.LoggerConfig.LoggerPrefix != "RodCLI 🦅" || cfg.LoggerConfig.LoggerFileMaxSize != 50 {
+		t.Errorf("unset keys lost their defaults: mode=%q logger=%+v", cfg.Mode, cfg.LoggerConfig)
+	}
+	for name, p := range map[string]*bool{
+		"webrtcLeakProtection": cfg.Stealth.WebRTCLeakProtection, "canvasNoise": cfg.Stealth.CanvasNoise,
+		"fontSpoof": cfg.Stealth.FontSpoof, "mediaDevicesSpoof": cfg.Stealth.MediaDevicesSpoof,
+		"batterySpoof": cfg.Stealth.BatterySpoof, "codecSpoof": cfg.Stealth.CodecSpoof,
+	} {
+		if p == nil || !*p {
+			t.Errorf("stealth.%s = %v, want the default true", name, p)
+		}
+	}
+
+	// The defaults are a deep copy: writing through the result leaves them alone.
+	if cfg.Stealth.CanvasNoise != nil {
+		*cfg.Stealth.CanvasNoise = false
+		if !*DefaultConfig.Stealth.CanvasNoise {
+			*DefaultConfig.Stealth.CanvasNoise = true
+			t.Fatal("returned config shares the CanvasNoise pointer with DefaultConfig")
+		}
 	}
 }
 

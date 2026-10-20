@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, buildTabsArgs, waitForSelector, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -55,6 +55,8 @@ const FIXTURE_HTML = `<!DOCTYPE html>
   <p id="msg">Hello from fixture</p>
   <input id="name" type="text" placeholder="Enter name" />
   <button id="greet">Greet</button>
+  <select id="c"><option value="1">Item 1</option><option value="10">Item 10</option><option value="b">Banana</option></select>
+  <div id="pane" style="height:100px;overflow:auto"><div style="height:1000px">Pane content</div></div>
 </body></html>`;
 
 describe("integration workflow", () => {
@@ -140,6 +142,81 @@ describe("integration workflow", () => {
       await execRodCli(execFn, ["localstorage-set", "--", "testkey", "testval"], { signal: AbortSignal.timeout(10000) });
       const result = await execRodCli(execFn, ["localstorage-get", "--", "testkey"], { signal: AbortSignal.timeout(10000) });
       expect(result.stdout).toContain("testval");
+    });
+
+    // ext:EXT-6: each core builder's argv, run by the repo binary, leaves the expected DOM state.
+    // Humanized pointer moves (scroll, hover) can take several seconds.
+    describe("core builders against the binary", { timeout: 30_000 }, () => {
+      const run = (args: string[]) => execRodCli(execFn, args, { signal: AbortSignal.timeout(15000) });
+      const js = async (expression: string) => (await run(buildEvalArgs({ expression }))).stdout.trim();
+
+      beforeAll(async () => {
+        await run(buildGotoArgs({ url }));
+      });
+
+      it("fill sets the input value", async () => {
+        await run(buildFillFormArgs({ selector: "#name", text: "Ada Lovelace" }));
+        expect(await js("document.querySelector('#name').value")).toBe("Ada Lovelace");
+      });
+
+      it("select picks the option by its text", async () => {
+        await run(buildSelectArgs({ selector: "#c", values: ["Banana"] }));
+        expect(await js("document.querySelector('#c').value")).toBe("b");
+      });
+
+      it("scroll moves the inner pane, not the page", async () => {
+        await run(buildScrollArgs({ direction: "down", distance: 200, selector: "#pane" }));
+        expect(Number(await js("document.querySelector('#pane').scrollTop"))).toBeGreaterThan(0);
+        expect(await js("String(window.scrollY)")).toBe("0");
+      });
+
+      it("hover leaves the pointer over the element", async () => {
+        await run(buildHoverArgs({ selector: "#greet" }));
+        expect(await js("document.querySelector('#greet').matches(':hover')")).toBe("true");
+      });
+
+      it("press types the key into the focused input", async () => {
+        await js("(() => { const e = document.querySelector('#name'); e.value = ''; e.focus(); return 1; })()");
+        await run(buildPressArgs({ key: "x" }));
+        expect(await js("document.querySelector('#name').value")).toBe("x");
+      });
+
+      it("screenshot of a selector returns a PNG of just that element", async () => {
+        const [, image] = await captureScreenshot(execFn, { selector: "#msg" }, AbortSignal.timeout(15000));
+        const png = Buffer.from(image.data, "base64");
+        expect(png.subarray(1, 4).toString()).toBe("PNG");
+        // IHDR height: a one-line <p>, not the whole viewport.
+        expect(png.readUInt32BE(20)).toBeLessThan(100);
+      });
+
+      it("tabs new, select and close move between tabs", async () => {
+        const tabs = async () => (await run(buildTabsArgs({ action: "list" }))).stdout.trim().split("\n");
+        const indexOf = (lines: string[], text: string) => Number(lines.find((l) => l.includes(text))!.match(/\[(\d+)\]/)![1]);
+
+        await run(buildTabsArgs({ action: "new", url: `${url}/#t2` }));
+        expect(await js("location.hash")).toBe("#t2");
+        let lines = await tabs();
+        expect(lines).toHaveLength(2);
+
+        await run(buildTabsArgs({ action: "select", index: 1 - indexOf(lines, "#t2") }));
+        expect(await js("location.hash")).toBe("");
+
+        await run(buildTabsArgs({ action: "close", index: indexOf(lines, "#t2") }));
+        lines = await tabs();
+        expect(lines).toHaveLength(1);
+        expect(lines[0]).not.toContain("#t2");
+      });
+
+      // ext:EXT-7: waitForSelector reads the real eval output.
+      it("waitForSelector resolves for a present element", async () => {
+        await expect(waitForSelector(execFn, { selector: "#msg", timeoutMs: 5000 })).resolves.toBeUndefined();
+      });
+
+      it("waitForSelector times out on a missing element with the exact message", async () => {
+        await expect(waitForSelector(execFn, { selector: "#nope", timeoutMs: 1000 })).rejects.toThrow(
+          new Error("Timed out waiting 1000ms for selector: #nope"),
+        );
+      });
     });
   });
 

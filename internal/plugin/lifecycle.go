@@ -16,11 +16,24 @@ type LifecycleEmitter interface {
 	OnDOMNodeInserted(e *proto.DOMChildNodeInserted)
 }
 
-// BindLifecycle attaches CDP event listeners to the active page and forwards them to JS functions
+// BindLifecycle attaches CDP event listeners to the active page and forwards
+// them to JS functions. A page is bound at most once, so loading a second
+// plugin does not dispatch every event twice; the listeners stop when ctx is
+// done, after which the page may be bound again.
 func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, recordCdpDomain func(string)) {
+	e.mu.Lock()
 	if e.vm != nil {
 		e.vm.Set("api", NewPluginAPI(page))
 	}
+	if e.bound[page.TargetID] {
+		e.mu.Unlock()
+		return
+	}
+	if e.bound == nil {
+		e.bound = map[proto.TargetTargetID]bool{}
+	}
+	e.bound[page.TargetID] = true
+	e.mu.Unlock()
 
 	// Enable the CDP DOM domain and fetch the full document tree so the backend
 	// emits DOMChildNodeInserted events to the onDOMNodeInserted hook. Without an
@@ -34,7 +47,7 @@ func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, record
 	}
 	_, _ = proto.DOMGetDocument{Depth: &fullDepth}.Call(page)
 
-	go page.EachEvent(func(ev *proto.NetworkRequestWillBeSent) {
+	wait := page.Context(ctx).EachEvent(func(ev *proto.NetworkRequestWillBeSent) {
 		e.invokeJSFunc("onRequest", ev)
 	}, func(ev *proto.NetworkResponseReceived) {
 		e.invokeJSFunc("onResponse", ev)
@@ -44,10 +57,18 @@ func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, record
 		e.invokeJSFunc("onLoad", ev)
 	}, func(ev *proto.DOMChildNodeInserted) {
 		e.invokeJSFunc("onDOMNodeInserted", ev)
-	})()
+	})
+	go func() {
+		wait()
+		e.mu.Lock()
+		delete(e.bound, page.TargetID)
+		e.mu.Unlock()
+	}()
 }
 
 func (e *PluginEngine) invokeJSFunc(funcName string, arg interface{}) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.vm == nil {
 		return
 	}

@@ -12,7 +12,7 @@ version: v1.7
 
 1. **Daemon Architecture**: `rod-cli` runs as a persistent background daemon that holds state.
    - The first command boots a persistent browser in the background.
-   - **Idle timeout**: the daemon outlives the command that started it and exits after 15 minutes without a command.
+   - **Idle timeout**: the daemon outlives the command that started it and exits after 15 minutes without a command (`sessions` only pings it, which does not count).
    - **Always** run `rod-cli close` when finished to clean up resources.
    - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` on Linux (the user cache dir: on disk, never `/tmp` or the working directory; `browserTempDir` in `./rod-cli.yaml` overrides the location). Chrome's lock dir and temp files go to a per-session `chrome-*` dir in the system temp dir. `close`, the idle timeout and SIGINT/SIGTERM/SIGHUP remove both. A daemon killed with `kill -9` or crashed leaves them; the next session that launches Chrome removes them (default location only). Every session file and its cleanup: [references/session-management.md](references/session-management.md#session-files).
 
@@ -33,14 +33,14 @@ version: v1.7
 
 ## Commands
 
-**Flag placement**: Command-specific flags must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). This applies to every command-local flag in this skill: `fill --submit`, `drop --path`, `route --body`, `screenshot --name`/`--selector`/`--out`/`--full-page`, `pdf --name`/`--out`, `console --clear`, `requests --clear`, `mousewheel --end`/`--max`, `snapshot -i`, `dialog-accept --prompt`, `show --annotate`. A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
+**Flag placement**: Command-specific flags must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). This applies to every command-local flag in this skill: `fill --submit`, `drop --path`, `route --body`, `screenshot --name`/`--selector`/`--out`/`--full-page`, `pdf --name`/`--out`, `console --clear`, `requests --clear`, `mousewheel --end`/`--max`, `snapshot -i`, `dialog-accept --prompt`, `show --annotate`. A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere; a value flag such as `--session` left at the very end with no value is an error.
 
 ### Global Options
 - `--max-output N`: Cap any command's output at N bytes (0 = unlimited, the default). Use it to bound token cost on big pages, e.g. `rod-cli --max-output 4000 snapshot`.
 - `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
 - `--raw`: Only changes output for `install` (suppresses the "Downloading…" progress line), `stealth-check` (single-line PASS/FAIL instead of a table) and `--profile=list` (names only). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — omit it there.
 - The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
-- `-s, --session`: Specify a named session string.
+- `-s, --session`: Specify a named session string. Session names use letters, digits, `.`, `_` or `-` (1 to 64 characters, not `.` or `..`); any other name fails with `invalid session name`.
 
 Session-spawn flags take effect only when a session's daemon spawns (its first command). To change them, run `rod-cli close` first, then pass them on the next command:
 - `--headless`: enable headless.
@@ -50,7 +50,7 @@ Session-spawn flags take effect only when a session's daemon spawns (its first c
 - `--user-agent`: pin navigator.userAgent / HTTP UA for this session (the fingerprint derivation anchor).
 - `--locale`: pin the BCP-47 locale (e.g. en-US); derived from languages when unset.
 - `--timezone`: pin the IANA timezone (e.g. America/New_York).
-- `--platform`: pin navigator.platform (e.g. Win32, MacIntel, Linux); derived from the UA OS token when unset.
+- `--platform`: pin navigator.platform (e.g. Win32, MacIntel, Linux); derived from the UA OS token when unset, so `--user-agent` also replaces a `--profile`'s platform.
 - `--cdp-endpoint`: control browser by cdp.
 - `--console-capture`: Capture browser console messages for the console command (default off; enables Runtime CDP domain).
 - `--request-capture`: Capture network requests for the requests/`request` commands (default off; enables Network CDP domain).
@@ -88,7 +88,7 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli drop --path [file-path] [selector]`: Drop a file onto an element.
 
 ### Advanced Input & Dialogs
-- `rod-cli press [key]`: Simulate a raw keyboard key press (e.g., `Enter`, `Tab`, `Escape`).
+- `rod-cli press [key]`: Simulate a raw keyboard key press. Key names: `Enter`, `Tab`, `Backspace`, `Escape`, `Space`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Shift`, `Control`, `Alt`, `Meta`, `CapsLock`, `ContextMenu`, `F1`–`F12`, or one US-keyboard character (`a`, `A`, `1`, `/`). Any other key (such as `é`) fails with `unknown key`.
 - `rod-cli mousemove [x] [y]`: Move the mouse to absolute coordinates.
 - `rod-cli mousedown [left|right|middle]`: Trigger mouse down.
 - `rod-cli mouseup [left|right|middle]`: Trigger mouse up.
@@ -97,7 +97,7 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
 
 ### Storage & State Controls
-- `rod-cli state-save [path]`: Save the browser's cookies to a JSON file (path required).
+- `rod-cli state-save [path]`: Save the browser's cookies to a JSON file (path required). The file is written owner-only (0600) because it holds session cookies.
 - `rod-cli state-load [path]`: Load cookies saved by `state-save` into the session (path required).
 - `rod-cli cookie-get [name]`: Read all browser cookies, or only the cookie with that exact name (errors if none matches).
 - `rod-cli cookie-set [name] [value]`: Set a cookie.

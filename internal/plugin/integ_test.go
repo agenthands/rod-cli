@@ -68,7 +68,7 @@ func TestBindLifecycle_SetsAPIOnVM(t *testing.T) {
 	engine.BindLifecycle(context.Background(), page, nil)
 
 	// Verify that the 'api' global is set in the VM
-	val := engine.vm.Get("api")
+	val := vmGet(engine, "api")
 	if val == nil {
 		t.Fatal("expected 'api' global to be set in VM after BindLifecycle")
 	}
@@ -103,7 +103,7 @@ func TestBindLifecycle_ForwardsOnLoad(t *testing.T) {
 	_ = page.Timeout(5 * time.Second).WaitLoad()
 	time.Sleep(500 * time.Millisecond)
 
-	val := engine.vm.Get("loadCalled")
+	val := vmGet(engine, "loadCalled")
 	if val == nil {
 		t.Fatal("expected loadCalled variable")
 	}

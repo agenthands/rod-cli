@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import fc from "fast-check";
+import { builderCall, modelString, SCREENSHOT_OUT } from "./builder-arbs";
 import {
   withSession,
   buildGotoArgs,
@@ -115,7 +117,13 @@ describe("buildScreenshotArgs", () => {
 
   it("builds screenshot argv with --selector", () => {
     expect(buildScreenshotArgs({ selector: "#chart" })).toEqual([
-      "screenshot", "--selector", "#chart",
+      "screenshot", "--selector=#chart",
+    ]);
+  });
+
+  it("keeps a flag-like selector inside its own --selector= token", () => {
+    expect(buildScreenshotArgs({ selector: "--out", out: "/tmp/x.png", session: "admin" })).toEqual([
+      "-s", "admin", "screenshot", "--selector=--out", "--out", "/tmp/x.png",
     ]);
   });
 
@@ -387,5 +395,34 @@ describe("press/select/hover builders", () => {
   it("buildHoverArgs puts the selector after --", () => {
     expect(buildHoverArgs({ selector: "s1e9" })).toEqual(["hover", "--", "s1e9"]);
     expect(buildHoverArgs({ selector: "s1e9", session: "a" })).toEqual(["-s", "a", "hover", "--", "s1e9"]);
+  });
+});
+
+// gap-plan ext:EXT-1: a model value must never become a flag or command of its own.
+describe("argv builders (property)", () => {
+  const LITERALS = new Set([
+    "goto", "snapshot", "-i", "click", "dblclick", "type", "eval",
+    "screenshot", "--full-page", "--out", SCREENSHOT_OUT, "mousewheel",
+    "tab-list", "tab-new", "tab-close", "tab-select", "reload", "go-back", "go-forward",
+    "cookie-get", "cookie-set", "cookie-delete", "cookie-clear",
+    ...["localstorage", "sessionstorage"].flatMap((p) => ["get", "set", "delete", "clear"].map((a) => `${p}-${a}`)),
+    "fill", "--submit", "press", "select", "hover",
+  ]);
+  const OWN_FLAG = /^--selector=/; // screenshot's only model-valued flag
+
+  it("every token before the first -- is a builder literal or a single --<own-flag>=<v>", () => {
+    fc.assert(
+      fc.property(builderCall(fc.option(modelString, { nil: undefined })), ({ model, argv }) => {
+        let tokens = argv;
+        if (model.session) {
+          expect(tokens.slice(0, 2)).toEqual(["-s", model.session]);
+          tokens = tokens.slice(2);
+        }
+        const end = tokens.indexOf("--");
+        for (const tok of end < 0 ? tokens : tokens.slice(0, end)) {
+          expect(LITERALS.has(tok) || OWN_FLAG.test(tok), `stray token ${JSON.stringify(tok)}`).toBe(true);
+        }
+      }),
+    );
   });
 });

@@ -44,6 +44,7 @@ func buildProfileTestBin(t *testing.T) string {
 	if testing.Short() {
 		t.Skip("skipping browser/spawn test in short mode")
 	}
+	privateTmp(t)
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	bin := filepath.Join(t.TempDir(), "rod-cli")
 	if out, err := exec.Command("go", "build", "-o", bin, "github.com/agenthands/rod-cli").CombinedOutput(); err != nil {
@@ -138,4 +139,30 @@ func TestDaemonKillProfileSweptOnNextStart(t *testing.T) {
 	assertGone(t, dirs[0], "the next start's sweep")
 	assertGone(t, portFilePath(killed), "the next start's sweep")
 	assertGone(t, tmp, "the next start's sweep")
+}
+
+func TestCloseCleansUpBeforeReply(t *testing.T) {
+	bin := buildProfileTestBin(t)
+	session, pid, root := spawnProfileDaemon(t, bin, "close")
+	dirs := profileDirs(t, root)
+	if len(dirs) != 1 {
+		t.Fatalf("want 1 profile dir under %s, got %v", root, dirs)
+	}
+	tmp := chromeTmp(t, dirs[0])
+
+	if res, err := ClientExecute(session, Request{Command: "close"}); err != nil || res != "closing" {
+		t.Fatalf("close: res=%q err=%v, want closing", res, err)
+	}
+	assertGone(t, portFilePath(session), "the close reply")
+	assertGone(t, dirs[0], "the close reply")
+	assertGone(t, tmp, "the close reply")
+	for i := 0; i < 50 && syscall.Kill(pid, 0) == nil; i++ {
+		time.Sleep(100 * time.Millisecond)
+	}
+	if syscall.Kill(pid, 0) == nil {
+		t.Fatalf("daemon %d still alive 5s after close", pid)
+	}
+	if _, err := ClientExecute(session, Request{Command: "ping"}); err == nil || !strings.Contains(err.Error(), "not running") {
+		t.Fatalf("ping after close: err = %v, want not running", err)
+	}
 }

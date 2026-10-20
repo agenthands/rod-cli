@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { execRodCli, type ExecFn } from "../exec";
+import { withSession } from "../argv";
 
 function mockExecFn(result?: Partial<{ code: number; stdout: string; stderr: string }>): ExecFn {
   return vi.fn().mockResolvedValue({
@@ -87,5 +88,21 @@ describe("execRodCli — integration behavior", () => {
     await expect(execRodCli(fn, ["goto"])).rejects.toThrow();
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(1000);
+  });
+});
+
+describe("execRodCli — session name charset (EXT-12)", () => {
+  it("rejects a path-escaping session before exec", async () => {
+    const fn = mockExecFn();
+    await expect(execRodCli(fn, withSession("/../../tmp/evil", ["close"]))).rejects.toThrow(
+      new Error(`invalid session name "/../../tmp/evil": use letters, digits, '.', '_' or '-' (max 64)`),
+    );
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("passes a plain session name through to exec", async () => {
+    const fn = mockExecFn();
+    await execRodCli(fn, withSession("admin", ["close"]));
+    expect(fn).toHaveBeenCalledWith(["--raw", "--max-output", "51200", "-s", "admin", "close"], expect.anything());
   });
 });

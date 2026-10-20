@@ -152,7 +152,10 @@ func captureStderr(t *testing.T, fn func()) string {
 // applies, regardless of where callers place global flags.
 func runApp(args ...string) error {
 	app := getApp()
-	full := reorderGlobalFlags(app, append([]string{"rod-cli"}, args...))
+	full, err := reorderGlobalFlags(app, append([]string{"rod-cli"}, args...))
+	if err != nil {
+		return err
+	}
 	return app.Run(full)
 }
 
@@ -409,8 +412,8 @@ func TestReorderGlobalFlags(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := reorderGlobalFlags(app, tc.in)
-			if strings.Join(got, " ") != strings.Join(tc.want, " ") {
+			got, err := reorderGlobalFlags(app, tc.in)
+			if err != nil || strings.Join(got, " ") != strings.Join(tc.want, " ") {
 				t.Errorf("reorderGlobalFlags(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})
@@ -901,5 +904,26 @@ func TestRunClientCommandMaxOutput(t *testing.T) {
 	})
 	if !strings.HasPrefix(out, "fake\n[truncated: 4 of 11 bytes;") {
 		t.Fatalf("expected capped output, got %q", out)
+	}
+}
+
+// TestSessionNameRejectedBeforeFileOps: a session name that could escape TMPDIR
+// (or is otherwise outside the charset) is refused before any port-file, lock
+// or spawn work, so the error is the validation error, not a daemon failure.
+func TestSessionNameRejectedBeforeFileOps(t *testing.T) {
+	clearPortFiles(t)
+	oldArg0 := os.Args[0]
+	os.Args[0] = filepath.Join(os.TempDir(), "rod-cli-definitely-missing-binary-xyz")
+	defer func() { os.Args[0] = oldArg0 }()
+
+	for _, s := range []string{"x/../../../etc/foo", ".", "..", "", "a b", strings.Repeat("a", 65)} {
+		err := runApp("--session", s, "snapshot")
+		want := fmt.Sprintf("invalid session name %q: use letters, digits, '.', '_' or '-' (max 64)", s)
+		if err == nil || err.Error() != want {
+			t.Errorf("session %q: err = %v, want %q", s, err, want)
+		}
+	}
+	if entries, _ := os.ReadDir(os.TempDir()); len(entries) != 0 {
+		t.Errorf("TMPDIR not empty after rejected sessions: %v", entries)
 	}
 }

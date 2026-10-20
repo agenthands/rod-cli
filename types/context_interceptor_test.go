@@ -13,9 +13,7 @@ func TestContextInterceptorRules(t *testing.T) {
 	ctx.interceptor = network.NewInterceptor(nil)
 	
 	// Set mock routes
-	ctx.routes = map[string]string{
-		"**/*.png": "mocked png",
-	}
+	ctx.routes = []Route{{"**/*.png", "mocked png"}}
 
 	// Generate a dummy fingerprint
 	fg := rodfingerprint.NewFingerprintGenerator(rodfingerprint.FPWithBrowserNames("chrome"))

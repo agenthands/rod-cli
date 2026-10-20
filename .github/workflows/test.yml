@@ -41,5 +41,10 @@ jobs:
       - name: Run tests (headless)
         run: go test ./... -count=1
 
+      # Plugin hooks and RunFunc share one goja VM across goroutines; keep the
+      # race detector on this package so an unguarded VM use fails CI.
+      - name: Run plugin tests (race)
+        run: go test -race ./internal/plugin/... -count=1
+
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

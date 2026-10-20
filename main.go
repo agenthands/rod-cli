@@ -34,6 +34,31 @@ func runDaemonServer(c *cli.Context) error {
 	// profile load fails the daemon loudly rather than shipping a half-resolved
 	// identity. Credentials are never logged here (they would otherwise reach the
 	// daemon log file).
+	stealthFlags := stealthFlagsFrom(c)
+	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
+		return err
+	}
+
+	types.InitLogger(cfg.LoggerConfig)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rodCtx := types.NewContext(ctx, *cfg)
+	defer rodCtx.Close()
+
+	session := c.String("session")
+
+	log.Infof("Starting daemon for session %s", session)
+	if err := daemon.StartServer(session, rodCtx); err != nil {
+		log.Errorf("Daemon error: %s", err)
+		return err
+	}
+	return nil
+}
+
+// stealthFlagsFrom captures the stealth flags forwarded on the daemon argv
+// (plus the env-passed proxy credential) as types.StealthFlags.
+func stealthFlagsFrom(c *cli.Context) types.StealthFlags {
 	stealthFlags := types.StealthFlags{
 		Proxy: c.String("proxy"),
 		// proxy-auth is passed out-of-band via the environment (never the daemon
@@ -144,39 +169,18 @@ func runDaemonServer(c *cli.Context) error {
 		v := c.Bool("scroll-physics")
 		stealthFlags.ScrollPhysics = &v
 	}
-	if err := types.ResolveStealth(cfg, &stealthFlags); err != nil {
-		return err
-	}
-
-	types.InitLogger(cfg.LoggerConfig)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	rodCtx := types.NewContext(ctx, *cfg)
-	defer rodCtx.Close()
-
-	session := c.String("session")
-
-	log.Infof("Starting daemon for session %s", session)
-	if err := daemon.StartServer(session, rodCtx); err != nil {
-		log.Errorf("Daemon error: %s", err)
-		return err
-	}
-	return nil
+	return stealthFlags
 }
 
 func main() {
 	app := getApp()
-	args := reorderGlobalFlags(app, os.Args)
-	if err := app.Run(args); err != nil {
-		isJson := false
-		for _, arg := range os.Args {
-			if arg == "--json" {
-				isJson = true
-				break
-			}
-		}
-		if isJson {
+	args, err := reorderGlobalFlags(app, os.Args)
+	if err == nil {
+		err = app.Run(args)
+	}
+	if err != nil {
+		// Before records the parsed --json; an error before parsing stays plain.
+		if isJSON, _ := app.Metadata["json"].(bool); isJSON {
 			// Extract just the underlying error message if it's wrapped by cli.Exit
 			msg := err.Error()
 			out, _ := json.Marshal(map[string]string{"error": msg})
