@@ -156,3 +156,26 @@ func TestStartServerSweepsOnlyDeadPortFiles(t *testing.T) {
 		t.Fatalf("server's port file mode = %v, want 0600", fi.Mode().Perm())
 	}
 }
+
+func TestListSessionsSkipsHungListener(t *testing.T) {
+	privateTmp(t)
+	hung, err := net.Listen("tcp", "127.0.0.1:0") // never accepts
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hung.Close()
+	writePortFile(t, "hung", strings.TrimPrefix(hung.Addr().String(), "127.0.0.1:"))
+
+	done := make(chan []string, 1)
+	go func() { s, _ := ListSessions(); done <- s }()
+	select {
+	case s := <-done:
+		for _, name := range s {
+			if name == "hung" {
+				t.Fatalf("hung session listed: %v", s)
+			}
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("ListSessions still blocked after 5s on a listener that never accepts")
+	}
+}

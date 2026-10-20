@@ -36,6 +36,9 @@ var execAcquireTimeout = 60 * time.Second
 // daemon to answer ping before killing it. A var so tests can shrink it.
 var daemonStartTimeout = 30 * time.Second
 
+// pingTimeout bounds a ping round-trip. A var so tests can shrink it.
+var pingTimeout = 2 * time.Second
+
 // exitDaemon terminates the daemon process. If the binary was built with
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
 // accumulated coverage counters first, since os.Exit otherwise skips the
@@ -85,8 +88,14 @@ func ClientExecute(session string, req Request) (string, error) {
 		return "", err
 	}
 
+	// Only ping is bounded: a hung daemon must not hang `sessions` or the
+	// readiness poll, while real commands legitimately run for up to ~105s.
+	client := http.DefaultClient
+	if req.Command == "ping" {
+		client = &http.Client{Timeout: pingTimeout}
+	}
 	body, _ := json.Marshal(req)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/execute", port), "application/json", bytes.NewReader(body))
+	resp, err := client.Post(fmt.Sprintf("http://127.0.0.1:%d/execute", port), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
