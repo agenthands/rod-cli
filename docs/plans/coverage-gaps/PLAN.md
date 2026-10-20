@@ -99,7 +99,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 **Done when:** `go test ./types/ -count=1` passes.
 
-### G05 [~] Snapshot and routes
+### G05 [x] Snapshot and routes
 **Rows:** types:T6 (property), types:T7, types:T8 and types:route-order (insertion order; the newest route wins), plus the pruneInteractive decision.
 **Done when:** `go test ./types/ ./actions/ -run 'Snapshot|Prune|Route' -count=1` passes.
 
