@@ -69,3 +69,7 @@ tdd: TestOutPathResolvedAgainstClientCwd (root:root-6; passes on today's code) �
 tdd: TestEvalJSONOutputShape (root:root-7 / root:eval-json-shape; pins today's shape, passes on today's code) — red (mutation treating only objects as JSON values): cli_g08_test.go:330: result [1,2] []: got "{\"result\":\"[1,2]\"}\n", <nil>; want "[1,2]\n" (with --max-output 3 the array was also cut) — green: go test . -run TestEvalJSONOutputShape -count=1 passed
 done-check: go vet ./... ok; TMPDIR=$X go test ./ -count=1 → ok github.com/agenthands/rod-cli 1.281s (TMPDIR left only leakless-*)
 verify: G08 — pass — go vet ok, go test ./ ok (TMPDIR left only leakless-*); rows root-2..7 at their seams; root-3/root-5 tests red when the fixes are reverted in a scratch copy; docs updated for trailing value flag
+
+## G09
+
+tdd: TestFlagForwardingRoundTrip — red (mutation: scroll-physics forwarding disabled in cmd.go, reverted): seed 1086706180945155239: all flags unset but --scroll-physics=true → "--scroll-physics: daemon IsSet=false, client set=true" — green: go test ./ -run TestFlagForwardingRoundTrip -count=1 passed
