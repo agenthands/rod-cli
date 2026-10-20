@@ -123,3 +123,4 @@ tdd: godoll TestREPLSIGTERMClosesBrowser — red: Should be empty, but was [/tmp
 tdd: TestLaunchBrowser_FallsBackToDownloadedChromium — red: errpaths_test.go:320: expected the downloaded Chromium /tmp/TestLaunchBrowser_FallsBackToDownloadedChromium2576278333/001/downloaded-chrome to be launched, got: the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path. — green: go test ./types/ -run TestLaunchBrowser_ -count=1 passed
 tdd: TestLaunchBrowser_PrefersSystemChrome — red not observed (guard: system Chrome stays first)
 tdd: TestLaunchBrowser_NoChrome (now also stubs the downloaded path) — red not observed (guard: existing error text when neither exists)
+tdd: godoll TestSnapshotCommand_ListsPageElements — red: "Page snapshot captured. Available elements:\n" does not contain ": button \"Submit\"" — green: go test -run 'TestSnapshotCommand_ListsPageElements$' ./commands (in cmd/godoll module) passed
