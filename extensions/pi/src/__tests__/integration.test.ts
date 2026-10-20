@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, buildTabsArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -187,6 +187,24 @@ describe("integration workflow", () => {
         expect(png.subarray(1, 4).toString()).toBe("PNG");
         // IHDR height: a one-line <p>, not the whole viewport.
         expect(png.readUInt32BE(20)).toBeLessThan(100);
+      });
+
+      it("tabs new, select and close move between tabs", async () => {
+        const tabs = async () => (await run(buildTabsArgs({ action: "list" }))).stdout.trim().split("\n");
+        const indexOf = (lines: string[], text: string) => Number(lines.find((l) => l.includes(text))!.match(/\[(\d+)\]/)![1]);
+
+        await run(buildTabsArgs({ action: "new", url: `${url}/#t2` }));
+        expect(await js("location.hash")).toBe("#t2");
+        let lines = await tabs();
+        expect(lines).toHaveLength(2);
+
+        await run(buildTabsArgs({ action: "select", index: 1 - indexOf(lines, "#t2") }));
+        expect(await js("location.hash")).toBe("");
+
+        await run(buildTabsArgs({ action: "close", index: indexOf(lines, "#t2") }));
+        lines = await tabs();
+        expect(lines).toHaveLength(1);
+        expect(lines[0]).not.toContain("#t2");
       });
     });
   });
