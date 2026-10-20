@@ -125,7 +125,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 **Done when:** `go test ./actions/ -run 'Select|Evaluate|State|TabNew|Fill' -count=1` passes.
 
-### G08 [ ] CLI parsing and output
+### G08 [~] CLI parsing and output
 **Rows:** root:root-2 (property), root:root-3 / root:trailing-flag, root:root-5 / root:json-detect, root:root-4, root:root-6, root:root-7 / root:eval-json-shape (pin today's shape).
 **Done when:** `go test ./ -count=1` passes.
 
