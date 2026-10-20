@@ -124,3 +124,4 @@ tdd: TestLaunchBrowser_FallsBackToDownloadedChromium — red: errpaths_test.go:3
 tdd: TestLaunchBrowser_PrefersSystemChrome — red not observed (guard: system Chrome stays first)
 tdd: TestLaunchBrowser_NoChrome (now also stubs the downloaded path) — red not observed (guard: existing error text when neither exists)
 tdd: godoll TestSnapshotCommand_ListsPageElements — red: "Page snapshot captured. Available elements:\n" does not contain ": button \"Submit\"" — green: go test -run 'TestSnapshotCommand_ListsPageElements$' ./commands (in cmd/godoll module) passed
+change: R6a ppid watcher, StartServer ppid param and hidden --ppid flags removed (nothing passed --ppid; each client exits after its command); TestStartServerWithPpid -> TestStartServerAnswersPing; no user docs claimed it — go build ./... && go vet ./daemon/ . && go test ./daemon/ -count=1 — ok

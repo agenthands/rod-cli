@@ -135,14 +135,12 @@ func TestClientExecuteSuccessResponse(t *testing.T) {
 	}
 }
 
-func TestStartServerWithPpid(t *testing.T) {
-	// Exercise StartServer's TCP listen, port-file write, /execute handler and
-	// the ppid>0 watcher goroutine branch, without a browser (ping only) and
-	// without triggering any os.Exit path. We use a live ppid so the watcher
-	// loop keeps running harmlessly.
-	session := uniqueSession("ppid")
+func TestStartServerAnswersPing(t *testing.T) {
+	// Exercise StartServer's TCP listen, port-file write and /execute handler
+	// without a browser (ping only) and without triggering any os.Exit path.
+	session := uniqueSession("ping")
 	ctx := types.NewContext(context.Background(), types.Config{})
-	go func() { _ = StartServer(session, os.Getpid(), ctx) }()
+	go func() { _ = StartServer(session, ctx) }()
 
 	pf := portFilePath(session)
 	ready := false
@@ -157,10 +155,8 @@ func TestStartServerWithPpid(t *testing.T) {
 	}
 	if !ready {
 		os.Remove(pf)
-		t.Fatal("server with ppid did not become ready")
+		t.Fatal("server did not become ready")
 	}
-	// Let the ppid watcher goroutine run at least one iteration.
-	time.Sleep(100 * time.Millisecond)
 	os.Remove(pf)
 }
 
@@ -354,8 +350,8 @@ func startInProcessDaemon(t *testing.T) (string, *types.Context, func()) {
 
 	session := uniqueSession("inproc")
 	go func() {
-		// ppid 0 means no parent-watch goroutine; StartServer blocks on Serve.
-		_ = StartServer(session, 0, ctx)
+		// StartServer blocks on Serve.
+		_ = StartServer(session, ctx)
 	}()
 
 	// Poll for the port file / responsive ping.

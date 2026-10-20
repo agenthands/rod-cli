@@ -156,10 +156,9 @@ func runDaemonServer(c *cli.Context) error {
 	defer rodCtx.Close()
 
 	session := c.String("session")
-	ppid := c.Int("ppid")
 
-	log.Infof("Starting daemon for session %s (ppid: %d)", session, ppid)
-	if err := daemon.StartServer(session, ppid, rodCtx); err != nil {
+	log.Infof("Starting daemon for session %s", session)
+	if err := daemon.StartServer(session, rodCtx); err != nil {
 		log.Errorf("Daemon error: %s", err)
 		return err
 	}

@@ -203,7 +203,7 @@ func removeDeadPortFiles() {
 	}
 }
 
-func StartServer(session string, ppid int, rodCtx *types.Context) error {
+func StartServer(session string, rodCtx *types.Context) error {
 	removeDeadPortFiles()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -326,22 +326,6 @@ func StartServer(session string, ppid int, rodCtx *types.Context) error {
 		cleanup()
 		exitDaemon(0)
 	}()
-
-	if ppid > 0 {
-		go func() {
-			for {
-				time.Sleep(2 * time.Second)
-				process, err := os.FindProcess(ppid)
-				if err == nil {
-					err = process.Signal(syscall.Signal(0))
-				}
-				if err != nil {
-					cleanup()
-					exitDaemon(0)
-				}
-			}
-		}()
-	}
 
 	return http.Serve(listener, mux)
 }

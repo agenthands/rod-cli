@@ -367,7 +367,6 @@ func getApp() *cli.App {
 			// ponytail: --scroll-physics is accepted for config compatibility but ignored;
 			// mousewheel sends real wheel notches. Remove the flag in a breaking release.
 			&cli.BoolFlag{Name: "scroll-physics", Usage: "ignored: wheel scrolling uses real wheel notches"},
-			&cli.IntFlag{Name: "ppid", Hidden: true, Usage: "parent process ID for daemon mode"},
 		},
 		Commands: []*cli.Command{
 			{
@@ -390,9 +389,6 @@ func getApp() *cli.App {
 			{
 				Name:   "daemon",
 				Hidden: true,
-				Flags: []cli.Flag{
-					&cli.IntFlag{Name: "ppid"},
-				},
 				Action: func(c *cli.Context) error {
 					return runDaemonServer(c)
 				},
