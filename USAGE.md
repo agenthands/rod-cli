@@ -53,7 +53,7 @@ rod-cli snapshot
 
 ## Browser Sessions
 
-Each session runs its own background daemon that keeps its browser alive between commands. To handle multiple isolated browsers (e.g., simulating two different users chatting), use named sessions via `-s` (default: `default`):
+Each session runs its own background daemon that keeps its browser alive between commands. To handle multiple isolated browsers (e.g., simulating two different users chatting), use named sessions via `-s` (default: `default`). Session names use letters, digits, `.`, `_` or `-` (1 to 64 characters, not `.` or `..`); any other name fails with `invalid session name`:
 
 ```bash
 rod-cli -s=admin goto https://example.com/admin

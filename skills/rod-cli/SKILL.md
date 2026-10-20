@@ -40,7 +40,7 @@ version: v1.7
 - `--json`: Wraps any command's result in structured JSON (`{"result": "…"}`, or passed through verbatim when the daemon already returns structured JSON, e.g. `stealth-check`). Useful when a caller needs to parse output programmatically.
 - `--raw`: Only changes output for `install` (suppresses the "Downloading…" progress line), `stealth-check` (single-line PASS/FAIL instead of a table) and `--profile=list` (names only). For every other command (`goto`, `snapshot`, `eval`, `close`, `sessions`, …) it is a no-op, byte-identical to omitting the flag — omit it there.
 - The startup banner is off by default (bare `rod-cli` only); pass `--banner`/`-b` to show it.
-- `-s, --session`: Specify a named session string.
+- `-s, --session`: Specify a named session string. Session names use letters, digits, `.`, `_` or `-` (1 to 64 characters, not `.` or `..`); any other name fails with `invalid session name`.
 
 Session-spawn flags take effect only when a session's daemon spawns (its first command). To change them, run `rod-cli close` first, then pass them on the next command:
 - `--headless`: enable headless.

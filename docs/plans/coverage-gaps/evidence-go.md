@@ -2,3 +2,4 @@
 
 ## G01
 tdd: TestListSessionsPrunesDead (daemon test hygiene, privateTmp in every port-file/lock/daemon test) — red: with TMPDIR=$X holding rod-cli-devsession.port, `go test ./daemon/ -run TestListSessionsPrunesDead$` deleted it ("RED: dev port file rod-cli-devsession.port deleted by TestListSessionsPrunesDead") — green: same run left it in place ("GREEN: dev port file survived"); `TMPDIR=$X go test ./daemon/ -count=1` passed and left only leakless-* and the planted port file
+tdd: TestSessionNameRejectedBeforeFileOps — red: cmd_test.go:920: session "x/../../../etc/foo": err = failed to ensure daemon: open /tmp/etc/foo.port.lock: no such file or directory, want "invalid session name \"x/../../../etc/foo\": use letters, digits, '.', '_' or '-' (max 64)" — green: go test . -run TestSessionNameRejectedBeforeFileOps$ -count=1 passed

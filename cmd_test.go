@@ -903,3 +903,24 @@ func TestRunClientCommandMaxOutput(t *testing.T) {
 		t.Fatalf("expected capped output, got %q", out)
 	}
 }
+
+// TestSessionNameRejectedBeforeFileOps: a session name that could escape TMPDIR
+// (or is otherwise outside the charset) is refused before any port-file, lock
+// or spawn work, so the error is the validation error, not a daemon failure.
+func TestSessionNameRejectedBeforeFileOps(t *testing.T) {
+	clearPortFiles(t)
+	oldArg0 := os.Args[0]
+	os.Args[0] = filepath.Join(os.TempDir(), "rod-cli-definitely-missing-binary-xyz")
+	defer func() { os.Args[0] = oldArg0 }()
+
+	for _, s := range []string{"x/../../../etc/foo", ".", "..", "", "a b", strings.Repeat("a", 65)} {
+		err := runApp("--session", s, "snapshot")
+		want := fmt.Sprintf("invalid session name %q: use letters, digits, '.', '_' or '-' (max 64)", s)
+		if err == nil || err.Error() != want {
+			t.Errorf("session %q: err = %v, want %q", s, err, want)
+		}
+	}
+	if entries, _ := os.ReadDir(os.TempDir()); len(entries) != 0 {
+		t.Errorf("TMPDIR not empty after rejected sessions: %v", entries)
+	}
+}

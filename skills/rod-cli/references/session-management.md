@@ -7,7 +7,7 @@ Running `rod-cli open https://example.com` automatically spawns the default back
 
 ## Multiplexing Named Sessions
 
-For workflows that need isolated browsers (like testing a chat application with two users at once), use the `--session` or `-s` flag. Each session has its own daemon, Chrome and profile directory.
+For workflows that need isolated browsers (like testing a chat application with two users at once), use the `--session` or `-s` flag. Each session has its own daemon, Chrome and profile directory. Session names use letters, digits, `.`, `_` or `-` (1 to 64 characters, not `.` or `..`); any other name fails with `invalid session name`.
 
 ```bash
 # Start an admin session

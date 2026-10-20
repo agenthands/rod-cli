@@ -35,7 +35,7 @@ task involving web browsing, scraping, form interaction, or page evaluation.
 - rod-cli runs as a background daemon — the first command starts it.
 - Always run `rod-cli close` when done to clean up.
 - For multi-tab work, use `rod-cli tab-new <url>` (it prints the new tab's ID) and `rod-cli tab-select <id>`; prefer the ID over the index, because indexes shift.
-- For separate browsers (e.g. two logged-in users), use `--session <name>`.
+- For separate browsers (e.g. two logged-in users), use `--session <name>`. Session names use letters, digits, `.`, `_` or `-` (1 to 64 characters, not `.` or `..`); any other name fails with `invalid session name`.
 - rod-cli is NOT an MCP server — do not attempt MCP registration. Use it as a CLI.
 EOF
 ```

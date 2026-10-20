@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -312,8 +313,21 @@ func globalFlagName(tok string) (name string, hasValue bool) {
 	return trimmed, false
 }
 
+var sessionNameRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+
+// validateSession refuses a session name that could leave TMPDIR when it is
+// joined into the port, lock and log paths ("x/../../etc/foo", ".", "..").
+func validateSession(s string) error {
+	if !sessionNameRe.MatchString(s) || s == "." || s == ".." {
+		return fmt.Errorf("invalid session name %q: use letters, digits, '.', '_' or '-' (max 64)", s)
+	}
+	return nil
+}
+
 func getApp() *cli.App {
 	return &cli.App{
+		// Every command, the daemon included, checks --session before any file op.
+		Before: func(c *cli.Context) error { return validateSession(c.String("session")) },
 		Name:        "rod-cli",
 		Description: "Native web browsing, scraping, and interaction CLI for AI assistants",
 		Usage:       "rod-cli [command] [options]",
