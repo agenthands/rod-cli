@@ -114,3 +114,4 @@ tdd: TestMkdirTempRemovesDeadTestDirs (in-use dir kept) — red: internal/testch
 live: tests binary killed with kill -9 left rod-cli-tests-cache-3032369357 + a daemon; a rerun kept the dir while the daemon lived; after the daemon's SIGTERM cleanup the next run removed it; no chrome-* left
 
 ## Review-found issues (2026-10-20)
+change: G3 godoll cmd/godoll build (unused rod import, go mod tidy -> go 1.26.0, test_output.log removed) — cd cmd/godoll && go build ./... && go vet ./... ; make build ; GOBIN=<tmp> make install — all succeeded, binaries print version (godoll b138191)
