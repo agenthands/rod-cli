@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -145,7 +145,8 @@ describe("integration workflow", () => {
     });
 
     // ext:EXT-6: each core builder's argv, run by the repo binary, leaves the expected DOM state.
-    describe("core builders against the binary", () => {
+    // Humanized pointer moves (scroll, hover) can take several seconds.
+    describe("core builders against the binary", { timeout: 30_000 }, () => {
       const run = (args: string[]) => execRodCli(execFn, args, { signal: AbortSignal.timeout(15000) });
       const js = async (expression: string) => (await run(buildEvalArgs({ expression }))).stdout.trim();
 
@@ -172,6 +173,12 @@ describe("integration workflow", () => {
       it("hover leaves the pointer over the element", async () => {
         await run(buildHoverArgs({ selector: "#greet" }));
         expect(await js("document.querySelector('#greet').matches(':hover')")).toBe("true");
+      });
+
+      it("press types the key into the focused input", async () => {
+        await js("(() => { const e = document.querySelector('#name'); e.value = ''; e.focus(); return 1; })()");
+        await run(buildPressArgs({ key: "x" }));
+        expect(await js("document.querySelector('#name').value")).toBe("x");
       });
     });
   });
