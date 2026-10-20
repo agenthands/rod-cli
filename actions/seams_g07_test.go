@@ -1,6 +1,9 @@
 package actions
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agenthands/rod-cli/types"
@@ -72,5 +75,37 @@ func TestEvaluateRunsFunctionsAndStatements(t *testing.T) {
 	ref := refFor(t, ctx, "Btn")
 	if got, err := Evaluate(ctx, "() => null", ref); err != nil || got != "null" {
 		t.Errorf("Evaluate(() => null, ref) = %q, %v; want null", got, err)
+	}
+}
+
+// TestStateSaveLoadRoundTripsCookiesPrivately pins actions:A1 /
+// actions:state-0644: save, clear, load brings back a session and a persistent
+// cookie, and the saved jar is readable by the owner only.
+func TestStateSaveLoadRoundTripsCookiesPrivately(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	if _, err := Evaluate(ctx, `document.cookie = "sess=1"; document.cookie = "pers=2; max-age=3600"`, ""); err != nil {
+		t.Fatalf("set cookies: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "state.json")
+	if _, err := StateSave(ctx, path); err != nil {
+		t.Fatalf("StateSave: %v", err)
+	}
+	if fi, err := os.Stat(path); err != nil || fi.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("state file mode = %v, %v; want no group/other bits", fi.Mode().Perm(), err)
+	}
+	page, _ := ctx.ControlledPage()
+	if err := page.Browser().SetCookies(nil); err != nil {
+		t.Fatalf("clear cookies: %v", err)
+	}
+	if got, _ := Evaluate(ctx, "document.cookie", ""); got != "" {
+		t.Fatalf("cookies after clear = %q; want empty", got)
+	}
+	if _, err := StateLoad(ctx, path); err != nil {
+		t.Fatalf("StateLoad: %v", err)
+	}
+	got, _ := Evaluate(ctx, "document.cookie", "")
+	if !strings.Contains(got, "sess=1") || !strings.Contains(got, "pers=2") {
+		t.Fatalf("cookies after load = %q; want sess=1 and pers=2", got)
 	}
 }

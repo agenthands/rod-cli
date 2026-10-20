@@ -97,7 +97,7 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli dialog-dismiss`: Automatically dismiss the next javascript alert/confirm.
 
 ### Storage & State Controls
-- `rod-cli state-save [path]`: Save the browser's cookies to a JSON file (path required).
+- `rod-cli state-save [path]`: Save the browser's cookies to a JSON file (path required). The file is written owner-only (0600) because it holds session cookies.
 - `rod-cli state-load [path]`: Load cookies saved by `state-save` into the session (path required).
 - `rod-cli cookie-get [name]`: Read all browser cookies, or only the cookie with that exact name (errors if none matches).
 - `rod-cli cookie-set [name] [value]`: Set a cookie.

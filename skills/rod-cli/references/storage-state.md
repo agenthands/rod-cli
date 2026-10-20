@@ -57,7 +57,7 @@ rod-cli sessionstorage-clear
 
 ## Saving and restoring state
 
-`state-save` writes the session's cookies to a JSON file; `state-load` reads that file back into a session (both require the path). localStorage and sessionStorage are not included.
+`state-save` writes the session's cookies to a JSON file; `state-load` reads that file back into a session (both require the path). The file is written owner-only (0600). localStorage and sessionStorage are not included.
 ```bash
 rod-cli state-save /tmp/auth.json
 rod-cli close

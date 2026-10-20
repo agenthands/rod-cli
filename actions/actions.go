@@ -1455,7 +1455,11 @@ func StateSave(ctx *types.Context, path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := osWriteFile(path, b, 0644); err != nil {
+	// The jar holds session cookies: owner-only, also when overwriting an older file.
+	if err := osWriteFile(path, b, 0600); err != nil {
+		return "", err
+	}
+	if err := os.Chmod(path, 0600); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Saved state to %s", path), nil
