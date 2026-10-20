@@ -62,3 +62,4 @@ verify: G07 — pass — Done-when (243s) + full actions pkg + go vet green; 6 r
 
 ## G08
 tdd: TestReorderGlobalFlagsProperties (root:root-2; passes on today's code) — red (mutation ignoring the `--` terminator): seed 7170201281461089191: in ["" "--" "--headless"] → plain tokens + tail after globals: got ["--headless" "--"], want ["--" "--headless"] — green: go test . -run TestReorderGlobalFlagsProperties -count=1 -rapid.checks=2000 passed
+tdd: TestTrailingGlobalFlagWithoutValueErrors (root:root-3 / root:trailing-flag) — red: cli_g08_test.go:146: runApp(["sessions" "--session"]) = nil, want an error (also ["goto" "https://x" "-s"]) — green: go test . -run TestTrailingGlobalFlagWithoutValueErrors -count=1 passed

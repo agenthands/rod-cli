@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -71,7 +73,10 @@ func TestReorderGlobalFlagsProperties(t *testing.T) {
 			in = append(in, tail...)
 		}
 
-		out := reorderGlobalFlags(app, append([]string(nil), in...))
+		out, err := reorderGlobalFlags(app, append([]string(nil), in...))
+		if err != nil {
+			t.Fatalf("reorderGlobalFlags(%q): %v", in, err)
+		}
 
 		if len(out) != len(in) || out[0] != in[0] || !sameMultiset(out, in) {
 			t.Fatalf("not a permutation with [0] fixed: in %q out %q", in, out)
@@ -107,7 +112,7 @@ func TestReorderGlobalFlagsProperties(t *testing.T) {
 		if !sameMultiset(gotSegs, wantSegs) {
 			t.Fatalf("global segments: got %q, want %q", gotSegs, wantSegs)
 		}
-		if again := reorderGlobalFlags(app, append([]string(nil), out...)); strings.Join(again, "\x00") != strings.Join(out, "\x00") {
+		if again, _ := reorderGlobalFlags(app, append([]string(nil), out...)); strings.Join(again, "\x00") != strings.Join(out, "\x00") {
 			t.Fatalf("not idempotent: %q -> %q", out, again)
 		}
 	})
@@ -127,4 +132,22 @@ func sameMultiset(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestTrailingGlobalFlagWithoutValueErrors (root-3): a value-taking global flag
+// at the end of argv has no value; it must not swallow the subcommand.
+func TestTrailingGlobalFlagWithoutValueErrors(t *testing.T) {
+	clearPortFiles(t)
+	oldArg0 := os.Args[0]
+	os.Args[0] = filepath.Join(os.TempDir(), "rod-cli-definitely-missing-binary-xyz")
+	t.Cleanup(func() { os.Args[0] = oldArg0 })
+
+	for _, args := range [][]string{{"sessions", "--session"}, {"goto", "https://x", "-s"}} {
+		var err error
+		captureStdout(t, func() { err = runApp(args...) })
+		// The spawn path must not be reached: the flag error comes first.
+		if err == nil || strings.Contains(err.Error(), "ensure daemon") {
+			t.Errorf("runApp(%q) = %v, want an argv error", args, err)
+		}
+	}
 }

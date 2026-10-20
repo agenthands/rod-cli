@@ -42,7 +42,7 @@ For JSON output, pass `--json`; plain-text results are wrapped as `{"result": ".
 rod-cli --json sessions
 ```
 
-Global options such as `--raw`, `--json` and `-s` work before or after the command name. A command's own options, such as `route --body`, go before its arguments.
+Global options such as `--raw`, `--json` and `-s` work before or after the command name. A value option such as `-s` left at the very end with no value is an error. A command's own options, such as `route --body`, go before its arguments.
 
 ## Snapshots
 

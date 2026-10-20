@@ -152,7 +152,10 @@ func captureStderr(t *testing.T, fn func()) string {
 // applies, regardless of where callers place global flags.
 func runApp(args ...string) error {
 	app := getApp()
-	full := reorderGlobalFlags(app, append([]string{"rod-cli"}, args...))
+	full, err := reorderGlobalFlags(app, append([]string{"rod-cli"}, args...))
+	if err != nil {
+		return err
+	}
 	return app.Run(full)
 }
 
@@ -409,8 +412,8 @@ func TestReorderGlobalFlags(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := reorderGlobalFlags(app, tc.in)
-			if strings.Join(got, " ") != strings.Join(tc.want, " ") {
+			got, err := reorderGlobalFlags(app, tc.in)
+			if err != nil || strings.Join(got, " ") != strings.Join(tc.want, " ") {
 				t.Errorf("reorderGlobalFlags(%v) = %v, want %v", tc.in, got, tc.want)
 			}
 		})

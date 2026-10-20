@@ -247,9 +247,12 @@ func runClientCommand(c *cli.Context, req daemon.Request) error {
 //
 // A bare "--" terminator stops reordering: everything from that point on is
 // passed through untouched, per the POSIX end-of-flags convention.
-func reorderGlobalFlags(app *cli.App, args []string) []string {
+//
+// A value flag at the very end has no value; it is an error rather than a flag
+// that would swallow the subcommand (or be ignored by it) once hoisted.
+func reorderGlobalFlags(app *cli.App, args []string) ([]string, error) {
 	if len(args) == 0 {
-		return args
+		return args, nil
 	}
 
 	takesValue := make(map[string]bool, len(app.Flags)*2)
@@ -282,7 +285,10 @@ func reorderGlobalFlags(app *cli.App, args []string) []string {
 		}
 
 		global = append(global, tok)
-		if tv && !hasValue && i+1 < len(args) {
+		if tv && !hasValue {
+			if i+1 == len(args) {
+				return nil, fmt.Errorf("flag needs an argument: %s", tok)
+			}
 			i++
 			global = append(global, args[i])
 		}
@@ -292,7 +298,7 @@ func reorderGlobalFlags(app *cli.App, args []string) []string {
 	out = append(out, args[0])
 	out = append(out, global...)
 	out = append(out, rest...)
-	return out
+	return out, nil
 }
 
 // globalFlagName strips leading dashes and any "=value" suffix from a flag

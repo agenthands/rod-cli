@@ -33,7 +33,7 @@ version: v1.7
 
 ## Commands
 
-**Flag placement**: Command-specific flags must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). This applies to every command-local flag in this skill: `fill --submit`, `drop --path`, `route --body`, `screenshot --name`/`--selector`/`--out`/`--full-page`, `pdf --name`/`--out`, `console --clear`, `requests --clear`, `mousewheel --end`/`--max`, `snapshot -i`, `dialog-accept --prompt`, `show --annotate`. A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere.
+**Flag placement**: Command-specific flags must come **before** the command's positional arguments (e.g. `rod-cli fill --submit "#q" "text"`). This applies to every command-local flag in this skill: `fill --submit`, `drop --path`, `route --body`, `screenshot --name`/`--selector`/`--out`/`--full-page`, `pdf --name`/`--out`, `console --clear`, `requests --clear`, `mousewheel --end`/`--max`, `snapshot -i`, `dialog-accept --prompt`, `show --annotate`. A flag placed after a positional is treated as a positional itself and silently ignored. Global flags (`--session`, `--json`, `--raw`) may go anywhere; a value flag such as `--session` left at the very end with no value is an error.
 
 ### Global Options
 - `--max-output N`: Cap any command's output at N bytes (0 = unlimited, the default). Use it to bound token cost on big pages, e.g. `rod-cli --max-output 4000 snapshot`.
