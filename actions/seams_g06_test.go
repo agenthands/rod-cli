@@ -4,8 +4,10 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agenthands/godoll/humanize"
+	"github.com/agenthands/rod-cli/types"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
@@ -124,5 +126,34 @@ func TestMouseWheelHorizontalThenEnd(t *testing.T) {
 	}
 	if got, err := MouseWheel(ctx, 300, 0, "", 50); err != nil || got != "scrolled dx=700 x=1000/1000 dy=0 y=0/0 end" {
 		t.Fatalf("dx=300 --end: got %q, err %v", got, err)
+	}
+}
+
+// TestMouseWheelScrollDurationSpacesNotches pins actions:A11: with
+// ScrollDuration=400, dy=400 is four notches at least ~100ms apart.
+func TestMouseWheelScrollDurationSpacesNotches(t *testing.T) {
+	ctx, cleanup := newLiveCtxCfg(t, func(c *types.Config) { d := 400; c.Stealth.ScrollDuration = &d })
+	defer cleanup()
+	srv := newFixtureServer()
+	defer srv.Close()
+	navFixture(t, ctx, srv)
+
+	var at []time.Time
+	origMeasure, origScroll, origMove := measureScroll, mouseScroll, moveToPoint
+	measureScroll = func(el *rod.Element) ([]scrollBox, error) { return []scrollBox{{MaxY: 10000, VH: 800}}, nil }
+	mouseScroll = func(p *rod.Page, dx, dy float64) error { at = append(at, time.Now()); return nil }
+	moveToPoint = func(p *rod.Page, pt humanize.Point, opts ...humanize.MouseOption) error { return nil }
+	t.Cleanup(func() { measureScroll, mouseScroll, moveToPoint = origMeasure, origScroll, origMove })
+
+	if _, err := MouseWheel(ctx, 0, 400, "", 0); err != nil {
+		t.Fatalf("MouseWheel: %v", err)
+	}
+	if len(at) != 4 {
+		t.Fatalf("scroll calls = %d, want 4", len(at))
+	}
+	for i := 1; i < len(at); i++ {
+		if gap := at[i].Sub(at[i-1]); gap < 90*time.Millisecond {
+			t.Errorf("gap %d = %v, want >= 90ms", i, gap)
+		}
 	}
 }
