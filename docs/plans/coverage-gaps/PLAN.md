@@ -79,7 +79,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 **Done when:** `go vet ./... && go test ./daemon/ ./ -count=1` pass. A session named `x/../../../etc/foo` fails with `invalid session name`.
 
-### G02 [ ] Daemon /execute and port-file hardening
+### G02 [~] Daemon /execute and port-file hardening
 **Rows:** daemon:D3/S1, daemon:S7, daemon:D2, daemon:D4/S2, daemon:S4.
 **Change:** as the rows and the Decisions section say. The ping-only timeout must not shorten real commands.
 **Done when:** `go test ./daemon/ ./ -count=1` passes with the new red→green tests, and `go build -o rod-cli . && ./rod-cli --session g02 --headless sessions && ./rod-cli --session g02 close` works.
