@@ -5,7 +5,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, type ExecFn } from "@agenthands/rod-cli-core";
+import { findRodCli, execRodCli, buildGotoArgs, buildEvalArgs, buildFillFormArgs, buildSelectArgs, buildScrollArgs, buildHoverArgs, buildPressArgs, captureScreenshot, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
@@ -179,6 +179,14 @@ describe("integration workflow", () => {
         await js("(() => { const e = document.querySelector('#name'); e.value = ''; e.focus(); return 1; })()");
         await run(buildPressArgs({ key: "x" }));
         expect(await js("document.querySelector('#name').value")).toBe("x");
+      });
+
+      it("screenshot of a selector returns a PNG of just that element", async () => {
+        const [, image] = await captureScreenshot(execFn, { selector: "#msg" }, AbortSignal.timeout(15000));
+        const png = Buffer.from(image.data, "base64");
+        expect(png.subarray(1, 4).toString()).toBe("PNG");
+        // IHDR height: a one-line <p>, not the whole viewport.
+        expect(png.readUInt32BE(20)).toBeLessThan(100);
       });
     });
   });
