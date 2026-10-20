@@ -18,9 +18,11 @@ type LifecycleEmitter interface {
 
 // BindLifecycle attaches CDP event listeners to the active page and forwards them to JS functions
 func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, recordCdpDomain func(string)) {
+	e.mu.Lock()
 	if e.vm != nil {
 		e.vm.Set("api", NewPluginAPI(page))
 	}
+	e.mu.Unlock()
 
 	// Enable the CDP DOM domain and fetch the full document tree so the backend
 	// emits DOMChildNodeInserted events to the onDOMNodeInserted hook. Without an
@@ -48,6 +50,8 @@ func (e *PluginEngine) BindLifecycle(ctx context.Context, page *rod.Page, record
 }
 
 func (e *PluginEngine) invokeJSFunc(funcName string, arg interface{}) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.vm == nil {
 		return
 	}
