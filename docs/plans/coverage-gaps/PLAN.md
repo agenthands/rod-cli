@@ -103,7 +103,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 **Rows:** types:T6 (property), types:T7, types:T8 and types:route-order (insertion order; the newest route wins), plus the pruneInteractive decision.
 **Done when:** `go test ./types/ ./actions/ -run 'Snapshot|Prune|Route' -count=1` passes.
 
-### G06 [~] Actions with seams (no Chrome)
+### G06 [x] Actions with seams (no Chrome)
 **Rows:**
 - actions:A2 / actions:parseKey: map the named keys; an unknown key gives `unknown key %q`.
 - actions:A5 / actions:wrap-nil.
