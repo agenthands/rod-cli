@@ -772,8 +772,11 @@ func MouseWheel(ctx *types.Context, dx, dy float64, ref string, maxSteps int) (s
 	}
 
 	first, err := measureScroll(anchor)
-	if err != nil || len(first) == 0 {
+	if err != nil {
 		return "", errors.Wrap(err, "Failed to measure scroll")
+	}
+	if len(first) == 0 {
+		return "", errors.New("Failed to measure scroll: no scroll container")
 	}
 	dxReq := dx != 0
 	if dx == 0 && dy == 0 {

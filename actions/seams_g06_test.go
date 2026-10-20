@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agenthands/godoll/humanize"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 )
@@ -35,5 +36,20 @@ func TestPressSendsNamedKeyNeverFirstByte(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), `unknown key "`+name+`"`) || len(sent) != 0 {
 			t.Errorf("Press(%q): sent %v, err %v; want unknown key error and nothing sent", name, sent, err)
 		}
+	}
+}
+
+// TestMouseWheelEmptyMeasureIsError pins actions:A5: no scroll boxes is an
+// error, never ("", nil) from errors.Wrap(nil).
+func TestMouseWheelEmptyMeasureIsError(t *testing.T) {
+	ctx, cleanup := withLiveFixture(t)
+	defer cleanup()
+	origMeasure, origMove := measureScroll, moveToPoint
+	measureScroll = func(el *rod.Element) ([]scrollBox, error) { return []scrollBox{}, nil }
+	moveToPoint = func(p *rod.Page, pt humanize.Point, opts ...humanize.MouseOption) error { return nil }
+	t.Cleanup(func() { measureScroll, moveToPoint = origMeasure, origMove })
+
+	if got, err := MouseWheel(ctx, 0, 0, "", 0); err == nil || !strings.Contains(err.Error(), "Failed to measure scroll") {
+		t.Fatalf("MouseWheel = %q, %v; want a Failed to measure scroll error", got, err)
 	}
 }

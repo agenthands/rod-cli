@@ -44,3 +44,4 @@ verify: G05 — pass — snapshot/prune/route tests green (types, actions); T6 r
 
 ## G06
 tdd: TestPressSendsNamedKeyNeverFirstByte — red: seams_g06_test.go:29: Press("Delete"): sent [68], err <nil>; want [302] (also é sent [195]) — green: go test ./actions/ -run TestPressSendsNamedKeyNeverFirstByte -count=1 passed
+tdd: TestMouseWheelEmptyMeasureIsError — red: seams_g06_test.go:53: MouseWheel = "", <nil>; want a Failed to measure scroll error — green: go test ./actions/ -run TestMouseWheelEmptyMeasureIsError -count=1 passed
