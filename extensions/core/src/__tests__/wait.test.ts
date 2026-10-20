@@ -56,4 +56,19 @@ describe("waitForSelector", () => {
     await expect(waitForSelector(execFn, { selector: "#x", timeoutMs: 5000 })).rejects.toBe(boom);
     expect(execFn).toHaveBeenCalledTimes(1);
   });
+
+  it("rejects with signal.reason on abort and stops polling", async () => {
+    vi.useFakeTimers();
+    const ac = new AbortController();
+    const reason = new Error("user cancelled");
+    const execFn = vi.fn().mockResolvedValue({ code: 0, stdout: "false\n", stderr: "" });
+    const done = expect(
+      waitForSelector(execFn, { selector: "#x", timeoutMs: 5000 }, { signal: ac.signal }),
+    ).rejects.toBe(reason);
+    await vi.advanceTimersByTimeAsync(100);
+    ac.abort(reason);
+    await done;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(execFn).toHaveBeenCalledTimes(1);
+  });
 });

@@ -17,3 +17,4 @@ tdd: waitForSelector polls every 500ms until eval prints true (3 calls, exact ev
 tdd: waitForSelector rejects with the exact timeout message when the selector never appears — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
 tdd: waitForSelector with timeoutMs 0 / -1 checks exactly once and does not poll — red: Error: Timed out waiting 0ms for selector: #x (0 exec calls; same for -1ms) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
 tdd: waitForSelector propagates an exec rejection without retrying — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
+tdd: waitForSelector rejects with signal.reason on abort and stops polling — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
