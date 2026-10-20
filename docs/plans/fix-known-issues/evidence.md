@@ -112,3 +112,5 @@ tdd: pi integration.test.ts daemon cleanup — red: after vitest run, daemon 984
 tdd: TestMkdirTempRemovesDeadTestDirs — red: internal/testchrome/testchrome_test.go:90:14: undefined: MkdirTemp — green: go test ./internal/testchrome/ -count=1 passed
 tdd: TestMkdirTempRemovesDeadTestDirs (in-use dir kept) — red: internal/testchrome/testchrome_test.go:92:34: too many arguments in call to MkdirTemp — green: go test ./internal/testchrome/ -count=1 passed
 live: tests binary killed with kill -9 left rod-cli-tests-cache-3032369357 + a daemon; a rerun kept the dir while the daemon lived; after the daemon's SIGTERM cleanup the next run removed it; no chrome-* left
+
+## Review-found issues (2026-10-20)
