@@ -95,6 +95,7 @@ verify: G11 — pass — independent rerun of go build + go vet + go test ./... 
 
 verify: full suite (go build, go vet, TMPDIR=$T go test ./..., race internal/plugin, core/pi/omp vitest+bun+tsc) exit 0; $T held only leakless-amd64-adb80298fa6a3af7ced8b1c9b5f18007 and rod-cli-daemon.log
 verify: govulncheck@latest ./... — No vulnerabilities found.
+verify: F01 — pass — independent rerun: build, vet, TMPDIR=$T go test ./..., race plugin, core/pi/omp vitest+bun+tsc exit 0; $T held only leakless-* and rod-cli-daemon.log; govulncheck No vulnerabilities found; status clean
 
 ## Summary
 
