@@ -79,3 +79,4 @@ verify: G09 — pass — root-1/D1 round-trip and root-9 stealthFlagsFrom proper
 ## G10
 
 tdd: TestIsHttpSchemeCase — red: net_test.go:17: IsHttp("Https://example.com") = false, want true — green: go test ./utils/ -run TestIsHttp -count=1 passed
+tdd: TestReadNormalizesGetPropertiesProperty — red: seed 15198709855505079634: {"id":1,"result":{"exceptionDetails":{"exceptionId":1,"text":""},"result":[{"get":{...},"name":""}]}} → got result without exceptionDetails — green: go test ./internal/cdpproxy/ -run TestReadNormalizesGetPropertiesProperty -count=1 passed

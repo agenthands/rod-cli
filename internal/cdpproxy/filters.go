@@ -28,17 +28,21 @@ func normalizeCDPResponse(data []byte) []byte {
 
 	// Try to parse the result as a Runtime.getProperties result shape:
 	// {"result": [ ...property descriptors... ]}
-	var outer struct {
-		Result []json.RawMessage `json:"result"`
+	// Decode into a map so sibling keys (internalProperties,
+	// privateProperties, exceptionDetails, ...) survive the rebuild.
+	var outer map[string]json.RawMessage
+	var props []json.RawMessage
+	if err := json.Unmarshal(envelope.Result, &outer); err != nil {
+		return data
 	}
-	if err := json.Unmarshal(envelope.Result, &outer); err != nil || outer.Result == nil {
+	if err := json.Unmarshal(outer["result"], &props); err != nil || props == nil {
 		return data // not a getProperties response
 	}
 
 	// Iterate property descriptors and strip `value` from accessor properties.
 	modified := false
-	clean := make([]json.RawMessage, len(outer.Result))
-	for i, rawProp := range outer.Result {
+	clean := make([]json.RawMessage, len(props))
+	for i, rawProp := range props {
 		var prop map[string]json.RawMessage
 		if err := json.Unmarshal(rawProp, &prop); err != nil {
 			clean[i] = rawProp
@@ -63,7 +67,11 @@ func normalizeCDPResponse(data []byte) []byte {
 	}
 
 	// Rebuild the full response.
-	outer.Result = clean
+	newProps, err := json.Marshal(clean)
+	if err != nil {
+		return data
+	}
+	outer["result"] = newProps
 	newResult, err := json.Marshal(outer)
 	if err != nil {
 		return data
