@@ -2,13 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/agenthands/rod-cli/daemon"
 	"github.com/agenthands/rod-cli/types"
 	"github.com/urfave/cli/v2"
 	"pgregory.net/rapid"
@@ -234,5 +239,67 @@ func TestProfileListFormatsAgreeWithoutSpawning(t *testing.T) {
 	}
 	if entries, _ := os.ReadDir(os.TempDir()); len(entries) != 0 {
 		t.Errorf("TMPDIR not empty, a daemon was touched: %v", entries)
+	}
+}
+
+// startRecordingDaemon is a fake daemon that answers ping, records every other
+// request and replies with result (a raw JSON string value).
+func startRecordingDaemon(t *testing.T, result string) (session string, reqs func() []daemon.Request) {
+	t.Helper()
+	var mu sync.Mutex
+	var got []daemon.Request
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req daemon.Request
+		json.NewDecoder(r.Body).Decode(&req)
+		if req.Command == "ping" {
+			fmt.Fprint(w, `{"result":"pong"}`)
+			return
+		}
+		mu.Lock()
+		got = append(got, req)
+		mu.Unlock()
+		b, _ := json.Marshal(daemon.Response{Result: result})
+		w.Write(b)
+	}))
+	t.Cleanup(srv.Close)
+	session = uniqueSession("rec")
+	writePortFile(t, srv, session)
+	return session, func() []daemon.Request {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]daemon.Request(nil), got...)
+	}
+}
+
+// TestOutPathResolvedAgainstClientCwd (root-6): a relative --out reaches the
+// daemon as an absolute path under the client's cwd; no --out sends "".
+func TestOutPathResolvedAgainstClientCwd(t *testing.T) {
+	clearPortFiles(t)
+	session, reqs := startRecordingDaemon(t, "ok")
+	cwd := t.TempDir()
+	t.Chdir(cwd)
+	for _, cmd := range []string{"screenshot", "pdf"} {
+		captureStdout(t, func() {
+			if err := runApp("--session", session, cmd, "--out", "rel/x.png"); err != nil {
+				t.Errorf("%s --out: %v", cmd, err)
+			}
+			if err := runApp("--session", session, cmd); err != nil {
+				t.Errorf("%s: %v", cmd, err)
+			}
+		})
+	}
+	want := filepath.Join(cwd, "rel/x.png")
+	got := reqs()
+	if len(got) != 4 {
+		t.Fatalf("daemon got %d requests, want 4: %+v", len(got), got)
+	}
+	for i, r := range got {
+		w := want
+		if i%2 == 1 {
+			w = ""
+		}
+		if r.Args["out"] != w {
+			t.Errorf("%s request %d: out = %q, want %q", r.Command, i, r.Args["out"], w)
+		}
 	}
 }
