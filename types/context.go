@@ -34,6 +34,8 @@ import (
 // real functions; tests swap them and restore via defer. Zero behavior change.
 var (
 	launcherLookPath = launcher.LookPath
+	// downloadedBrowserPath is where `rod-cli install` puts Chromium.
+	downloadedBrowserPath = func() string { return launcher.NewBrowser().BinPath() }
 )
 
 // parseProxyConfig maps a proxy URL (with scheme) and an optional "user:pass"
@@ -134,14 +136,16 @@ func launchBrowser(cfg Config) (*rod.Browser, *cdpproxy.Proxy, func(), error) {
 		Set("--disable-dev-shm-usage").
 		Set("--disable-features", "HttpsUpgrades")
 
+	// Binary order: configured path, system Chrome, then the Chromium that
+	// `rod-cli install` downloaded.
 	if cfg.BrowserBinPath != "" {
 		browserLauncher.Bin(cfg.BrowserBinPath)
+	} else if browserPath, has := launcherLookPath(); has {
+		browserLauncher.Bin(browserPath)
+	} else if _, err := os.Stat(downloadedBrowserPath()); err == nil {
+		browserLauncher.Bin(downloadedBrowserPath())
 	} else {
-		if browserPath, has := launcherLookPath(); has {
-			browserLauncher.Bin(browserPath)
-		} else {
-			return nil, nil, nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
-		}
+		return nil, nil, nil, errors.New("the machine does not have Chrome installed. Please run 'rod-cli install' to fetch it, or set the browser executable path.")
 	}
 
 	// Per-session proxy via godoll's proxy API (replaces the bare

@@ -19,7 +19,7 @@ go install github.com/agenthands/rod-cli@latest
 
 This places the `rod-cli` binary in `$GOPATH/bin` (usually `~/go/bin`). Make sure that directory is in your `$PATH`.
 
-Then download the Chromium build `rod-cli` drives; the command prints where it installed it:
+`rod-cli` launches the system Chrome (or Chromium/Edge) when it finds one. On a machine without one, download Chromium; sessions use it when no system Chrome is found, and the command prints where it installed it:
 
 ```bash
 rod-cli install

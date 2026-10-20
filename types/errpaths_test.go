@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -278,17 +279,53 @@ func firstFrameRef(s, prefix string) string {
 
 // --- context.go error branches ---
 
-// launchBrowser when no Chrome is found and no bin path is configured.
-func TestLaunchBrowser_NoChrome(t *testing.T) {
-	origLP := launcherLookPath
-	launcherLookPath = func() (string, bool) { return "", false }
-	defer func() { launcherLookPath = origLP }()
+// launchBrowserBin runs launchBrowser with the system-Chrome and
+// downloaded-Chromium lookups stubbed and returns its error. The binaries the
+// tests hand it are non-executable files, so the launch fails and the error
+// names the binary that was chosen.
+func launchBrowserBin(t *testing.T, system string, downloaded string) error {
+	t.Helper()
+	t.Setenv("TMPDIR", t.TempDir())
+	origLP, origDL := launcherLookPath, downloadedBrowserPath
+	launcherLookPath = func() (string, bool) { return system, system != "" }
+	downloadedBrowserPath = func() string { return downloaded }
+	defer func() { launcherLookPath, downloadedBrowserPath = origLP, origDL }()
 
 	_, _, _, err := launchBrowser(Config{BrowserTempDir: t.TempDir()})
 	if err == nil {
-		t.Fatal("expected error when no Chrome is installed")
+		t.Fatal("expected the launch of a non-executable binary to fail")
 	}
-	if !strings.Contains(err.Error(), "Chrome") {
+	return err
+}
+
+func fakeBin(t *testing.T, name string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(p, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestLaunchBrowser_PrefersSystemChrome(t *testing.T) {
+	system, downloaded := fakeBin(t, "system-chrome"), fakeBin(t, "downloaded-chrome")
+	if err := launchBrowserBin(t, system, downloaded); !strings.Contains(err.Error(), system) {
+		t.Fatalf("expected the system Chrome %s to be launched, got: %v", system, err)
+	}
+}
+
+func TestLaunchBrowser_FallsBackToDownloadedChromium(t *testing.T) {
+	downloaded := fakeBin(t, "downloaded-chrome")
+	if err := launchBrowserBin(t, "", downloaded); !strings.Contains(err.Error(), downloaded) {
+		t.Fatalf("expected the downloaded Chromium %s to be launched, got: %v", downloaded, err)
+	}
+}
+
+// launchBrowser when no Chrome is found, nothing was downloaded and no bin path
+// is configured.
+func TestLaunchBrowser_NoChrome(t *testing.T) {
+	err := launchBrowserBin(t, "", filepath.Join(t.TempDir(), "not-downloaded"))
+	if !strings.Contains(err.Error(), "the machine does not have Chrome installed") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

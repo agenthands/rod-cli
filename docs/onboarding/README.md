@@ -18,13 +18,13 @@ Download the latest binary from [GitHub Releases](https://github.com/agenthands/
 
 ### Install Chromium
 
-rod-cli requires Chromium. After installing the binary, run:
+rod-cli launches the system Chrome (or Chromium/Edge) when it finds one. Without one, run:
 
 ```bash
 rod-cli install
 ```
 
-This downloads Chromium to `~/.cache/rod/browser/`.
+This downloads Chromium to `~/.cache/rod/browser/`; sessions use it when no system Chrome is found. `browserBinPath` in `rod-cli.yaml` overrides both.
 
 ### Where browser profiles live
 
