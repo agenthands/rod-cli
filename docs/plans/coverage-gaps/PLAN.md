@@ -173,7 +173,7 @@ Why: running `cd extensions/core && npm install -D fast-check` fails with `npm e
 **Cosmetic:** validate.ts now says "characters", not "bytes".
 **Done when:** the TS checks pass.
 
-### E03 [ ] Extensions, live against the repo build
+### E03 [~] Extensions, live against the repo build
 **Rows:** ext:EXT-6 (add `<select id="c">` and a scrollable `#pane` to the pi FIXTURE_HTML), ext:EXT-7.
 **Change:** These run through the pi integration harness against `<repo>/rod-cli`. Build it with `go build -o rod-cli .` in the repo root, and delete it after. If a Go fix that this needs is not on the branch yet, wait for it: check `git log --oneline` for the Go task's checkpoint, and return blocked only if it is still missing after the Go track finishes.
 **Done when:** the TS checks pass, and `extensions/pi` holds no new untracked files.
