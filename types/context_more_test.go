@@ -140,11 +140,11 @@ func TestContext_LifecycleAndAccessors(t *testing.T) {
 
 	// Routes accessors exercise updateInterceptorRules with mock rules.
 	ctx.AddRoute("**/*.png", "mocked-png")
-	if got := ctx.GetRoutes(); got["**/*.png"] != "mocked-png" {
+	if got := ctx.GetRoutes(); len(got) != 1 || got[0] != (Route{"**/*.png", "mocked-png"}) {
 		t.Fatalf("AddRoute/GetRoutes mismatch: %v", got)
 	}
 	ctx.RemoveRoute("**/*.png")
-	if _, ok := ctx.GetRoutes()["**/*.png"]; ok {
+	if len(ctx.GetRoutes()) != 0 {
 		t.Fatal("expected route removed")
 	}
 
@@ -245,7 +245,7 @@ func TestContext_UpdateInterceptorRules_NoCatchAll(t *testing.T) {
 		t.Fatalf("expected 0 rules with no routes (catch-all removed), got %d", got)
 	}
 
-	ctx.routes = map[string]string{"**/*.png": "mocked"}
+	ctx.routes = []Route{{"**/*.png", "mocked"}}
 	ctx.updateInterceptorRules()
 	if got := len(ctx.interceptor.Rules()); got != 1 {
 		t.Fatalf("expected exactly 1 mock rule, got %d", got)

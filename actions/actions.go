@@ -1299,8 +1299,8 @@ func RouteList(ctx *types.Context) (string, error) {
 		return "No active routes", nil
 	}
 	var res strings.Builder
-	for pattern := range routes {
-		res.WriteString(fmt.Sprintf("- %s\n", pattern))
+	for _, r := range routes {
+		res.WriteString(fmt.Sprintf("- %s\n", r.Pattern))
 	}
 	return res.String(), nil
 }

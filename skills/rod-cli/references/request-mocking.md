@@ -19,8 +19,11 @@ Return a mocked JSON body instead of the real backend response:
 rod-cli route --body='{"id": 1, "name": "Mock User"}' "https://api.example.com/user"
 ```
 
+### Overlapping patterns
+When several routes match one request, the most recently added route wins. Re-running `route` with an existing pattern replaces its body and makes it the newest route.
+
 ## Listing Routes
-To see all active routes in the current session:
+To see all active routes in the current session, oldest first:
 ```bash
 rod-cli route-list
 ```
