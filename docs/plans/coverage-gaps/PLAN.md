@@ -156,8 +156,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 ## TS track
 
-### E01 [!] fast-check, argv builder and timeout properties
-Blocked: E01 is blocked because fast-check could not be installed. The two bug fixes are done and committed. The two property tests are not written.
+### E01 [~] fast-check, argv builder and timeout properties
 
 Why: running `cd extensions/core && npm install -D fast-check` fails with `npm error errno DEPTH_ZERO_SELF_SIGNED_CERT ... request to https://localhost:8443/npm/fast-check failed, reason: self-signed certificate`. The ~/.npmrc sets `registry=https://localhost:8443/npm/`, and that server's cert is self-signed (CN=localhost, created Oct 19). I tried to trust that cert for this one install with NODE_EXTRA_CA_CERTS, and the auto-mode classifier denied it as [
 **Rows:** Prerequisite "TS: add fast-check", ext:EXT-1 / ext:screenshot-selector (emit `--selector=<sel>` as one token), ext:EXT-5 / ext:timeoutFor.

@@ -5,8 +5,16 @@
   "license": "MIT",
   "type": "module",
   "main": "src/index.ts",
-  "keywords": ["browser-automation", "rod-cli"],
-  "files": ["src/**/*.ts", "!src/__tests__/**", "README.md", "LICENSE"],
+  "keywords": [
+    "browser-automation",
+    "rod-cli"
+  ],
+  "files": [
+    "src/**/*.ts",
+    "!src/__tests__/**",
+    "README.md",
+    "LICENSE"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -26,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "fast-check": "^4.10.2",
     "typescript": "^5.8.0",
     "vitest": "^3.0.0"
   }
