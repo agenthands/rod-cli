@@ -35,7 +35,7 @@ rod-cli close
 rod-cli -s=admin close
 ```
 
-A session also shuts down by itself after 15 minutes with no command, and on SIGTERM, SIGINT or SIGHUP; each of these deletes the profile too.
+A session also shuts down by itself after 15 minutes with no command (a ping from `sessions` does not count), and on SIGTERM, SIGINT or SIGHUP; each of these deletes the profile too.
 
 ## Session files
 - Profile: one directory per session under `~/.cache/rod-cli/profiles` on Linux (Go's `os.UserCacheDir()`/`rod-cli/profiles`), unless the config sets `browserTempDir` (the old value `./rod/browser` counts as unset). It holds `owner.pid` (the daemon's PID) and `chrome-tmp` (the path of the session Chrome's temp dir). A session started with `--cdp-endpoint` drives that browser and has no profile.

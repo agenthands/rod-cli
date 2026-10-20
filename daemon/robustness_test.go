@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -46,5 +47,34 @@ func TestExecuteActionRejectsNonNumericArgs(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), c.bad) {
 			t.Errorf("%s %v: err = %v, want an error naming %s", c.cmd, c.args, err, c.bad)
 		}
+	}
+}
+
+func TestPingDoesNotResetIdleTimer(t *testing.T) {
+	privateTmp(t)
+	exited := make(chan struct{})
+	var once sync.Once
+	origExit, origIdle := exitDaemon, idleTimeout
+	t.Cleanup(func() { exitDaemon, idleTimeout = origExit, origIdle })
+	exitDaemon = func(int) { once.Do(func() { close(exited) }) }
+	idleTimeout = 300 * time.Millisecond
+	session, _ := startBareServer(t)
+
+	exitedWhilePolling := false
+	for deadline := time.Now().Add(time.Second); time.Now().Before(deadline) && !exitedWhilePolling; {
+		_, _ = ClientExecute(session, Request{Command: "ping"})
+		select {
+		case <-exited:
+			exitedWhilePolling = true
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+	// Let a still-armed timer fire while the stub is in place.
+	select {
+	case <-exited:
+	case <-time.After(2 * time.Second):
+	}
+	if !exitedWhilePolling {
+		t.Fatal("daemon polled by ping every 50ms never idled out after 300ms: ping resets the idle timer")
 	}
 }

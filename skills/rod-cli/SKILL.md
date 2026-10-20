@@ -12,7 +12,7 @@ version: v1.7
 
 1. **Daemon Architecture**: `rod-cli` runs as a persistent background daemon that holds state.
    - The first command boots a persistent browser in the background.
-   - **Idle timeout**: the daemon outlives the command that started it and exits after 15 minutes without a command.
+   - **Idle timeout**: the daemon outlives the command that started it and exits after 15 minutes without a command (`sessions` only pings it, which does not count).
    - **Always** run `rod-cli close` when finished to clean up resources.
    - **Profiles**: each session's Chrome profile lives in `~/.cache/rod-cli/profiles/<id>` on Linux (the user cache dir: on disk, never `/tmp` or the working directory; `browserTempDir` in `./rod-cli.yaml` overrides the location). Chrome's lock dir and temp files go to a per-session `chrome-*` dir in the system temp dir. `close`, the idle timeout and SIGINT/SIGTERM/SIGHUP remove both. A daemon killed with `kill -9` or crashed leaves them; the next session that launches Chrome removes them (default location only). Every session file and its cleanup: [references/session-management.md](references/session-management.md#session-files).
 

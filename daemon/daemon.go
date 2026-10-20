@@ -47,13 +47,18 @@ var runAction = executeAction
 // `-cover` and GOCOVERDIR is set (i.e. during a coverage run), it flushes the
 // accumulated coverage counters first, since os.Exit otherwise skips the
 // coverage runtime's atexit writer. In a normal build WriteCountersDir returns
-// an error and is ignored, so this is a no-op in production.
-func exitDaemon(code int) {
+// an error and is ignored, so this is a no-op in production. A var so tests
+// can observe an exit without ending the test process.
+var exitDaemon = func(code int) {
 	if dir := os.Getenv("GOCOVERDIR"); dir != "" {
 		_ = coverage.WriteCountersDir(dir)
 	}
 	os.Exit(code)
 }
+
+// idleTimeout is how long a daemon waits without a command before it shuts
+// down. A var so tests can shrink it.
+var idleTimeout = 15 * time.Minute
 
 type Request struct {
 	Command string            `json:"command"`
@@ -290,7 +295,7 @@ func StartServer(session string, rodCtx *types.Context) error {
 	}()
 
 	mux := http.NewServeMux()
-	idleTimer := time.NewTimer(15 * time.Minute)
+	idleTimer := time.NewTimer(idleTimeout)
 	// execSem serializes executeAction across concurrent /execute requests,
 	// as a 1-buffered channel acting as a mutex WITH a bounded acquire
 	// timeout (sync.Mutex has none). The session model is one shared
@@ -349,17 +354,19 @@ func StartServer(session string, rodCtx *types.Context) error {
 			json.NewEncoder(w).Encode(Response{Error: "forbidden: not a rod-cli client request"})
 			return
 		}
-		idleTimer.Reset(15 * time.Minute)
 		var req Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			json.NewEncoder(w).Encode(Response{Error: err.Error()})
 			return
 		}
 
+		// ping does not count as use: `sessions` and readiness polls would
+		// otherwise keep every daemon alive forever.
 		if req.Command == "ping" {
 			json.NewEncoder(w).Encode(Response{Result: "pong"})
 			return
 		}
+		idleTimer.Reset(idleTimeout)
 		if req.Command == "close" {
 			// Clean up before answering, so the browser and profile are gone
 			// when the client's close returns.
