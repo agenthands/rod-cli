@@ -129,7 +129,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 **Rows:** root:root-2 (property), root:root-3 / root:trailing-flag, root:root-5 / root:json-detect, root:root-4, root:root-6, root:root-7 / root:eval-json-shape (pin today's shape).
 **Done when:** `go test ./ -count=1` passes.
 
-### G09 [ ] Flag forwarding properties
+### G09 [~] Flag forwarding properties
 **Rows:** root:root-1 (with daemon:D1 merged), root:root-9 (extract `stealthFlagsFrom(c)` from main.go first, as a pure refactor with no behaviour change).
 **Done when:** `go test ./ -run 'Forward|StealthFlags' -count=1` passes, and `go test ./ -count=1` passes.
 
