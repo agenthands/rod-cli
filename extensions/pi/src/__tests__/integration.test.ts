@@ -1,11 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 import { execFile } from "node:child_process";
+import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { findRodCli, execRodCli, type ExecFn } from "@agenthands/rod-cli-core";
 
 // A session of its own, so the tests never touch the user's default session
 // and can close their daemon when done.
 const SESSION = `pi-integration-${process.pid}`;
+
+// rod-cli runs from an empty dir of its own, so a file it writes into its
+// working directory (other than a requested screenshot) fails the test
+// instead of landing in the repo.
+const CWD = mkdtempSync(join(tmpdir(), "pi-int-"));
 
 /**
  * A real child_process execFn for integration tests.
@@ -14,7 +23,7 @@ const SESSION = `pi-integration-${process.pid}`;
 function createRealExecFn(bin: string): ExecFn {
   return (args, opts) => {
     return new Promise((resolve, reject) => {
-      const child = execFile(bin, ["--session", SESSION, "--headless", ...args], { timeout: opts?.timeout }, (err, stdout, stderr) => {
+      const child = execFile(bin, ["--session", SESSION, "--headless", ...args], { timeout: opts?.timeout, cwd: CWD }, (err, stdout, stderr) => {
         if (err) {
           // Non-zero exit is NOT an error here — we return it as a result.
           if (err.code === undefined) {
@@ -49,7 +58,10 @@ const FIXTURE_HTML = `<!DOCTYPE html>
 </body></html>`;
 
 describe("integration workflow", () => {
-  const rodCliPath = findRodCli();
+  // The repo's own build (the full suite builds it first) tests this code; an
+  // installed rod-cli may be older.
+  const repoBin = fileURLToPath(new URL("../../../../rod-cli", import.meta.url));
+  const rodCliPath = statSync(repoBin, { throwIfNoEntry: false })?.isFile() ? repoBin : findRodCli();
   const bin = rodCliPath ?? "rod-cli";
   const execFn = createRealExecFn(bin);
 
@@ -76,6 +88,11 @@ describe("integration workflow", () => {
 
     afterAll(async () => {
       await execFn(["close"], { timeout: 15000 });
+      // Only the screenshot the test asked for (saved under tmp/screenshots).
+      const left = readdirSync(CWD, { recursive: true }).map(String).sort();
+      rmSync(CWD, { recursive: true, force: true });
+      expect(left.filter((f) => !f.startsWith("tmp"))).toEqual([]);
+      expect(left.filter((f) => f.startsWith("tmp"))).toEqual(["tmp", join("tmp", "screenshots"), expect.stringMatching(/^tmp\/screenshots\/.+\.png$/)]);
       if (server) {
         server.closeAllConnections();
         server.close();
