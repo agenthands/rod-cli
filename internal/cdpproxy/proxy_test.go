@@ -3,7 +3,9 @@ package cdpproxy
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"pgregory.net/rapid"
@@ -126,4 +128,74 @@ func TestReadNormalizesGetPropertiesProperty(t *testing.T) {
 			t.Fatalf("Read∘Read not idempotent\nonce:  %s\ntwice: %s", out, again)
 		}
 	})
+}
+
+// TestTrafficRingBufferModel: Traffic() equals the last min(cap, n) entries of
+// a plain list of logged messages. Sends are logged even when the inner Send
+// fails; recvs are logged only on success.
+func TestTrafficRingBufferModel(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		capN := rapid.IntRange(1, 8).Draw(t, "cap")
+		ws := &fakeWS{}
+		p := New(ws, capN, 0)
+		var model []CDPMessage
+		ops := rapid.SliceOfN(rapid.IntRange(0, 2), 0, 30).Draw(t, "ops")
+		for i, op := range ops {
+			frame := []byte(`{"method":"E","params":{"i":` + strconv.Itoa(i) + `}}`)
+			switch op {
+			case 0: // send; inner may fail
+				ws.sendErr = nil
+				if rapid.Bool().Draw(t, "sendFails") {
+					ws.sendErr = errors.New("send failed")
+				}
+				_ = p.Send(frame)
+				model = append(model, CDPMessage{Direction: "send", Raw: frame})
+			case 1: // recv ok
+				ws.readErr, ws.frames = nil, [][]byte{frame}
+				if _, err := p.Read(); err != nil {
+					t.Fatalf("Read: %v", err)
+				}
+				model = append(model, CDPMessage{Direction: "recv", Raw: frame})
+			case 2: // recv err
+				ws.readErr = errors.New("read failed")
+				if _, err := p.Read(); err == nil {
+					t.Fatal("expected read error")
+				}
+			}
+		}
+		if len(model) > capN {
+			model = model[len(model)-capN:]
+		}
+		got := p.Traffic()
+		if len(got) != len(model) {
+			t.Fatalf("Traffic len %d, want %d", len(got), len(model))
+		}
+		for i := range model {
+			if got[i].Direction != model[i].Direction || !bytes.Equal(got[i].Raw, model[i].Raw) {
+				t.Fatalf("entry %d = %s %s, want %s %s", i, got[i].Direction, got[i].Raw, model[i].Direction, model[i].Raw)
+			}
+		}
+	})
+}
+
+func TestTrafficDefaultCapAndNoAliasing(t *testing.T) {
+	ws := &fakeWS{}
+	p := New(ws, 0, 0)
+	buf := []byte(`{"method":"E"}`)
+	for i := 0; i < 300; i++ {
+		_ = p.Send(buf)
+	}
+	if n := len(p.Traffic()); n != 256 {
+		t.Fatalf("cap<=0: Traffic len %d, want 256", n)
+	}
+	buf[2] = 'X' // rod reuses its buffers after the call returns
+	ws.frames = [][]byte{buf}
+	if _, err := p.Read(); err != nil {
+		t.Fatal(err)
+	}
+	buf[2] = 'Y'
+	tr := p.Traffic()
+	if string(tr[0].Raw) != `{"method":"E"}` || string(tr[255].Raw) != `{"Xethod":"E"}` {
+		t.Fatalf("Traffic aliases caller buffers: first %s, last %s", tr[0].Raw, tr[255].Raw)
+	}
 }

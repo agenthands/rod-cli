@@ -80,3 +80,5 @@ verify: G09 — pass — root-1/D1 round-trip and root-9 stealthFlagsFrom proper
 
 tdd: TestIsHttpSchemeCase — red: net_test.go:17: IsHttp("Https://example.com") = false, want true — green: go test ./utils/ -run TestIsHttp -count=1 passed
 tdd: TestReadNormalizesGetPropertiesProperty — red: seed 15198709855505079634: {"id":1,"result":{"exceptionDetails":{"exceptionId":1,"text":""},"result":[{"get":{...},"name":""}]}} → got result without exceptionDetails — green: go test ./internal/cdpproxy/ -run TestReadNormalizesGetPropertiesProperty -count=1 passed
+tdd: TestTrafficRingBufferModel — red not observed on today's code (passes first run); mutation check (logMessage `>=`→`>`, reverted): seed 17648088359615489968: "Traffic len 2, want 1" — green: go test ./internal/cdpproxy/ -run TestTrafficRingBufferModel -count=1 passed
+tdd: TestTrafficDefaultCapAndNoAliasing — red not observed on today's code; mutation check (logMessage stores caller slice without copy, reverted): "Traffic aliases caller buffers: first {"Yethod":"E"}, last {"Yethod":"E"}" — green: go test ./internal/cdpproxy/ -run TestTrafficDefaultCapAndNoAliasing -count=1 passed
