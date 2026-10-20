@@ -19,3 +19,5 @@ tdd: waitForSelector with timeoutMs 0 / -1 checks exactly once and does not poll
 tdd: waitForSelector propagates an exec rejection without retrying — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
 tdd: waitForSelector rejects with signal.reason on abort and stops polling — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
 tdd: waitForSelector puts -s <session> after the --raw/--max-output prefix — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/wait.test.ts) passed
+tdd: captureScreenshot returns the PNG as base64 and removes the temp file — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/screenshot.test.ts) passed
+tdd: captureScreenshot rejects and removes the temp file when rod-cli exits non-zero after writing it — red not observed (characterizes existing behaviour) — green: (cd extensions/core && npx vitest run src/__tests__/screenshot.test.ts) passed
