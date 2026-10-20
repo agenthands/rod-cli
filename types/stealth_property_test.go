@@ -2,9 +2,12 @@ package types
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/agenthands/godoll/stealth"
 	"pgregory.net/rapid"
 )
 
@@ -23,9 +26,9 @@ func TestResolveStealthPlatformFollowsFlagUA(t *testing.T) {
 	profiles := append([]string{""}, BuiltinProfileNames()...)
 	rapid.Check(t, func(t *rapid.T) {
 		profile := rapid.SampledFrom(profiles).Draw(t, "profile")
-		os := rapid.SampledFrom(uaOSTable).Draw(t, "os")
+		osRow := rapid.SampledFrom(uaOSTable).Draw(t, "os")
 		major := rapid.IntRange(90, 199).Draw(t, "major")
-		ua := fmt.Sprintf("Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%d.0.0.0 Safari/537.36", os.token, major)
+		ua := fmt.Sprintf("Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%d.0.0.0 Safari/537.36", osRow.token, major)
 
 		cfg, err := defaultConfigCopy()
 		if err != nil {
@@ -35,8 +38,8 @@ func TestResolveStealthPlatformFollowsFlagUA(t *testing.T) {
 		if profile == "" && err != nil {
 			t.Fatalf("no profile, UA %q: unexpected error %v", ua, err)
 		}
-		if err == nil && cfg.Stealth.Platform != os.platform {
-			t.Fatalf("profile %q, UA %q: platform = %q, want %q", profile, ua, cfg.Stealth.Platform, os.platform)
+		if err == nil && cfg.Stealth.Platform != osRow.platform {
+			t.Fatalf("profile %q, UA %q: platform = %q, want %q", profile, ua, cfg.Stealth.Platform, osRow.platform)
 		}
 	})
 }
@@ -143,4 +146,37 @@ func TestResolveStealthRejectsUnsafeFingerprintValue(t *testing.T) {
 			}
 		})
 	})
+}
+
+// TestResolveStealthUserDirProfile pins types:T5: a bare name that is not a
+// built-in resolves to ~/.rod-cli/profiles/<name>.json, a missing one is an
+// error naming that path, and traversal-shaped names are never built-ins.
+func TestResolveStealthUserDirProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dir := filepath.Join(home, ".rod-cli", "profiles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ua := "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+	path := writeProfile(t, dir, "custom", stealth.Profile{UserAgent: ua, Platform: "Linux"})
+
+	cfg := &Config{}
+	if err := ResolveStealth(cfg, &StealthFlags{Profile: "custom"}); err != nil {
+		t.Fatalf("custom: %v", err)
+	}
+	if cfg.Stealth.ProfilePath != path || cfg.Stealth.UserAgent != ua || cfg.Stealth.Platform != "Linux" {
+		t.Fatalf("custom: path=%q ua=%q platform=%q, want %q %q Linux", cfg.Stealth.ProfilePath, cfg.Stealth.UserAgent, cfg.Stealth.Platform, path, ua)
+	}
+
+	nope := filepath.Join(dir, "nope.json")
+	if err := ResolveStealth(&Config{}, &StealthFlags{Profile: "nope"}); err == nil || !strings.Contains(err.Error(), nope) {
+		t.Fatalf("nope: err = %v, want one naming %q", err, nope)
+	}
+
+	for _, name := range []string{"../windows-11-chrome", "./windows-11-chrome", "windows-11-chrome/..", "profiles/windows-11-chrome", ".."} {
+		if prof, ok, err := LoadBuiltinProfile(name); prof != nil || ok || err != nil {
+			t.Errorf("LoadBuiltinProfile(%q) = (%v, %v, %v), want (nil, false, nil)", name, prof, ok, err)
+		}
+	}
 }
