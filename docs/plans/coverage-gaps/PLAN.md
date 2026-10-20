@@ -156,7 +156,7 @@ The seams in gap-plan.md were confirmed by the user on 2026-10-20 ("All of A–D
 
 ## TS track
 
-### E01 [ ] fast-check, argv builder and timeout properties
+### E01 [~] fast-check, argv builder and timeout properties
 **Rows:** Prerequisite "TS: add fast-check", ext:EXT-1 / ext:screenshot-selector (emit `--selector=<sel>` as one token), ext:EXT-5 / ext:timeoutFor.
 **Change:** `cd extensions/core && npm install -D fast-check`. Commit package.json and the lockfile.
 **Done when:** the TS checks pass.
