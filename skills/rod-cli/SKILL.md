@@ -20,6 +20,8 @@ version: v1.7
    - For multi-target workflows (e.g., logging in as two distinct users simultaneously), use the global `--session` or `-s` flag to multiplex daemons.
    - `rod-cli -s=admin goto http://...`
    - `rod-cli -s=guest goto http://...`
+   - Keep the same session flag on every command for that workflow, including cleanup.
+   - Finish the examples above with `rod-cli -s=admin close` and `rod-cli -s=guest close`. Run `rod-cli sessions` and check that neither session remains.
 
 3. **Element Targeting**: Every command below that takes `[selector]` (`click`, `dblclick`, `type`, `fill`, `select`, `check`, `uncheck`, `hover`, `upload`, `drag`, `drop`, `highlight`) accepts **either**:
    - a plain **CSS selector** (e.g. `#submit-button`, `.nav-link`) — resolves immediately, even before any `snapshot` call, or
@@ -124,6 +126,7 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli route-list`: List all active network interception routes.
 - `rod-cli unroute [pattern]`: Remove a mock network route.
 - `rod-cli requests`: List all captured network requests. Only works when the session was started with `--request-capture` (off by default) — pass it on the session's first command.
+  For example, start with `rod-cli --request-capture goto https://example.com`, then run `rod-cli requests`.
 - `rod-cli request [index]`: Show details for a specific request (also requires the session started with `--request-capture`).
 
 ### Evaluation & Export
@@ -142,6 +145,10 @@ Use a selector or ref first; use pixel input (mousemove/mousedown/mouseup) only 
 - `rod-cli plugin run [name]`: Invoke a named function defined in the loaded plugin (e.g. an accessor like `getFindings`) and print its returned value. Use it to read back the state a plugin accumulated during browsing.
 
 ## Usage Example
+
+Run `rod-cli tab-new https://example.com` first to create a task-owned tab.
+The interaction command below requires a page containing `#search-input`. Before running it, navigate to the intended search page and run `rod-cli snapshot "#search-input"` to confirm the field exists.
+After submitting, check `rod-cli snapshot` for the expected result. After teardown, run `rod-cli sessions` and check that the workflow's session is absent.
 
 ```bash
 # Navigate to the site
@@ -166,8 +173,6 @@ Install this skill folder whole (`SKILL.md` together with `references/`) so the 
 Pi and OMP users can use the typed extensions instead: [Pi](https://github.com/agenthands/rod-cli/blob/main/extensions/pi/README.md), [OMP](https://github.com/agenthands/rod-cli/blob/main/extensions/omp/README.md).
 
 ## Specific tasks
-
-Detailed guides on advanced features:
 
 * **Inspecting element attributes**: [references/element-attributes.md](references/element-attributes.md)
 * **Request mocking**: [references/request-mocking.md](references/request-mocking.md)
